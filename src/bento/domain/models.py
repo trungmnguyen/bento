@@ -113,7 +113,7 @@ class SuiteResult:
         return self.failed_scenarios == 0
 
 
-# --- Autonomous Loop Domain Models ---
+# --- Level 2: Autonomous Loop Domain Models ---
 
 class AutoLoopStatus(str, Enum):
     SUCCESS = "SUCCESS"
@@ -153,13 +153,13 @@ class AutoLoopResult:
         return self.status == AutoLoopStatus.SUCCESS
 
 
-# --- Lifelong Memory & Self-Evolution Domain Models ---
+# --- Level 3: Lifelong Memory & Self-Evolution Domain Models ---
 
 @dataclass(frozen=True)
 class MemoryLesson:
     id: str
     title: str
-    category: str  # e.g., "quant", "clean-architecture", "syntax", "edge-case"
+    category: str
     context: str
     rule: str
     anti_pattern: str = ""
@@ -188,4 +188,79 @@ class DreamCycleResult:
     consolidated_lessons_count: int
     new_lessons_discovered: int
     suite_result: SuiteResult
+    total_duration_ms: float
+
+
+# --- Level 4: Adversarial Self-Play, Swarms & Optimizer Models ---
+
+@dataclass(frozen=True)
+class ArenaRound:
+    round_num: int
+    attacker_payload: str
+    attacker_contract: Scenario
+    builder_response: AgentResponse
+    evaluation_result: ScenarioResult
+    exploit_found: bool
+
+
+@dataclass(frozen=True)
+class ArenaResult:
+    task_name: str
+    rounds: list[ArenaRound]
+    total_rounds: int
+    total_exploits_found: int
+    total_exploits_patched: int
+    hardened: bool
+    total_duration_ms: float
+
+
+class SwarmRole(str, Enum):
+    ARCHITECT = "ARCHITECT"
+    BUILDER = "BUILDER"
+    AUDITOR = "AUDITOR"
+    JUDGE = "JUDGE"
+
+
+@dataclass(frozen=True)
+class SwarmTaskResult:
+    role: SwarmRole
+    task_name: str
+    output_summary: str
+    passed: bool
+    duration_ms: float
+    error_message: str | None = None
+
+
+@dataclass(frozen=True)
+class SwarmPipelineResult:
+    pipeline_name: str
+    task_results: list[SwarmTaskResult]
+    passed: bool
+    total_duration_ms: float
+
+
+@dataclass(frozen=True)
+class OptimizerCandidate:
+    id: str
+    model_name: str
+    system_prompt_variant: str
+    temperature: float = 0.0
+
+
+@dataclass(frozen=True)
+class OptimizerRanking:
+    candidate: OptimizerCandidate
+    pass_rate: float
+    passed_scenarios: int
+    total_scenarios: int
+    total_duration_ms: float
+    avg_latency_ms: float
+    score: float
+
+
+@dataclass(frozen=True)
+class OptimizerResult:
+    suite_name: str
+    best_candidate: OptimizerCandidate
+    rankings: list[OptimizerRanking]
     total_duration_ms: float

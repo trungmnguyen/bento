@@ -4,12 +4,27 @@ import datetime
 import hashlib
 from bento.adapters.parsers.scenario_parser import ScenarioParser
 from bento.adapters.presenters.console_presenter import ConsolePresenter
-from bento.domain.models import MemoryLesson, Scenario
-from bento.domain.ports import AgentGateway, GitGateway, MemoryGateway, StorageGateway
+from bento.domain.models import (
+    MemoryLesson,
+    OptimizerCandidate,
+    Scenario,
+)
+from bento.domain.ports import (
+    AgentGateway,
+    GitGateway,
+    MemoryGateway,
+    StorageGateway,
+    SwarmGateway,
+    WorktreeGateway,
+)
 from bento.use_cases.auto_loop import AutoLoopUseCase
+from bento.use_cases.distill_memory import DistillMemoryUseCase
 from bento.use_cases.dream_cycle import DreamCycleUseCase
+from bento.use_cases.optimize_prompts import OptimizePromptsUseCase
+from bento.use_cases.run_arena import RunArenaUseCase
 from bento.use_cases.run_scenario import RunScenarioUseCase
 from bento.use_cases.run_suite import RunSuiteUseCase
+from bento.use_cases.run_swarm import RunSwarmUseCase
 
 
 class CliController:
@@ -21,6 +36,7 @@ class CliController:
         presenter: ConsolePresenter,
         git_gateway: GitGateway | None = None,
         memory_gateway: MemoryGateway | None = None,
+        worktree_gateway: WorktreeGateway | None = None,
     ):
         self._run_scenario = run_scenario_use_case
         self._run_suite = run_suite_use_case
@@ -28,6 +44,7 @@ class CliController:
         self._presenter = presenter
         self._git = git_gateway
         self._memory = memory_gateway
+        self._worktree = worktree_gateway
 
     def handle_run_scenario_file(
         self,
@@ -147,6 +164,108 @@ class CliController:
 
         exit_code = 0 if result.suite_result.all_passed else 1
         return exit_code, output
+
+    def handle_arena(
+        self,
+        task_file: str,
+        contract_file: str,
+        attacker_gateway: AgentGateway,
+        builder_gateway: AgentGateway,
+        rounds: int = 3,
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        if not self._storage.file_exists(task_file) or not self._storage.file_exists(contract_file):
+            return 1, "Error: Task or contract file not found."
+
+        task_content = self._storage.read_text(task_file)
+        contract_content = self._storage.read_text(contract_file)
+        scenario = ScenarioParser.from_json(contract_content)
+
+        arena_uc = RunArenaUseCase(
+            attacker_gateway=attacker_gateway,
+            builder_gateway=builder_gateway,
+            run_scenario_use_case=self._run_scenario,
+            memory_gateway=self._memory,
+        )
+
+        result = arena_uc.execute(
+            task_description=task_content,
+            base_scenario=scenario,
+            rounds=rounds,
+            working_dir=working_dir,
+        )
+
+        if json_output:
+            output = self._presenter.format_json(result)
+        else:
+            output = self._presenter.format_arena_result(result)
+
+        exit_code = 0 if result.hardened else 1
+        return exit_code, output
+
+    def handle_swarm(
+        self,
+        task_file: str,
+        contract_file: str,
+        swarm_gateway: SwarmGateway,
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        if not self._storage.file_exists(task_file) or not self._storage.file_exists(contract_file):
+            return 1, "Error: Task or contract file not found."
+
+        task_content = self._storage.read_text(task_file)
+        contract_content = self._storage.read_text(contract_file)
+        scenario = ScenarioParser.from_json(contract_content)
+
+        swarm_uc = RunSwarmUseCase(
+            swarm_gateway=swarm_gateway,
+            run_scenario_use_case=self._run_scenario,
+            storage_gateway=self._storage,
+        )
+
+        result = swarm_uc.execute(
+            task_description=task_content,
+            scenario=scenario,
+            working_dir=working_dir,
+        )
+
+        if json_output:
+            output = self._presenter.format_json(result)
+        else:
+            output = self._presenter.format_swarm_result(result)
+
+        exit_code = 0 if result.passed else 1
+        return exit_code, output
+
+    def handle_optimize(
+        self,
+        suite_dir: str = "examples",
+        candidates: list[OptimizerCandidate] | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        files = self._storage.list_files(suite_dir, pattern="*.json")
+        if not files:
+            return 1, f"Error: No scenarios found in '{suite_dir}'."
+
+        scenarios = [ScenarioParser.from_json(self._storage.read_text(f)) for f in files]
+
+        default_candidates = candidates or [
+            OptimizerCandidate(id="claude-3-7-sonnet", model_name="Claude 3.7 Sonnet", system_prompt_variant="standard"),
+            OptimizerCandidate(id="gemini-2-0-flash", model_name="Gemini 2.0 Flash", system_prompt_variant="concise"),
+            OptimizerCandidate(id="gemini-2-0-pro", model_name="Gemini 2.0 Pro", system_prompt_variant="deep-reasoning"),
+        ]
+
+        opt_uc = OptimizePromptsUseCase(run_suite_use_case=self._run_suite)
+        result = opt_uc.execute(candidates=default_candidates, scenarios=scenarios)
+
+        if json_output:
+            output = self._presenter.format_json(result)
+        else:
+            output = self._presenter.format_optimizer_result(result)
+
+        return 0, output
 
     def handle_memory_list(
         self,

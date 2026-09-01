@@ -1,8 +1,9 @@
-"""Pure Domain Evaluation & Memory Distillation Rules for Bento.
+"""Pure Domain Evaluation, Memory Distillation & Level 4 Rules for Bento.
 
 All logic is deterministic, functional, and decoupled from any I/O.
 """
 from __future__ import annotations
+import ast
 import datetime
 import hashlib
 import json
@@ -15,10 +16,13 @@ from bento.domain.models import (
     AutoLoopIteration,
     MemoryBank,
     MemoryLesson,
+    OptimizerCandidate,
+    OptimizerRanking,
     Scenario,
     ScenarioResult,
     StepResult,
     StepStatus,
+    SuiteResult,
 )
 
 
@@ -185,24 +189,20 @@ def filter_relevant_lessons(
     tags: list[str],
     task_description: str,
 ) -> list[MemoryLesson]:
-    """Pure keyword and tag matching to retrieve applicable memory lessons."""
     task_lower = task_description.lower()
     tags_lower = [t.lower() for t in tags]
     relevant: list[MemoryLesson] = []
 
     for lesson in memory_bank.lessons:
-        # Match if tag intersects
         lesson_tags = [t.lower() for t in lesson.tags]
         if any(t in lesson_tags for t in tags_lower):
             relevant.append(lesson)
             continue
 
-        # Match category or keywords in task description
         if lesson.category.lower() in task_lower or lesson.title.lower() in task_lower:
             relevant.append(lesson)
             continue
 
-        # Check tag matches in text
         if any(t in task_lower for t in lesson_tags):
             relevant.append(lesson)
 
@@ -215,7 +215,6 @@ def extract_lessons_from_iterations(
     iterations: list[AutoLoopIteration],
     timestamp: str = "",
 ) -> list[MemoryLesson]:
-    """Analyzes failed earlier iterations and synthesizes permanent memory lessons."""
     if len(iterations) <= 1:
         return []
 
@@ -224,11 +223,9 @@ def extract_lessons_from_iterations(
         return []
 
     lessons: list[MemoryLesson] = []
-    # Inspect first failed iteration
     failed_iter = iterations[0]
     for step in failed_iter.scenario_result.step_results:
         if step.status != StepStatus.PASSED:
-            # Generate deterministic lesson ID
             h = hashlib.sha256(f"{scenario.name}_{step.step_name}_{step.command}".encode()).hexdigest()[:8]
             lesson_id = f"MEM-{h.upper()}"
 
@@ -240,7 +237,7 @@ def extract_lessons_from_iterations(
             elif any("quant" in t.lower() or "trade" in t.lower() for t in scenario.tags):
                 category = "quant-engineering"
 
-            error_summary = step.error_message or step.stderr.splitlines()[-1] if step.stderr else "Assertion check failed"
+            error_summary = step.error_message or (step.stderr.splitlines()[-1] if step.stderr else "Assertion check failed")
             rule_text = f"Ensure step '{step.step_name}' succeeds against '{step.command}' by handling edge cases ({error_summary})."
             anti_pattern_text = f"Failing assertion or crashing with: {error_summary}"
 
@@ -261,7 +258,6 @@ def extract_lessons_from_iterations(
 
 
 def synthesize_regression_scenario(scenario: Scenario, lesson: MemoryLesson) -> Scenario:
-    """Clones a scenario and marks it as a permanent regression contract in the suite."""
     tags = list(set(scenario.tags + ["regression", "auto-generated", lesson.category]))
     return Scenario(
         name=f"[Regression] {scenario.name}",
@@ -272,3 +268,125 @@ def synthesize_regression_scenario(scenario: Scenario, lesson: MemoryLesson) -> 
         max_loop_iterations=scenario.max_loop_iterations,
         metadata={"lesson_id": lesson.id, "source_scenario": scenario.name},
     )
+
+
+# --- Level 4: Adversarial Self-Play, Swarms & Optimizer Rules ---
+
+def build_adversarial_attacker_prompt(
+    task_description: str,
+    base_scenario: Scenario,
+    round_num: int,
+    previous_exploits: list[str] | None = None,
+) -> str:
+    lines = [
+        "You are the RED-TEAM ADVERSARIAL ATTACKER in the Bento Level 4 Arena.",
+        f"Your mission in Round {round_num} is to find UNHANDLED EDGE CASES, FUZZING VULNERABILITIES, or RACE CONDITIONS in the Builder's code.",
+        "",
+        "TASK BEING TESTED:",
+        task_description.strip(),
+        "",
+        "CURRENT VERIFIED SCENARIO:",
+        f"Scenario Name: {base_scenario.name}",
+    ]
+    for idx, s in enumerate(base_scenario.steps, 1):
+        lines.append(f"  Step {idx}: {s.name} ({s.command})")
+
+    if previous_exploits:
+        lines.append("")
+        lines.append("ALREADY RESOLVED EXPLOITS (Do not repeat):")
+        for exp in previous_exploits:
+            lines.append(f"  - {exp}")
+
+    lines.append("")
+    lines.append("PRODUCE A NEW ADVERSARIAL TEST JSON CONTRACT containing extreme payloads (e.g. empty lists, negative values, NaN, flash-crash prices, concurrent bursts, malformed inputs).")
+    lines.append("Output ONLY valid JSON for the adversarial scenario contract.")
+    return "\n".join(lines)
+
+
+def build_adversarial_builder_prompt(
+    task_description: str,
+    exploit_scenario: Scenario,
+    failure_output: str,
+) -> str:
+    lines = [
+        "⚔️ RED-TEAM EXPLOIT DETECTED in Bento Arena!",
+        "The Adversarial Attacker agent discovered an unhandled edge case that crashed or failed your code.",
+        "",
+        "TASK OBJECTIVE:",
+        task_description.strip(),
+        "",
+        f"ADVERSARIAL CONTRACT: {exploit_scenario.name}",
+        "FAILURE TRACE:",
+        failure_output.strip(),
+        "",
+        "Please HARDEN your implementation to defend against this exploit while maintaining all core functionality.",
+    ]
+    return "\n".join(lines)
+
+
+def validate_clean_architecture_ast(file_path: str, code_content: str) -> list[str]:
+    """Pure AST validator enforcing Clean Architecture boundaries on Python files."""
+    violations: list[str] = []
+    try:
+        tree = ast.parse(code_content, filename=file_path)
+    except SyntaxError as e:
+        return [f"Syntax error parsing {file_path}: {e}"]
+
+    is_domain_layer = "/domain/" in file_path or "\\domain\\" in file_path or file_path.startswith("domain/")
+
+    if is_domain_layer:
+        forbidden_modules = {"subprocess", "os", "sys", "requests", "urllib", "socket", "http", "sqlite3"}
+        for node in ast.walk(tree):
+            # Check imports
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    root_mod = alias.name.split(".")[0]
+                    if root_mod in forbidden_modules:
+                        violations.append(
+                            f"Clean Architecture Violation in {file_path}:{node.lineno}: Domain layer must not import '{root_mod}' (I/O side-effect forbidden)."
+                        )
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    root_mod = node.module.split(".")[0]
+                    if root_mod in forbidden_modules:
+                        violations.append(
+                            f"Clean Architecture Violation in {file_path}:{node.lineno}: Domain layer must not import from '{root_mod}'."
+                        )
+
+            # Check forbidden calls (e.g. print)
+            elif isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name) and node.func.id == "print":
+                    violations.append(
+                        f"Clean Architecture Violation in {file_path}:{node.lineno}: 'print()' call forbidden in domain layer. Use PresenterGateway."
+                    )
+
+    return violations
+
+
+def rank_optimizer_candidates(
+    results: list[tuple[OptimizerCandidate, SuiteResult]],
+) -> list[OptimizerRanking]:
+    """Ranks model/prompt candidates by score = pass_rate * 100 - (avg_latency_ms * 0.05)."""
+    rankings: list[OptimizerRanking] = []
+
+    for candidate, suite in results:
+        pass_rate = suite.pass_rate
+        avg_latency = (suite.total_duration_ms / max(1, suite.total_scenarios))
+        # Higher pass rate is prioritized, with low latency breaking ties
+        score = (pass_rate * 10.0) - (avg_latency * 0.01)
+
+        rankings.append(
+            OptimizerRanking(
+                candidate=candidate,
+                pass_rate=pass_rate,
+                passed_scenarios=suite.passed_scenarios,
+                total_scenarios=suite.total_scenarios,
+                total_duration_ms=suite.total_duration_ms,
+                avg_latency_ms=avg_latency,
+                score=score,
+            )
+        )
+
+    # Sort descending by score
+    rankings.sort(key=lambda r: r.score, reverse=True)
+    return rankings

@@ -5,13 +5,16 @@ Zero side-effects: Returns pure strings and does not call print().
 from __future__ import annotations
 import json
 from bento.domain.models import (
+    ArenaResult,
     AutoLoopResult,
     AutoLoopStatus,
     DreamCycleResult,
     MemoryBank,
+    OptimizerResult,
     ScenarioResult,
     StepStatus,
     SuiteResult,
+    SwarmPipelineResult,
 )
 from bento.domain.ports import PresenterGateway
 
@@ -147,7 +150,71 @@ class ConsolePresenter(PresenterGateway):
         lines.append(self.format_suite_result(result.suite_result))
         return "\n".join(lines)
 
-    def format_json(self, result: ScenarioResult | SuiteResult | AutoLoopResult | DreamCycleResult | MemoryBank) -> str:
+    def format_arena_result(self, result: ArenaResult) -> str:
+        lines: list[str] = []
+        status_badge = (
+            self._c("32;1", "🛡️ CODE FULLY HARDENED")
+            if result.hardened
+            else self._c("31;1", "⚔️ UNPATCHED VULNERABILITIES DETECTED")
+        )
+        lines.append("")
+        lines.append(f"⚔️ {self._c('1', 'Bento Adversarial Red-Team Arena')}: {result.task_name} [{status_badge}]")
+        lines.append(f"🥊 Sparring Rounds: {result.total_rounds} | Exploits Found: {result.total_exploits_found} | Patched: {result.total_exploits_patched}")
+        lines.append(f"⏱️  Arena Duration: {result.total_duration_ms:.1f}ms")
+        lines.append("─" * 60)
+
+        for rnd in result.rounds:
+            icon = self._c("33", "💥 EXPLOIT DISCOVERED & PATCHED") if rnd.exploit_found else self._c("32", "🛡️ ATTACK RESISTED")
+            lines.append(f"  [Round {rnd.round_num}/{result.total_rounds}] -> {icon}")
+            lines.append(f"    Attacker Scenario: {self._c('90', rnd.attacker_contract.name)}")
+            if rnd.exploit_found:
+                lines.append(f"    {self._c('36', 'Builder Patch:')} Applied defense and re-verified green.")
+
+        lines.append("─" * 60)
+        return "\n".join(lines)
+
+    def format_swarm_result(self, result: SwarmPipelineResult) -> str:
+        lines: list[str] = []
+        status_badge = (
+            self._c("32;1", "🎉 ALL STAGES PASSED")
+            if result.passed
+            else self._c("31;1", "❌ PIPELINE FAILED")
+        )
+        lines.append("")
+        lines.append(f"👥 {self._c('1', result.pipeline_name)} [{status_badge}]")
+        lines.append(f"⏱️  Total Pipeline Duration: {result.total_duration_ms:.1f}ms")
+        lines.append("─" * 60)
+
+        for task in result.task_results:
+            icon = self._c("32", "✓ PASSED") if task.passed else self._c("31", "✗ FAILED")
+            lines.append(f"  [{task.role.value}] {task.task_name} -> {icon} ({task.duration_ms:.1f}ms)")
+            lines.append(f"    Summary: {self._c('90', task.output_summary)}")
+            if task.error_message:
+                lines.append(f"    Error: {self._c('31', task.error_message)}")
+
+        lines.append("─" * 60)
+        return "\n".join(lines)
+
+    def format_optimizer_result(self, result: OptimizerResult) -> str:
+        lines: list[str] = []
+        lines.append("")
+        lines.append(f"🧬 {self._c('1', 'Bento Model & Prompt Optimizer')}: {result.suite_name}")
+        lines.append(f"🏆 Top Candidate: {self._c('32;1', result.best_candidate.id)} ({result.best_candidate.model_name})")
+        lines.append(f"⏱️  Benchmark Duration: {result.total_duration_ms:.1f}ms")
+        lines.append("=" * 60)
+        lines.append(f"  {'Rank':<5} {'Candidate ID':<20} {'Model':<15} {'Pass Rate':<12} {'Avg Latency':<12} {'Score'}")
+        lines.append("─" * 60)
+
+        for rank_idx, r in enumerate(result.rankings, 1):
+            rank_str = f"#{rank_idx}"
+            pass_str = f"{r.pass_rate:.1f}% ({r.passed_scenarios}/{r.total_scenarios})"
+            lat_str = f"{r.avg_latency_ms:.1f}ms"
+            lines.append(f"  {rank_str:<5} {r.candidate.id:<20} {r.candidate.model_name:<15} {pass_str:<12} {lat_str:<12} {r.score:.1f}")
+
+        lines.append("=" * 60)
+        return "\n".join(lines)
+
+    def format_json(self, result: Any) -> str:
         def serialize(obj):
             if hasattr(obj, "__dict__"):
                 return {k: serialize(v) for k, v in obj.__dict__.items()}

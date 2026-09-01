@@ -8,11 +8,13 @@ from bento.frameworks.agent_drivers import (
     ClaudeCodeDriver,
     GenericCommandDriver,
     MockAgentDriver,
+    SwarmDispatcherDriver,
 )
 from bento.frameworks.fs_memory import FileSystemMemoryGateway
 from bento.frameworks.fs_storage import FileSystemStorageGateway
 from bento.frameworks.git_driver import SubprocessGitGateway
 from bento.frameworks.subprocess_executor import SubprocessExecutionGateway
+from bento.frameworks.worktree_driver import SubprocessWorktreeGateway
 from bento.use_cases.run_scenario import RunScenarioUseCase
 from bento.use_cases.run_suite import RunSuiteUseCase
 
@@ -49,6 +51,7 @@ def build_controller() -> CliController:
     executor = SubprocessExecutionGateway()
     git = SubprocessGitGateway()
     memory = FileSystemMemoryGateway()
+    worktree = SubprocessWorktreeGateway()
     presenter = ConsolePresenter(use_color=sys.stdout.isatty())
     run_scenario_uc = RunScenarioUseCase(execution_gateway=executor)
     run_suite_uc = RunSuiteUseCase(run_scenario_use_case=run_scenario_uc)
@@ -60,13 +63,14 @@ def build_controller() -> CliController:
         presenter=presenter,
         git_gateway=git,
         memory_gateway=memory,
+        worktree_gateway=worktree,
     )
 
 
 def main(args: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="bento",
-        description="🍱 Bento: Clean-Architecture Harness Engineering, Autonomous Loop & Self-Learning Memory System",
+        description="🍱 Bento: Clean-Architecture Harness Engineering, Autonomous Loop & Multi-Agent Swarm Arena",
     )
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
@@ -83,17 +87,39 @@ def main(args: list[str] | None = None) -> int:
     suite_parser.add_argument("--name", default="Bento Test Suite", help="Suite display name")
     suite_parser.add_argument("--json", action="store_true", help="Output raw JSON result")
 
-    # bento auto --task <task.md> --contract <scenario.json>
+    # bento auto
     auto_parser = subparsers.add_parser("auto", help="Run autonomous closed-loop agent iteration with self-learning")
     auto_parser.add_argument("--task", required=True, help="Path to task objective markdown file")
     auto_parser.add_argument("--contract", required=True, help="Path to Bento ground-truth contract JSON")
-    auto_parser.add_argument("--max-iterations", type=int, default=5, help="Max self-healing iterations (default: 5)")
+    auto_parser.add_argument("--max-iterations", type=int, default=5, help="Max self-healing iterations")
     auto_parser.add_argument("--driver", choices=["claude", "generic", "mock"], default="claude", help="Agent driver")
     auto_parser.add_argument("--driver-cmd", default="python3 agent_worker.py", help="Command for generic driver")
     auto_parser.add_argument("--cwd", default=None, help="Override working directory")
     auto_parser.add_argument("--auto-commit", action="store_true", help="Auto-commit git changes on success")
     auto_parser.add_argument("--json", action="store_true", help="Output raw JSON result")
     auto_parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+
+    # bento arena (Level 4: Adversarial Self-Play)
+    arena_parser = subparsers.add_parser("arena", help="Run adversarial Red-Team (Attacker) vs Blue-Team (Builder) sparring")
+    arena_parser.add_argument("--task", required=True, help="Path to task objective markdown file")
+    arena_parser.add_argument("--contract", required=True, help="Path to base contract JSON")
+    arena_parser.add_argument("--rounds", type=int, default=3, help="Number of sparring rounds (default: 3)")
+    arena_parser.add_argument("--driver", choices=["claude", "generic", "mock"], default="claude", help="Agent driver")
+    arena_parser.add_argument("--cwd", default=None, help="Override working directory")
+    arena_parser.add_argument("--json", action="store_true", help="Output raw JSON result")
+
+    # bento swarm (Level 4: Role Pipeline)
+    swarm_parser = subparsers.add_parser("swarm", help="Run multi-agent Architect -> Builder -> Auditor -> Judge swarm pipeline")
+    swarm_parser.add_argument("--task", required=True, help="Path to task objective markdown file")
+    swarm_parser.add_argument("--contract", required=True, help="Path to contract JSON")
+    swarm_parser.add_argument("--driver", choices=["claude", "generic", "mock"], default="claude", help="Agent driver")
+    swarm_parser.add_argument("--cwd", default=None, help="Override working directory")
+    swarm_parser.add_argument("--json", action="store_true", help="Output raw JSON result")
+
+    # bento optimize (Level 4: Benchmark Optimizer)
+    opt_parser = subparsers.add_parser("optimize", help="Benchmark and rank model / prompt candidates")
+    opt_parser.add_argument("--suite", default="examples", help="Directory containing benchmark scenarios")
+    opt_parser.add_argument("--json", action="store_true", help="Output raw JSON result")
 
     # bento dream
     dream_parser = subparsers.add_parser("dream", help="Run overnight memory consolidation & benchmark sparring")
@@ -104,13 +130,9 @@ def main(args: list[str] | None = None) -> int:
     # bento memory
     mem_parser = subparsers.add_parser("memory", help="Inspect and manage persistent memory rules")
     mem_sub = mem_parser.add_subparsers(dest="memory_action", help="Memory actions")
-
-    # bento memory list
     mem_list = mem_sub.add_parser("list", help="List all stored memory rules")
     mem_list.add_argument("--cwd", default=None, help="Working directory")
     mem_list.add_argument("--json", action="store_true", help="Output raw JSON")
-
-    # bento memory add
     mem_add = mem_sub.add_parser("add", help="Manually add a memory rule")
     mem_add.add_argument("--title", required=True, help="Rule title")
     mem_add.add_argument("--rule", required=True, help="Rule text")
@@ -151,13 +173,7 @@ def main(args: list[str] | None = None) -> int:
         return exit_code
 
     elif parsed.command == "auto":
-        if parsed.driver == "claude":
-            driver = ClaudeCodeDriver()
-        elif parsed.driver == "generic":
-            driver = GenericCommandDriver(command_template=parsed.driver_cmd)
-        else:
-            driver = MockAgentDriver()
-
+        driver = ClaudeCodeDriver() if parsed.driver == "claude" else (GenericCommandDriver(command_template=parsed.driver_cmd) if parsed.driver == "generic" else MockAgentDriver())
         exit_code, output = controller.handle_auto_loop(
             task_file=parsed.task,
             contract_file=parsed.contract,
@@ -167,6 +183,47 @@ def main(args: list[str] | None = None) -> int:
             auto_commit=parsed.auto_commit,
             json_output=parsed.json,
             verbose=parsed.verbose,
+        )
+        print(output)
+        return exit_code
+
+    elif parsed.command == "arena":
+        attacker = ClaudeCodeDriver() if parsed.driver == "claude" else MockAgentDriver()
+        builder = ClaudeCodeDriver() if parsed.driver == "claude" else MockAgentDriver()
+        exit_code, output = controller.handle_arena(
+            task_file=parsed.task,
+            contract_file=parsed.contract,
+            attacker_gateway=attacker,
+            builder_gateway=builder,
+            rounds=parsed.rounds,
+            working_dir=parsed.cwd,
+            json_output=parsed.json,
+        )
+        print(output)
+        return exit_code
+
+    elif parsed.command == "swarm":
+        if parsed.driver == "claude":
+            swarm_driver = SwarmDispatcherDriver(ClaudeCodeDriver())
+        elif parsed.driver == "generic":
+            swarm_driver = SwarmDispatcherDriver(GenericCommandDriver())
+        else:
+            swarm_driver = MockAgentDriver()
+
+        exit_code, output = controller.handle_swarm(
+            task_file=parsed.task,
+            contract_file=parsed.contract,
+            swarm_gateway=swarm_driver,
+            working_dir=parsed.cwd,
+            json_output=parsed.json,
+        )
+        print(output)
+        return exit_code
+
+    elif parsed.command == "optimize":
+        exit_code, output = controller.handle_optimize(
+            suite_dir=parsed.suite,
+            json_output=parsed.json,
         )
         print(output)
         return exit_code
@@ -193,7 +250,6 @@ def main(args: list[str] | None = None) -> int:
             print(output)
             return exit_code
         else:
-            # Default to list
             exit_code, output = controller.handle_memory_list(
                 working_dir=parsed.cwd,
                 json_output=getattr(parsed, "json", False),

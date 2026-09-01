@@ -1,17 +1,21 @@
 """Domain Ports / Gateway Interfaces for Bento.
 
-Defines the contracts for execution, storage, agent invocation, memory, and git.
+Defines the contracts for execution, storage, agent invocation, swarms, worktrees, memory, and git.
 """
 from __future__ import annotations
 from typing import Protocol, runtime_checkable
 from bento.domain.models import (
     AgentResponse,
+    ArenaResult,
     DreamCycleResult,
     MemoryBank,
     MemoryLesson,
+    OptimizerResult,
     Scenario,
     ScenarioResult,
     SuiteResult,
+    SwarmPipelineResult,
+    SwarmRole,
 )
 
 
@@ -55,6 +59,28 @@ class AgentGateway(Protocol):
 
 
 @runtime_checkable
+class SwarmGateway(Protocol):
+    def execute_role(self, role: SwarmRole, prompt: str, working_dir: str | None = None) -> AgentResponse:
+        """Dispatches a task to a specialized agent role (Architect, Builder, Auditor, Judge)."""
+        ...
+
+
+@runtime_checkable
+class WorktreeGateway(Protocol):
+    def create_worktree(self, branch_name: str, path: str) -> bool:
+        """Creates an isolated git worktree branch."""
+        ...
+
+    def remove_worktree(self, path: str) -> bool:
+        """Cleans up a git worktree."""
+        ...
+
+    def merge_branch(self, branch_name: str) -> bool:
+        """Merges a green worktree branch into current HEAD."""
+        ...
+
+
+@runtime_checkable
 class GitGateway(Protocol):
     def commit_changes(self, message: str, working_dir: str | None = None) -> bool:
         """Stages and commits changes to git repository."""
@@ -88,6 +114,18 @@ class PresenterGateway(Protocol):
 
     def format_dream_cycle_result(self, result: DreamCycleResult) -> str:
         """Formats the dream cycle report for display."""
+        ...
+
+    def format_arena_result(self, result: ArenaResult) -> str:
+        """Formats adversarial sparring results."""
+        ...
+
+    def format_swarm_result(self, result: SwarmPipelineResult) -> str:
+        """Formats multi-agent swarm pipeline execution results."""
+        ...
+
+    def format_optimizer_result(self, result: OptimizerResult) -> str:
+        """Formats model / prompt optimization rankings."""
         ...
 
 
