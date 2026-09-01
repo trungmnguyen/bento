@@ -1,10 +1,13 @@
 """CliController: Translates CLI requests into Use Case executions and presenter renderings."""
 from __future__ import annotations
+import datetime
+import hashlib
 from bento.adapters.parsers.scenario_parser import ScenarioParser
 from bento.adapters.presenters.console_presenter import ConsolePresenter
-from bento.domain.models import Scenario
-from bento.domain.ports import AgentGateway, GitGateway, StorageGateway
+from bento.domain.models import MemoryLesson, Scenario
+from bento.domain.ports import AgentGateway, GitGateway, MemoryGateway, StorageGateway
 from bento.use_cases.auto_loop import AutoLoopUseCase
+from bento.use_cases.dream_cycle import DreamCycleUseCase
 from bento.use_cases.run_scenario import RunScenarioUseCase
 from bento.use_cases.run_suite import RunSuiteUseCase
 
@@ -17,12 +20,14 @@ class CliController:
         storage_gateway: StorageGateway,
         presenter: ConsolePresenter,
         git_gateway: GitGateway | None = None,
+        memory_gateway: MemoryGateway | None = None,
     ):
         self._run_scenario = run_scenario_use_case
         self._run_suite = run_suite_use_case
         self._storage = storage_gateway
         self._presenter = presenter
         self._git = git_gateway
+        self._memory = memory_gateway
 
     def handle_run_scenario_file(
         self,
@@ -98,6 +103,7 @@ class CliController:
             agent_gateway=agent_gateway,
             run_scenario_use_case=self._run_scenario,
             git_gateway=self._git,
+            memory_gateway=self._memory,
         )
 
         result = auto_loop_uc.execute(
@@ -106,6 +112,7 @@ class CliController:
             max_iterations=max_iterations,
             working_dir=working_dir_override,
             auto_commit=auto_commit,
+            auto_distill=True,
         )
 
         if json_output:
@@ -115,3 +122,72 @@ class CliController:
 
         exit_code = 0 if result.succeeded else 1
         return exit_code, output
+
+    def handle_dream_cycle(
+        self,
+        benchmarks_dir: str = "examples",
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        if not self._memory:
+            return 1, "Error: Memory gateway not configured."
+
+        dream_uc = DreamCycleUseCase(
+            memory_gateway=self._memory,
+            storage_gateway=self._storage,
+            run_suite_use_case=self._run_suite,
+        )
+
+        result = dream_uc.execute(benchmarks_dir=benchmarks_dir, working_dir=working_dir)
+
+        if json_output:
+            output = self._presenter.format_json(result)
+        else:
+            output = self._presenter.format_dream_cycle_result(result)
+
+        exit_code = 0 if result.suite_result.all_passed else 1
+        return exit_code, output
+
+    def handle_memory_list(
+        self,
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        if not self._memory:
+            return 1, "Error: Memory gateway not configured."
+
+        memory = self._memory.load_memory(working_dir=working_dir)
+        if json_output:
+            output = self._presenter.format_json(memory)
+        else:
+            output = self._presenter.format_memory_summary(memory)
+        return 0, output
+
+    def handle_memory_add(
+        self,
+        title: str,
+        rule: str,
+        category: str = "general",
+        anti_pattern: str = "",
+        tags: list[str] | None = None,
+        working_dir: str | None = None,
+    ) -> tuple[int, str]:
+        if not self._memory:
+            return 1, "Error: Memory gateway not configured."
+
+        h = hashlib.sha256(f"{title}_{rule}".encode()).hexdigest()[:8]
+        lesson = MemoryLesson(
+            id=f"MEM-{h.upper()}",
+            title=title,
+            category=category,
+            context="Manual rule addition via bento memory CLI",
+            rule=rule,
+            anti_pattern=anti_pattern,
+            discovery_date=datetime.datetime.now().strftime("%Y-%m-%d"),
+            tags=tags or [category],
+        )
+
+        bank = self._memory.load_memory(working_dir=working_dir)
+        updated_bank = bank.add_lesson(lesson)
+        self._memory.save_memory(updated_bank, working_dir=working_dir)
+        return 0, f"🧠 Added rule [{lesson.id}] '{title}' to Bento memory bank."

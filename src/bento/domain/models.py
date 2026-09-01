@@ -31,7 +31,7 @@ class StepStatus(str, Enum):
 class Assertion:
     type: AssertionType
     expected: Any
-    target_field: str = "stdout"  # "stdout", "stderr", "exit_code", "duration_ms"
+    target_field: str = "stdout"
     description: str = ""
 
 
@@ -146,7 +146,46 @@ class AutoLoopResult:
     final_scenario_result: ScenarioResult | None
     total_duration_ms: float
     committed: bool = False
+    distilled_lessons: list[MemoryLesson] = field(default_factory=list)
 
     @property
     def succeeded(self) -> bool:
         return self.status == AutoLoopStatus.SUCCESS
+
+
+# --- Lifelong Memory & Self-Evolution Domain Models ---
+
+@dataclass(frozen=True)
+class MemoryLesson:
+    id: str
+    title: str
+    category: str  # e.g., "quant", "clean-architecture", "syntax", "edge-case"
+    context: str
+    rule: str
+    anti_pattern: str = ""
+    discovery_date: str = ""
+    tags: list[str] = field(default_factory=list)
+    source_scenario: str = ""
+
+
+@dataclass(frozen=True)
+class MemoryBank:
+    lessons: list[MemoryLesson] = field(default_factory=list)
+    version: str = "1.0"
+    updated_at: str = ""
+
+    def add_lesson(self, lesson: MemoryLesson) -> MemoryBank:
+        filtered = [l for l in self.lessons if l.id != lesson.id]
+        return MemoryBank(
+            lessons=filtered + [lesson],
+            version=self.version,
+            updated_at=lesson.discovery_date or self.updated_at,
+        )
+
+
+@dataclass(frozen=True)
+class DreamCycleResult:
+    consolidated_lessons_count: int
+    new_lessons_discovered: int
+    suite_result: SuiteResult
+    total_duration_ms: float

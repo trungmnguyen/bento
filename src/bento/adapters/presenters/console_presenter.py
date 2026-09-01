@@ -7,6 +7,8 @@ import json
 from bento.domain.models import (
     AutoLoopResult,
     AutoLoopStatus,
+    DreamCycleResult,
+    MemoryBank,
     ScenarioResult,
     StepStatus,
     SuiteResult,
@@ -70,7 +72,7 @@ class ConsolePresenter(PresenterGateway):
 
         for s_res in result.scenario_results:
             icon = self._c("32", "[✓ PASS]") if s_res.passed else self._c("31", "[✗ FAIL]")
-            lines.append(f"  {icon} {s_res.scenario_name:<35} ({s_res.total_duration_ms:.1f}ms)")
+            lines.append(f"  {icon} {s_res.scenario_name:<40} ({s_res.total_duration_ms:.1f}ms)")
 
         lines.append("=" * 60)
         return "\n".join(lines)
@@ -88,6 +90,8 @@ class ConsolePresenter(PresenterGateway):
         lines.append(f"⏱️  Total Duration: {result.total_duration_ms:.1f}ms")
         if result.committed:
             lines.append(f"💾 Git: Changes auto-committed to repository")
+        if result.distilled_lessons:
+            lines.append(f"🧠 Memory: Auto-distilled {len(result.distilled_lessons)} new lesson(s) into memory bank")
         lines.append("─" * 60)
 
         for it in result.iterations:
@@ -104,12 +108,46 @@ class ConsolePresenter(PresenterGateway):
                         if step.error_message:
                             lines.append(f"      {self._c('33', step.error_message)}")
 
+        if result.distilled_lessons:
+            lines.append("─" * 60)
+            lines.append("🧠 Distilled Lessons Added to Memory:")
+            for l in result.distilled_lessons:
+                lines.append(f"  - [{l.id}] {l.title} (Rule: {l.rule})")
+
         lines.append("─" * 60)
         if result.final_scenario_result:
             lines.append(self.format_scenario_result(result.final_scenario_result, verbose=verbose))
         return "\n".join(lines)
 
-    def format_json(self, result: ScenarioResult | SuiteResult | AutoLoopResult) -> str:
+    def format_memory_summary(self, memory: MemoryBank) -> str:
+        lines: list[str] = []
+        lines.append("")
+        lines.append(f"🧠 {self._c('1', 'Bento Persistent Memory Bank')} ({len(memory.lessons)} rules stored)")
+        lines.append("─" * 60)
+        if not memory.lessons:
+            lines.append("  (Memory bank is currently empty. Run `bento auto` to discover new rules).")
+        else:
+            for l in memory.lessons:
+                lines.append(f"  [{self._c('36', l.id)}] {self._c('1', l.title)}")
+                lines.append(f"    Category: {l.category} | Discovered: {l.discovery_date}")
+                lines.append(f"    Rule: {self._c('32', l.rule)}")
+                if l.anti_pattern:
+                    lines.append(f"    Anti-Pattern: {self._c('31', l.anti_pattern)}")
+                lines.append("")
+        lines.append("─" * 60)
+        return "\n".join(lines)
+
+    def format_dream_cycle_result(self, result: DreamCycleResult) -> str:
+        lines: list[str] = []
+        lines.append("")
+        lines.append(f"🌙 {self._c('1;35', 'Bento Dream Cycle Maintenance Completed')}")
+        lines.append(f"🧠 Memory Bank: {result.consolidated_lessons_count} active rules enforced")
+        lines.append(f"⏱️  Duration: {result.total_duration_ms:.1f}ms")
+        lines.append("─" * 60)
+        lines.append(self.format_suite_result(result.suite_result))
+        return "\n".join(lines)
+
+    def format_json(self, result: ScenarioResult | SuiteResult | AutoLoopResult | DreamCycleResult | MemoryBank) -> str:
         def serialize(obj):
             if hasattr(obj, "__dict__"):
                 return {k: serialize(v) for k, v in obj.__dict__.items()}

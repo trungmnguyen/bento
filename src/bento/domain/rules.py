@@ -1,8 +1,10 @@
-"""Pure Domain Evaluation Rules for Bento.
+"""Pure Domain Evaluation & Memory Distillation Rules for Bento.
 
 All logic is deterministic, functional, and decoupled from any I/O.
 """
 from __future__ import annotations
+import datetime
+import hashlib
 import json
 import re
 from typing import Any
@@ -10,6 +12,9 @@ from bento.domain.models import (
     Assertion,
     AssertionResult,
     AssertionType,
+    AutoLoopIteration,
+    MemoryBank,
+    MemoryLesson,
     Scenario,
     ScenarioResult,
     StepResult,
@@ -104,9 +109,14 @@ def validate_scenario(scenario: Scenario) -> list[str]:
     return errors
 
 
-def build_initial_agent_prompt(task_description: str, scenario: Scenario) -> str:
+def build_initial_agent_prompt(
+    task_description: str,
+    scenario: Scenario,
+    relevant_lessons: list[MemoryLesson] | None = None,
+) -> str:
     lines = [
         "You are the Builder Agent in the Bento Harness Engineering loop.",
+        "",
         "TASK OBJECTIVE:",
         task_description.strip(),
         "",
@@ -119,6 +129,15 @@ def build_initial_agent_prompt(task_description: str, scenario: Scenario) -> str
         for a in step.assertions:
             desc = a.description or a.type.value
             lines.append(f"    - Expects: {desc} ({a.type.value}: {a.expected})")
+
+    if relevant_lessons:
+        lines.append("")
+        lines.append("🧠 BENTO MEMORY GUARDS (Past Architectural Lessons & Bug Guards):")
+        for lesson in relevant_lessons:
+            lines.append(f"  - [{lesson.id}] {lesson.title}")
+            lines.append(f"    Rule: {lesson.rule}")
+            if lesson.anti_pattern:
+                lines.append(f"    Avoid Anti-Pattern: {lesson.anti_pattern}")
 
     lines.append("")
     lines.append("Please implement or edit the necessary code files directly to fulfill this contract.")
@@ -157,3 +176,99 @@ def build_corrective_agent_prompt(
     lines.append("")
     lines.append("Please edit the code files to resolve these specific errors and satisfy all assertions.")
     return "\n".join(lines)
+
+
+# --- Memory Distillation & Retrieval Rules ---
+
+def filter_relevant_lessons(
+    memory_bank: MemoryBank,
+    tags: list[str],
+    task_description: str,
+) -> list[MemoryLesson]:
+    """Pure keyword and tag matching to retrieve applicable memory lessons."""
+    task_lower = task_description.lower()
+    tags_lower = [t.lower() for t in tags]
+    relevant: list[MemoryLesson] = []
+
+    for lesson in memory_bank.lessons:
+        # Match if tag intersects
+        lesson_tags = [t.lower() for t in lesson.tags]
+        if any(t in lesson_tags for t in tags_lower):
+            relevant.append(lesson)
+            continue
+
+        # Match category or keywords in task description
+        if lesson.category.lower() in task_lower or lesson.title.lower() in task_lower:
+            relevant.append(lesson)
+            continue
+
+        # Check tag matches in text
+        if any(t in task_lower for t in lesson_tags):
+            relevant.append(lesson)
+
+    return relevant
+
+
+def extract_lessons_from_iterations(
+    task_name: str,
+    scenario: Scenario,
+    iterations: list[AutoLoopIteration],
+    timestamp: str = "",
+) -> list[MemoryLesson]:
+    """Analyzes failed earlier iterations and synthesizes permanent memory lessons."""
+    if len(iterations) <= 1:
+        return []
+
+    final_iter = iterations[-1]
+    if not final_iter.scenario_result.passed:
+        return []
+
+    lessons: list[MemoryLesson] = []
+    # Inspect first failed iteration
+    failed_iter = iterations[0]
+    for step in failed_iter.scenario_result.step_results:
+        if step.status != StepStatus.PASSED:
+            # Generate deterministic lesson ID
+            h = hashlib.sha256(f"{scenario.name}_{step.step_name}_{step.command}".encode()).hexdigest()[:8]
+            lesson_id = f"MEM-{h.upper()}"
+
+            category = "edge-case"
+            if "zero" in (step.stderr + step.stdout).lower():
+                category = "arithmetic-safety"
+            elif "syntax" in (step.stderr + step.stdout).lower():
+                category = "syntax-rule"
+            elif any("quant" in t.lower() or "trade" in t.lower() for t in scenario.tags):
+                category = "quant-engineering"
+
+            error_summary = step.error_message or step.stderr.splitlines()[-1] if step.stderr else "Assertion check failed"
+            rule_text = f"Ensure step '{step.step_name}' succeeds against '{step.command}' by handling edge cases ({error_summary})."
+            anti_pattern_text = f"Failing assertion or crashing with: {error_summary}"
+
+            lesson = MemoryLesson(
+                id=lesson_id,
+                title=f"Guard for {step.step_name} in {scenario.name}",
+                category=category,
+                context=f"Discovered during self-healing iteration loop for scenario '{scenario.name}'.",
+                rule=rule_text,
+                anti_pattern=anti_pattern_text,
+                discovery_date=timestamp or datetime.datetime.now().strftime("%Y-%m-%d"),
+                tags=scenario.tags + [category],
+                source_scenario=scenario.name,
+            )
+            lessons.append(lesson)
+
+    return lessons
+
+
+def synthesize_regression_scenario(scenario: Scenario, lesson: MemoryLesson) -> Scenario:
+    """Clones a scenario and marks it as a permanent regression contract in the suite."""
+    tags = list(set(scenario.tags + ["regression", "auto-generated", lesson.category]))
+    return Scenario(
+        name=f"[Regression] {scenario.name}",
+        description=f"Auto-generated regression test from Lesson {lesson.id}: {lesson.title}",
+        tags=tags,
+        working_dir=scenario.working_dir,
+        steps=scenario.steps,
+        max_loop_iterations=scenario.max_loop_iterations,
+        metadata={"lesson_id": lesson.id, "source_scenario": scenario.name},
+    )

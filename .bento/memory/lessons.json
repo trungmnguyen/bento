@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-09-01",
+  "lessons": [
+    {
+      "id": "MEM-50790948",
+      "title": "Clean Architecture Port Rule",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Never import I/O directly in domain layer",
+      "anti_pattern": "",
+      "discovery_date": "2026-09-01",
+      "tags": [
+        "architecture"
+      ],
+      "source_scenario": ""
+    }
+  ]
+}

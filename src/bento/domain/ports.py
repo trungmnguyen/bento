@@ -1,10 +1,18 @@
 """Domain Ports / Gateway Interfaces for Bento.
 
-Defines the contracts for execution, storage, agent invocation, and git.
+Defines the contracts for execution, storage, agent invocation, memory, and git.
 """
 from __future__ import annotations
 from typing import Protocol, runtime_checkable
-from bento.domain.models import AgentResponse, ScenarioResult, SuiteResult
+from bento.domain.models import (
+    AgentResponse,
+    DreamCycleResult,
+    MemoryBank,
+    MemoryLesson,
+    Scenario,
+    ScenarioResult,
+    SuiteResult,
+)
 
 
 @runtime_checkable
@@ -54,6 +62,21 @@ class GitGateway(Protocol):
 
 
 @runtime_checkable
+class MemoryGateway(Protocol):
+    def load_memory(self, working_dir: str | None = None) -> MemoryBank:
+        """Loads the persistent memory bank."""
+        ...
+
+    def save_memory(self, memory: MemoryBank, working_dir: str | None = None) -> None:
+        """Persists the memory bank to disk."""
+        ...
+
+    def save_regression_scenario(self, scenario: Scenario, working_dir: str | None = None) -> str:
+        """Saves an auto-generated regression scenario to the benchmark suite directory."""
+        ...
+
+
+@runtime_checkable
 class PresenterGateway(Protocol):
     def format_scenario_result(self, result: ScenarioResult, verbose: bool = False) -> str:
         """Formats a scenario result for display."""
@@ -61,6 +84,10 @@ class PresenterGateway(Protocol):
 
     def format_suite_result(self, result: SuiteResult) -> str:
         """Formats a benchmark / suite result for display."""
+        ...
+
+    def format_dream_cycle_result(self, result: DreamCycleResult) -> str:
+        """Formats the dream cycle report for display."""
         ...
 
 
