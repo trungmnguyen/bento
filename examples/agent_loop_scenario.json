@@ -1,0 +1,29 @@
+{
+  "name": "Agent Code-Gen Verification Rig",
+  "description": "Closed-loop verification of dynamically generated logic against ground-truth contract",
+  "tags": [
+    "agent",
+    "eval",
+    "cyrilXBT-paradigm"
+  ],
+  "steps": [
+    {
+      "name": "Synthesize Factorial Function",
+      "command": "python3 -c \"import math; print(math.factorial(6))\"",
+      "assertions": [
+        {
+          "type": "EQUALS",
+          "expected": "720",
+          "target_field": "stdout",
+          "description": "Ground-truth contract: math.factorial(6) == 720"
+        },
+        {
+          "type": "MAX_DURATION_MS",
+          "expected": 1000,
+          "target_field": "duration_ms",
+          "description": "Execution completed under 1000ms latency ceiling"
+        }
+      ]
+    }
+  ]
+}

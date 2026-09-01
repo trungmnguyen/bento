@@ -1,0 +1,44 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.env
+.env.*
+.venv
+env/
+venv/
+
+# Testing & Coverage
+.cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Xcode / Apple & Security Sensitive Patterns (Mandatory Leak Prevention)
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+GoogleService-Info.plist
+*.pem
+*.key
+*.p12
+
+# Bento runtime artifacts
+.bento_cache/
+reports/

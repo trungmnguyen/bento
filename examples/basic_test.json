@@ -1,0 +1,48 @@
+{
+  "name": "Core System Health Check",
+  "description": "Verifies python environment and basic shell execution",
+  "tags": [
+    "sanity",
+    "core"
+  ],
+  "steps": [
+    {
+      "name": "Python 3 Availability",
+      "command": "python3 --version",
+      "timeout_sec": 10,
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "expected": 0,
+          "target_field": "exit_code",
+          "description": "Exit code is 0"
+        },
+        {
+          "type": "CONTAINS",
+          "expected": "Python 3.",
+          "target_field": "stdout",
+          "description": "Standard output contains Python 3 version"
+        }
+      ]
+    },
+    {
+      "name": "JSON Output Evaluation",
+      "command": "python3 -c \"import json; print(json.dumps({'status': 'ok', 'score': 99}))\"",
+      "timeout_sec": 5,
+      "assertions": [
+        {
+          "type": "JSON_KEY_EXISTS",
+          "expected": "status",
+          "target_field": "stdout",
+          "description": "JSON payload has status key"
+        },
+        {
+          "type": "CONTAINS",
+          "expected": "99",
+          "target_field": "stdout",
+          "description": "Score value present"
+        }
+      ]
+    }
+  ]
+}
