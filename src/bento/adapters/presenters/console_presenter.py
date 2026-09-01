@@ -4,7 +4,13 @@ Zero side-effects: Returns pure strings and does not call print().
 """
 from __future__ import annotations
 import json
-from bento.domain.models import ScenarioResult, StepStatus, SuiteResult
+from bento.domain.models import (
+    AutoLoopResult,
+    AutoLoopStatus,
+    ScenarioResult,
+    StepStatus,
+    SuiteResult,
+)
 from bento.domain.ports import PresenterGateway
 
 
@@ -23,7 +29,7 @@ class ConsolePresenter(PresenterGateway):
             self._c("32;1", "[PASS]") if result.passed else self._c("31;1", "[FAIL]")
         )
         lines.append("")
-        lines.append(f"🍱 Bento Harness Run: {self._c("1", result.scenario_name)} {status_badge}")
+        lines.append(f"🍱 Bento Harness Run: {self._c('1', result.scenario_name)} {status_badge}")
         lines.append(f"⏱️  Total Duration: {result.total_duration_ms:.1f}ms")
         lines.append("─" * 60)
 
@@ -34,7 +40,7 @@ class ConsolePresenter(PresenterGateway):
                 else self._c("31", "✗ FAILED")
             )
             lines.append(f"  Step {idx}: {step.step_name} -> {step_badge} ({step.duration_ms:.1f}ms)")
-            lines.append(f"    Command: {self._c("90", step.command)}")
+            lines.append(f"    Command: {self._c('90', step.command)}")
 
             if step.assertion_results:
                 for a_res in step.assertion_results:
@@ -44,9 +50,9 @@ class ConsolePresenter(PresenterGateway):
 
             if (not step.status == StepStatus.PASSED or verbose) and (step.stdout or step.stderr):
                 if step.stdout:
-                    lines.append(f"    {self._c("36", "stdout:")} {step.stdout.strip()}")
+                    lines.append(f"    {self._c('36', 'stdout:')} {step.stdout.strip()}")
                 if step.stderr:
-                    lines.append(f"    {self._c("33", "stderr:")} {step.stderr.strip()}")
+                    lines.append(f"    {self._c('33', 'stderr:')} {step.stderr.strip()}")
 
         lines.append("─" * 60)
         return "\n".join(lines)
@@ -57,7 +63,7 @@ class ConsolePresenter(PresenterGateway):
             self._c("32;1", "ALL PASSED") if result.all_passed else self._c("31;1", "FAILURES DETECTED")
         )
         lines.append("")
-        lines.append(f"🍱 Bento Suite: {self._c("1", result.suite_name)} [{overall_badge}]")
+        lines.append(f"🍱 Bento Suite: {self._c('1', result.suite_name)} [{overall_badge}]")
         lines.append(f"📊 Pass Rate: {result.pass_rate:.1f}% ({result.passed_scenarios}/{result.total_scenarios} passed)")
         lines.append(f"⏱️  Suite Duration: {result.total_duration_ms:.1f}ms")
         lines.append("=" * 60)
@@ -69,7 +75,41 @@ class ConsolePresenter(PresenterGateway):
         lines.append("=" * 60)
         return "\n".join(lines)
 
-    def format_json(self, result: ScenarioResult | SuiteResult) -> str:
+    def format_auto_loop_result(self, result: AutoLoopResult, verbose: bool = False) -> str:
+        lines: list[str] = []
+        if result.succeeded:
+            badge = self._c("32;1", "🎉 SUCCESS (ALL ASSERTIONS MET)")
+        else:
+            badge = self._c("31;1", "⚠️ BUDGET EXHAUSTED")
+
+        lines.append("")
+        lines.append(f"🍱 Bento Autonomous Loop: {self._c('1', result.task_name)} [{badge}]")
+        lines.append(f"🔄 Iterations: {result.total_iterations}/{result.max_iterations} completed")
+        lines.append(f"⏱️  Total Duration: {result.total_duration_ms:.1f}ms")
+        if result.committed:
+            lines.append(f"💾 Git: Changes auto-committed to repository")
+        lines.append("─" * 60)
+
+        for it in result.iterations:
+            pass_status = (
+                self._c("32", "✓ PASSED")
+                if it.scenario_result.passed
+                else self._c("31", "✗ FAILED")
+            )
+            lines.append(f"  [Iteration {it.iteration_num}/{result.max_iterations}] -> {pass_status}")
+            if not it.scenario_result.passed or verbose:
+                for step in it.scenario_result.step_results:
+                    if step.status != StepStatus.PASSED:
+                        lines.append(f"    - Failed Step: {step.step_name}")
+                        if step.error_message:
+                            lines.append(f"      {self._c('33', step.error_message)}")
+
+        lines.append("─" * 60)
+        if result.final_scenario_result:
+            lines.append(self.format_scenario_result(result.final_scenario_result, verbose=verbose))
+        return "\n".join(lines)
+
+    def format_json(self, result: ScenarioResult | SuiteResult | AutoLoopResult) -> str:
         def serialize(obj):
             if hasattr(obj, "__dict__"):
                 return {k: serialize(v) for k, v in obj.__dict__.items()}

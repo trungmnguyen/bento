@@ -1,6 +1,6 @@
 # 🍱 Bento
 
-> **A Clean-Architecture Harness Engineering System for Orchestration, Ground-Truth Verification, and Closed-Loop Agent Workflows.**
+> **A Clean-Architecture Harness Engineering System for Orchestration, Ground-Truth Verification, and Autonomous Closed-Loop Agent Workflows.**
 
 Inspired by modern **Harness Engineering** paradigms (as championed by `@cyrilXBT`), **Bento** moves beyond running "naked" LLMs and untracked scripts. It provides the structured scaffolding, contracts, execution sandboxes, and deterministic verification gates necessary to govern, benchmark, and iteratively evaluate code and autonomous agents.
 
@@ -8,8 +8,8 @@ Inspired by modern **Harness Engineering** paradigms (as championed by `@cyrilXB
 
 ## 🌟 Key Capabilities
 
+- 🔁 **Autonomous Closed-Loop Engine (`bento auto`):** Automatically drives the *Builder (Agent) $\leftrightarrow$ Judge (Harness)* feedback loop until 100% of assertions pass.
 - 🍱 **Compartmentalized Clean Architecture:** Strict 4-layer separation (Pure Domain $ightarrow$ Use Cases $ightarrow$ Adapters $ightarrow$ Frameworks). Zero I/O in domain logic.
-- 🔁 **Closed-Loop Verification Machinery:** Wraps raw generation into a *Builder $ightarrow$ Executor $ightarrow$ Judge* evaluation loop.
 - 🎯 **Deterministic Ground-Truth Gates:** Native evaluators for stdout/stderr matching, exit codes, regex pattern assertions, JSON payload validation, and latency budgets.
 - 📊 **Rich Multi-Format Reporting:** Instant ANSI-colored terminal summaries, exportable JSON metrics, and markdown test logs.
 - 🚀 **Zero Heavy Dependencies:** Core system runs natively on Python 3.10+ standard library with pluggable gateways.
@@ -23,57 +23,64 @@ Bento enforces inward-only dependency boundaries:
 ```
 src/bento/
 ├── domain/            # Tier 1: Pure Domain Logic (Models, Assertion Rules, Protocol Ports)
-├── use_cases/         # Tier 2: Application Orchestration (RunScenario, RunSuite, Evaluate)
+├── use_cases/         # Tier 2: Application Orchestration (AutoLoop, RunScenario, RunSuite)
 ├── adapters/          # Tier 3: Interface Adapters (Parsers, Console/JSON Presenters, CLI Controller)
-└── frameworks/        # Tier 4: Frameworks & Drivers (Subprocess Executor, FS Storage, CLI Entrypoint)
+└── frameworks/        # Tier 4: Frameworks & Drivers (Agent Drivers, Subprocess Executor, Git Driver, CLI)
 ```
 
 For complete architectural specifications, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
 
-## 🚀 Quickstart
+## 🚀 Quickstart & CLI Commands
 
-### 1. Installation
+### 1. Installation (Making `bento` a CLI command)
 
-Editable local install:
+To make the `bento` command globally available in your terminal:
 ```bash
 cd /Users/tmnguyen/Dev/bento
 pip install -e .
 ```
+*(You can also run it directly without installing via `python3.12 -m bento.frameworks.cli`)*
 
-### 2. Run a Single Verification Scenario
+---
+
+### 2. Autonomous Closed-Loop Execution (`bento auto`)
+
+Give Bento a task objective and a ground-truth contract. Bento will invoke the AI agent, test the code, feed errors back automatically, and commit when green:
+
+```bash
+bento auto --task examples/task_demo.md --contract examples/task_contract.json --max-iterations 5 --auto-commit
+```
+
+Output:
+```
+🍱 Bento Autonomous Loop: Quant Calc Signal Normalizer Contract [🎉 SUCCESS (ALL ASSERTIONS MET)]
+🔄 Iterations: 2/5 completed
+⏱️  Total Duration: 41.2ms
+💾 Git: Changes auto-committed to repository
+────────────────────────────────────────────────────────────
+  [Iteration 1/5] -> ✗ FAILED
+    - Failed Step: Run Normalization
+      ZeroDivisionError on flat price series
+  [Iteration 2/5] -> ✓ PASSED
+────────────────────────────────────────────────────────────
+```
+
+---
+
+### 3. Run a Single Verification Scenario (`bento run`)
 
 ```bash
 bento run examples/basic_test.json
 ```
 
-Output:
-```
-🍱 Bento Harness Run: Core System Health Check [PASS]
-⏱️  Total Duration: 38.4ms
-────────────────────────────────────────────────────────────
-  Step 1: Python 3 Availability -> ✓ PASSED (15.9ms)
-    Command: python3 --version
-      ├─ ✓ Exit code is 0: Expected exit code 0, got 0
-      ├─ ✓ Standard output contains Python 3 version: Target 'stdout' contains 'Python 3.': True
-  Step 2: JSON Output Evaluation -> ✓ PASSED (22.3ms)
-    Command: python3 -c "import json; print(json.dumps({'status': 'ok', 'score': 99}))"
-      ├─ ✓ JSON payload has status key: Key 'status' found in JSON output: True
-      ├─ ✓ Score value present: Target 'stdout' contains '99': True
-────────────────────────────────────────────────────────────
-```
+---
 
-### 3. Run a Benchmark Suite
+### 4. Run a Benchmark Suite (`bento suite`)
 
 ```bash
 bento suite examples/ --name "Release Verification Suite"
-```
-
-### 4. Scaffold a New Scenario
-
-```bash
-bento init my_scenario.json
 ```
 
 ---

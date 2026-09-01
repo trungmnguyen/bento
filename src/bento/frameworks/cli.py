@@ -4,7 +4,13 @@ import argparse
 import sys
 from bento.adapters.controllers.cli_controller import CliController
 from bento.adapters.presenters.console_presenter import ConsolePresenter
+from bento.frameworks.agent_drivers import (
+    ClaudeCodeDriver,
+    GenericCommandDriver,
+    MockAgentDriver,
+)
 from bento.frameworks.fs_storage import FileSystemStorageGateway
+from bento.frameworks.git_driver import SubprocessGitGateway
 from bento.frameworks.subprocess_executor import SubprocessExecutionGateway
 from bento.use_cases.run_scenario import RunScenarioUseCase
 from bento.use_cases.run_suite import RunSuiteUseCase
@@ -31,27 +37,23 @@ SAMPLE_SCENARIO_TEMPLATE = """{
           "description": "Must run on Python 3"
         }
       ]
-    },
-    {
-      "name": "Math Calculation Verification",
-      "command": "python3 -c "import math; print(f'PI={math.pi:.4f}')"",
-      "assertions": [
-        {
-          "type": "CONTAINS",
-          "expected": "PI=3.1416",
-          "target_field": "stdout",
-          "description": "Math output matches expected pi constant"
-        }
-      ]
     }
   ]
 }
+"""
+
+SAMPLE_TASK_TEMPLATE = """# Task Objective
+Implement a robust calculation module in `calculator.py` that computes:
+1. `add(a, b)`
+2. `multiply(a, b)`
+3. Handles invalid string inputs safely without crashing.
 """
 
 
 def build_controller() -> CliController:
     storage = FileSystemStorageGateway()
     executor = SubprocessExecutionGateway()
+    git = SubprocessGitGateway()
     presenter = ConsolePresenter(use_color=sys.stdout.isatty())
     run_scenario_uc = RunScenarioUseCase(execution_gateway=executor)
     run_suite_uc = RunSuiteUseCase(run_scenario_use_case=run_scenario_uc)
@@ -61,13 +63,14 @@ def build_controller() -> CliController:
         run_suite_use_case=run_suite_uc,
         storage_gateway=storage,
         presenter=presenter,
+        git_gateway=git,
     )
 
 
 def main(args: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="bento",
-        description="🍱 Bento: Clean-Architecture Harness Engineering & Evaluation System",
+        description="🍱 Bento: Clean-Architecture Harness Engineering & Autonomous Closed-Loop System",
     )
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
@@ -83,6 +86,18 @@ def main(args: list[str] | None = None) -> int:
     suite_parser.add_argument("suite_dir", help="Directory containing scenario JSON files")
     suite_parser.add_argument("--name", default="Bento Test Suite", help="Suite display name")
     suite_parser.add_argument("--json", action="store_true", help="Output raw JSON result")
+
+    # bento auto --task <task.md> --contract <scenario.json>
+    auto_parser = subparsers.add_parser("auto", help="Run autonomous closed-loop agent iteration")
+    auto_parser.add_argument("--task", required=True, help="Path to task objective markdown file")
+    auto_parser.add_argument("--contract", required=True, help="Path to Bento ground-truth contract JSON")
+    auto_parser.add_argument("--max-iterations", type=int, default=5, help="Max self-healing iterations (default: 5)")
+    auto_parser.add_argument("--driver", choices=["claude", "generic", "mock"], default="claude", help="Agent driver")
+    auto_parser.add_argument("--driver-cmd", default="python3 agent_worker.py", help="Command for generic driver")
+    auto_parser.add_argument("--cwd", default=None, help="Override working directory")
+    auto_parser.add_argument("--auto-commit", action="store_true", help="Auto-commit git changes on success")
+    auto_parser.add_argument("--json", action="store_true", help="Output raw JSON result")
+    auto_parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
     # bento init <path>
     init_parser = subparsers.add_parser("init", help="Scaffold a sample scenario file")
@@ -111,6 +126,27 @@ def main(args: list[str] | None = None) -> int:
             directory=parsed.suite_dir,
             suite_name=parsed.name,
             json_output=parsed.json,
+        )
+        print(output)
+        return exit_code
+
+    elif parsed.command == "auto":
+        if parsed.driver == "claude":
+            driver = ClaudeCodeDriver()
+        elif parsed.driver == "generic":
+            driver = GenericCommandDriver(command_template=parsed.driver_cmd)
+        else:
+            driver = MockAgentDriver()
+
+        exit_code, output = controller.handle_auto_loop(
+            task_file=parsed.task,
+            contract_file=parsed.contract,
+            agent_gateway=driver,
+            max_iterations=parsed.max_iterations,
+            working_dir_override=parsed.cwd,
+            auto_commit=parsed.auto_commit,
+            json_output=parsed.json,
+            verbose=parsed.verbose,
         )
         print(output)
         return exit_code

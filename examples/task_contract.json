@@ -1,0 +1,36 @@
+{
+  "name": "Quant Calc Signal Normalizer Contract",
+  "description": "Deterministic assertions for price normalization and edge-case safety",
+  "tags": [
+    "quant",
+    "auto-loop",
+    "demo"
+  ],
+  "steps": [
+    {
+      "name": "Standard Normalization Test",
+      "command": "python3 -c \"import json; print(json.dumps({'normalized': [0.0, 0.5, 1.0], 'count': 3}))\"",
+      "timeout_sec": 5,
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "expected": 0,
+          "target_field": "exit_code",
+          "description": "Exit code is 0"
+        },
+        {
+          "type": "JSON_KEY_EXISTS",
+          "expected": "normalized",
+          "target_field": "stdout",
+          "description": "Key 'normalized' exists in output"
+        },
+        {
+          "type": "CONTAINS",
+          "expected": "[0.0, 0.5, 1.0]",
+          "target_field": "stdout",
+          "description": "Scaled correctly"
+        }
+      ]
+    }
+  ]
+}

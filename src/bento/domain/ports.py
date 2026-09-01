@@ -1,10 +1,10 @@
 """Domain Ports / Gateway Interfaces for Bento.
 
-Defines the contracts for execution, storage, timing, and formatting.
+Defines the contracts for execution, storage, agent invocation, and git.
 """
 from __future__ import annotations
 from typing import Protocol, runtime_checkable
-from bento.domain.models import ScenarioResult, SuiteResult
+from bento.domain.models import AgentResponse, ScenarioResult, SuiteResult
 
 
 @runtime_checkable
@@ -36,6 +36,20 @@ class StorageGateway(Protocol):
 
     def file_exists(self, path: str) -> bool:
         """Checks if a file exists."""
+        ...
+
+
+@runtime_checkable
+class AgentGateway(Protocol):
+    def execute_agent_task(self, prompt: str, working_dir: str | None = None) -> AgentResponse:
+        """Invokes the AI agent (Claude Code, Gemini, local model) to perform a task/code edit."""
+        ...
+
+
+@runtime_checkable
+class GitGateway(Protocol):
+    def commit_changes(self, message: str, working_dir: str | None = None) -> bool:
+        """Stages and commits changes to git repository."""
         ...
 
 

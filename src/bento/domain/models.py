@@ -111,3 +111,42 @@ class SuiteResult:
     @property
     def all_passed(self) -> bool:
         return self.failed_scenarios == 0
+
+
+# --- Autonomous Loop Domain Models ---
+
+class AutoLoopStatus(str, Enum):
+    SUCCESS = "SUCCESS"
+    BUDGET_EXHAUSTED = "BUDGET_EXHAUSTED"
+    ERROR = "ERROR"
+
+
+@dataclass(frozen=True)
+class AgentResponse:
+    content: str
+    exit_code: int = 0
+    raw_output: str = ""
+
+
+@dataclass(frozen=True)
+class AutoLoopIteration:
+    iteration_num: int
+    prompt_sent: str
+    agent_response: AgentResponse
+    scenario_result: ScenarioResult
+
+
+@dataclass(frozen=True)
+class AutoLoopResult:
+    task_name: str
+    status: AutoLoopStatus
+    total_iterations: int
+    max_iterations: int
+    iterations: list[AutoLoopIteration]
+    final_scenario_result: ScenarioResult | None
+    total_duration_ms: float
+    committed: bool = False
+
+    @property
+    def succeeded(self) -> bool:
+        return self.status == AutoLoopStatus.SUCCESS

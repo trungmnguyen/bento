@@ -11,6 +11,7 @@ from bento.domain.models import (
     AssertionResult,
     AssertionType,
     Scenario,
+    ScenarioResult,
     StepResult,
     StepStatus,
 )
@@ -70,7 +71,7 @@ def evaluate_assertion(assertion: Assertion, output_data: dict[str, Any]) -> Ass
         assertion=assertion,
         passed=passed,
         actual_value=actual,
-        message=message
+        message=message,
     )
 
 
@@ -101,3 +102,58 @@ def validate_scenario(scenario: Scenario) -> list[str]:
             errors.append(f"Step '{step.name}' timeout_sec must be greater than 0")
 
     return errors
+
+
+def build_initial_agent_prompt(task_description: str, scenario: Scenario) -> str:
+    lines = [
+        "You are the Builder Agent in the Bento Harness Engineering loop.",
+        "TASK OBJECTIVE:",
+        task_description.strip(),
+        "",
+        f"HARNESS VERIFICATION CONTRACT ({scenario.name}):",
+        "Your code will be evaluated by Bento against the following deterministic steps:",
+    ]
+    for idx, step in enumerate(scenario.steps, 1):
+        lines.append(f"  Step {idx}: {step.name}")
+        lines.append(f"    Command: {step.command}")
+        for a in step.assertions:
+            desc = a.description or a.type.value
+            lines.append(f"    - Expects: {desc} ({a.type.value}: {a.expected})")
+
+    lines.append("")
+    lines.append("Please implement or edit the necessary code files directly to fulfill this contract.")
+    return "\n".join(lines)
+
+
+def build_corrective_agent_prompt(
+    task_description: str,
+    scenario_result: ScenarioResult,
+    iteration: int,
+) -> str:
+    lines = [
+        f"Bento Harness Verification FAILED on iteration {iteration}.",
+        "Please inspect the failure details below and fix the implementation.",
+        "",
+        "TASK OBJECTIVE:",
+        task_description.strip(),
+        "",
+        "FAILED VERIFICATION REPORT:",
+    ]
+    for step in scenario_result.step_results:
+        if step.status != StepStatus.PASSED:
+            lines.append(f"❌ Step FAILED: {step.step_name}")
+            lines.append(f"   Command: {step.command}")
+            lines.append(f"   Exit Code: {step.exit_code}")
+            if step.assertion_results:
+                for a_res in step.assertion_results:
+                    if not a_res.passed:
+                        desc = a_res.assertion.description or a_res.assertion.type.value
+                        lines.append(f"   - Failed Assertion [{desc}]: {a_res.message}")
+            if step.stderr:
+                lines.append(f"   Stderr Output:\n   {step.stderr.strip()}")
+            if step.stdout:
+                lines.append(f"   Stdout Output:\n   {step.stdout.strip()}")
+
+    lines.append("")
+    lines.append("Please edit the code files to resolve these specific errors and satisfy all assertions.")
+    return "\n".join(lines)
