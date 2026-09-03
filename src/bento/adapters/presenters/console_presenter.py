@@ -214,6 +214,39 @@ class ConsolePresenter(PresenterGateway):
         lines.append("=" * 60)
         return "\n".join(lines)
 
+
+    def format_bg_tasks(self, tasks: list[dict]) -> str:
+        lines: list[str] = []
+        lines.append("")
+        lines.append(f"🎩 {self._c('1', 'Bento Background Tasks (Butler Daemon)')}")
+        lines.append("─" * 65)
+        if not tasks:
+            lines.append("  (No active or past background tasks found).")
+        else:
+            lines.append(f"  {'Task ID':<12} {'Tag':<15} {'Status':<12} {'PID':<8} {'Command'}")
+            lines.append("─" * 65)
+            for t in tasks:
+                status_str = t.get("status", "UNKNOWN")
+                color = "32" if status_str == "RUNNING" else ("33" if status_str == "STOPPED" else "31")
+                badge = self._c(color, status_str)
+                lines.append(f"  {t.get('id', ''):<12} {t.get('tag', 'task'):<15} {badge:<21} {str(t.get('pid', '')):<8} {t.get('command', '')[:25]}")
+        lines.append("─" * 65)
+        return "\n".join(lines)
+
+    def format_bg_status(self, info: dict) -> str:
+        lines: list[str] = []
+        status_str = info.get("status", "UNKNOWN")
+        color = "32;1" if status_str == "RUNNING" else "33"
+        badge = self._c(color, status_str)
+        lines.append("")
+        lines.append(f"🎩 Bento Task: {self._c('1', info.get('id', ''))} [{badge}]")
+        lines.append(f"🏷️  Tag: {info.get('tag', '')} | PID: {info.get('pid', '')}")
+        lines.append(f"⏱️  Started: {info.get('started_at', '')}")
+        lines.append(f"📁 Log File: {info.get('log_file', '')}")
+        lines.append(f"💻 Command: {self._c('90', info.get('command', ''))}")
+        lines.append("─" * 60)
+        return "\n".join(lines)
+
     def format_json(self, result: Any) -> str:
         def serialize(obj):
             if hasattr(obj, "__dict__"):

@@ -55,6 +55,8 @@
 - **Location:** `src/bento/frameworks/`
 - **Rules:** Concrete external tools, standard library CLI parsers, OS interactions, and file system operations.
 - **Components:**
+  - `bg_runner.py`: Detached background daemon process manager (`bento bg`).
+  - `watcher.py`: Ambient file modification watcher (`bento watch`).
   - `cli.py`: CLI entry point (`bento run`, `bento suite`, `bento auto`, `bento arena`, `bento swarm`, `bento optimize`, `bento dream`, `bento memory`, `bento init`).
   - `agent_drivers.py`: Concrete `AgentGateway` & `SwarmGateway` implementations (`ClaudeCodeDriver`, `GenericCommandDriver`, `SwarmDispatcherDriver`, `MockAgentDriver`).
   - `worktree_driver.py`: Concrete `WorktreeGateway` implementing isolated git worktree branch creation and merging.

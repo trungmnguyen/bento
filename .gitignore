@@ -42,3 +42,6 @@ GoogleService-Info.plist
 # Bento runtime artifacts
 .bento_cache/
 reports/
+
+# Bento background daemon artifacts
+.bento/bg/

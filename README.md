@@ -107,6 +107,46 @@ bento dream --benchmarks examples/
 
 ---
 
+
+### 7. The Butler: Background Daemon Runner (`bento bg`)
+
+Delegate long-running or CPU-intensive tasks (e.g. overnight dream cycles, adversarial arena sparring, auto-healing loops) to run detached in the background:
+
+```bash
+# Start a background task
+bento bg run "bento dream --benchmarks examples/" --tag "nightly-dream"
+
+# Check active background tasks
+bento bg list
+
+# View live logs of a background task
+bento bg logs <task_id> -n 50
+
+# Check status metadata
+bento bg status <task_id>
+
+# Terminate a running task
+bento bg kill <task_id>
+```
+
+---
+
+### 8. Ambient Continuous Watcher (`bento watch`)
+
+Continuously monitors code and contract files, auto-evaluating assertions the millisecond you save:
+
+```bash
+bento watch examples/basic_test.json --dir src/
+```
+
+---
+
+### 9. Antigravity Skill (`bento-harness`)
+
+Bento is integrated with **Google Antigravity (AGY)** as an official skill (`.agents/skills/bento-harness/SKILL.md` and `~/.gemini/config/plugins/bento-plugin/`). AI agents can autonomously query Bento's memory bank, delegate background tasks, and run verification contracts.
+
+---
+
 ## 🧪 Running Tests
 
 ```bash

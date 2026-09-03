@@ -310,3 +310,104 @@ class CliController:
         updated_bank = bank.add_lesson(lesson)
         self._memory.save_memory(updated_bank, working_dir=working_dir)
         return 0, f"🧠 Added rule [{lesson.id}] '{title}' to Bento memory bank."
+
+    def handle_bg_run(
+        self,
+        command: str,
+        tag: str = "task",
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        from bento.frameworks.bg_runner import BackgroundTaskRunner
+        runner = BackgroundTaskRunner()
+        task_info = runner.start_task(command=command, tag=tag, working_dir=working_dir)
+
+        if json_output:
+            return 0, self._presenter.format_json(task_info)
+
+        out = (
+            f"🎩 Bento Background Task Spawned Successfully!\n"
+            f"  ID: {task_info['id']} | Tag: {task_info['tag']} | PID: {task_info['pid']}\n"
+            f"  Log: {task_info['log_file']}\n"
+            f"  To view logs: bento bg logs {task_info['id']}\n"
+            f"  To check status: bento bg status {task_info['id']}"
+        )
+        return 0, out
+
+    def handle_bg_list(
+        self,
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        from bento.frameworks.bg_runner import BackgroundTaskRunner
+        runner = BackgroundTaskRunner()
+        tasks = runner.list_tasks(working_dir=working_dir)
+
+        if json_output:
+            return 0, self._presenter.format_json(tasks)
+        return 0, self._presenter.format_bg_tasks(tasks)
+
+    def handle_bg_status(
+        self,
+        task_id: str,
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        from bento.frameworks.bg_runner import BackgroundTaskRunner
+        runner = BackgroundTaskRunner()
+        info = runner.get_status(task_id, working_dir=working_dir)
+        if not info:
+            return 1, f"Error: Task '{task_id}' not found."
+
+        if json_output:
+            return 0, self._presenter.format_json(info)
+        return 0, self._presenter.format_bg_status(info)
+
+    def handle_bg_logs(
+        self,
+        task_id: str,
+        lines: int = 50,
+        working_dir: str | None = None,
+    ) -> tuple[int, str]:
+        from bento.frameworks.bg_runner import BackgroundTaskRunner
+        runner = BackgroundTaskRunner()
+        logs = runner.get_logs(task_id, lines=lines, working_dir=working_dir)
+        return 0, logs
+
+    def handle_bg_kill(
+        self,
+        task_id: str,
+        working_dir: str | None = None,
+    ) -> tuple[int, str]:
+        from bento.frameworks.bg_runner import BackgroundTaskRunner
+        runner = BackgroundTaskRunner()
+        killed = runner.kill_task(task_id, working_dir=working_dir)
+        if killed:
+            return 0, f"🎩 Successfully terminated background task '{task_id}'."
+        return 1, f"Error: Could not terminate task '{task_id}'."
+
+    def handle_watch(
+        self,
+        scenario_file: str,
+        watch_dir: str = ".",
+        working_dir: str | None = None,
+        max_cycles: int | None = None,
+    ) -> int:
+        from bento.frameworks.watcher import AmbientWatcher
+        print(f"🎩 Bento Ambient Watcher Active...")
+        print(f"👀 Watching '{watch_dir}' -> Auto-evaluating contract '{scenario_file}' on save")
+        print("─" * 65)
+
+        # Initial run
+        self.handle_run_scenario_file(scenario_file, working_dir_override=working_dir)
+
+        watcher = AmbientWatcher(watch_dir=watch_dir)
+
+        def on_change(files: list[str]) -> None:
+            names = [Path(f).name for f in files[:3]]
+            print(f"\n⚡ Changes detected in: {', '.join(names)} -> Re-evaluating contract...")
+            exit_code, output = self.handle_run_scenario_file(scenario_file, working_dir_override=working_dir)
+            print(output)
+
+        watcher.run_watch_loop(on_change_callback=on_change, max_cycles=max_cycles)
+        return 0

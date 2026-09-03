@@ -141,6 +141,41 @@ def main(args: list[str] | None = None) -> int:
     mem_add.add_argument("--tags", nargs="*", default=[], help="Tags")
     mem_add.add_argument("--cwd", default=None, help="Working directory")
 
+
+    # bento bg (Butler Background Runner)
+    bg_parser = subparsers.add_parser("bg", help="Manage detached background harness tasks (Butler Daemon)")
+    bg_sub = bg_parser.add_subparsers(dest="bg_action", help="Background actions")
+    
+    bg_run = bg_sub.add_parser("run", help="Run a command detached in the background")
+    bg_run.add_argument("cmd", help="Command to run in background (e.g. 'bento dream --benchmarks examples')")
+    bg_run.add_argument("--tag", default="task", help="Tag/label for this background task")
+    bg_run.add_argument("--cwd", default=None, help="Working directory")
+    bg_run.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    bg_list = bg_sub.add_parser("list", help="List active and past background tasks")
+    bg_list.add_argument("--cwd", default=None, help="Working directory")
+    bg_list.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    bg_status = bg_sub.add_parser("status", help="Get status and metadata for a background task")
+    bg_status.add_argument("task_id", help="Background task ID (e.g. bg-123456)")
+    bg_status.add_argument("--cwd", default=None, help="Working directory")
+    bg_status.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    bg_logs = bg_sub.add_parser("logs", help="View logs for a background task")
+    bg_logs.add_argument("task_id", help="Background task ID")
+    bg_logs.add_argument("-n", "--lines", type=int, default=50, help="Number of log lines to show")
+    bg_logs.add_argument("--cwd", default=None, help="Working directory")
+
+    bg_kill = bg_sub.add_parser("kill", help="Terminate a running background task")
+    bg_kill.add_argument("task_id", help="Background task ID to kill")
+    bg_kill.add_argument("--cwd", default=None, help="Working directory")
+
+    # bento watch (Ambient File Watcher)
+    watch_parser = subparsers.add_parser("watch", help="Continuously watch files and auto-evaluate contract on save")
+    watch_parser.add_argument("scenario_file", help="Path to scenario JSON to evaluate on save")
+    watch_parser.add_argument("--dir", default=".", help="Directory to watch for file changes")
+    watch_parser.add_argument("--cwd", default=None, help="Working directory")
+
     # bento init <path>
     init_parser = subparsers.add_parser("init", help="Scaffold a sample scenario file")
     init_parser.add_argument("output_path", default="scenario.json", nargs="?", help="Output file path")
@@ -256,6 +291,58 @@ def main(args: list[str] | None = None) -> int:
             )
             print(output)
             return exit_code
+
+
+    elif parsed.command == "bg":
+        if parsed.bg_action == "run":
+            exit_code, output = controller.handle_bg_run(
+                command=parsed.cmd,
+                tag=parsed.tag,
+                working_dir=parsed.cwd,
+                json_output=parsed.json,
+            )
+            print(output)
+            return exit_code
+        elif parsed.bg_action == "list":
+            exit_code, output = controller.handle_bg_list(
+                working_dir=parsed.cwd,
+                json_output=parsed.json,
+            )
+            print(output)
+            return exit_code
+        elif parsed.bg_action == "status":
+            exit_code, output = controller.handle_bg_status(
+                task_id=parsed.task_id,
+                working_dir=parsed.cwd,
+                json_output=parsed.json,
+            )
+            print(output)
+            return exit_code
+        elif parsed.bg_action == "logs":
+            exit_code, output = controller.handle_bg_logs(
+                task_id=parsed.task_id,
+                lines=parsed.lines,
+                working_dir=parsed.cwd,
+            )
+            print(output)
+            return exit_code
+        elif parsed.bg_action == "kill":
+            exit_code, output = controller.handle_bg_kill(
+                task_id=parsed.task_id,
+                working_dir=parsed.cwd,
+            )
+            print(output)
+            return exit_code
+        else:
+            bg_parser.print_help()
+            return 0
+
+    elif parsed.command == "watch":
+        return controller.handle_watch(
+            scenario_file=parsed.scenario_file,
+            watch_dir=parsed.dir,
+            working_dir=parsed.cwd,
+        )
 
     elif parsed.command == "init":
         storage = FileSystemStorageGateway()
