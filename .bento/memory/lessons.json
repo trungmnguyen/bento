@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-09-01",
+  "updated_at": "2026-09-03",
   "lessons": [
     {
       "id": "MEM-50790948",
@@ -14,6 +14,132 @@
         "architecture"
       ],
       "source_scenario": ""
+    },
+    {
+      "id": "MEM-RSI-RANGE",
+      "title": "John Hayden RSI 80/40 & 60/20 Range Rules",
+      "category": "quant-rsi-regime",
+      "context": "RSI behaves logarithmically with the highest price sensitivity in the 40-60 zone. It defines macro bull vs. bear market regimes.",
+      "rule": "Bull Trend: RSI ranges 80/40 (finds support at 40 US, resistance at 80 UR; Avg Gain > Avg Loss). Bear Trend: RSI ranges 60/20 (finds resistance at 60 DS, support at 20 DR; Avg Loss > Avg Gain). Equilibrium midline is 50 MD. Violation of 40 in an uptrend or 60 in a downtrend signals the regime is in jeopardy from longer timeframe capital.",
+      "anti_pattern": "Treating RSI > 70 as an automatic short or < 30 as an automatic long. In strong bull markets, RSI routinely travels into 70-80 and respects 40 support; shorting based on retail overbought assumptions leads to severe losses.",
+      "discovery_date": "2026-09-03",
+      "tags": [
+        "quant",
+        "rsi",
+        "indicator",
+        "trend",
+        "regime",
+        "trading"
+      ],
+      "source_scenario": "RSI Curriculum (John Hayden)"
+    },
+    {
+      "id": "MEM-RSI-MDRP",
+      "title": "Momentum Discrepancy Reversal Points (MDRP)",
+      "category": "quant-rsi-mdrp",
+      "context": "Detects when shorter timeframe counter-trend traders overextend during pullbacks, confirming dominant trend continuation.",
+      "rule": "Bullish MDRP: In an uptrend, RSI dips BELOW a prior RSI trough, but price remains HIGHER than the prior price trough (signals pullback exhaustion and impending rally continuation). Bearish MDRP: In a downtrend, RSI rallies ABOVE a prior RSI peak, but price remains LOWER than the prior price peak. Calculate upside/downside price objectives by projecting reference swing distance from the intervening close.",
+      "anti_pattern": "Mistaking an MDRP for a trend reversal. Counter-trend momentum overextension in an established trend is a high-probability continuation signal for the higher timeframe.",
+      "discovery_date": "2026-09-03",
+      "tags": [
+        "quant",
+        "rsi",
+        "mdrp",
+        "divergence",
+        "continuation",
+        "trading"
+      ],
+      "source_scenario": "RSI Curriculum (MDRP Section)"
+    },
+    {
+      "id": "MEM-RSI-STUDY",
+      "title": "RSI Dual Moving Average Crossover Formula",
+      "category": "quant-rsi-formula",
+      "context": "Custom ThinkScript/PineScript lower study plotting smoothed momentum shifts on RSI.",
+      "rule": "Calculate RSI(14), Fast EMA(9) of RSI, and Slow WMA(45) of RSI. BuyForm trigger: rsi[1] < ema[1] and rsi[1] < wma[1] and rsi > ema and rsi > wma. SellForm trigger: rsi[1] > ema[1] and rsi[1] > wma[1] and rsi < ema and rsi < wma. Slow WMA(45) serves as dynamic support/resistance for RSI pullbacks.",
+      "anti_pattern": "Entering crossovers when the moving averages are misaligned with price trend or failing to confirm with price EMAs.",
+      "discovery_date": "2026-09-03",
+      "tags": [
+        "quant",
+        "rsi",
+        "thinkscript",
+        "pinescript",
+        "indicator",
+        "crossover"
+      ],
+      "source_scenario": "RSI Data Curriculum (ThinkScript Study)"
+    },
+    {
+      "id": "MEM-TREND-RIBBON",
+      "title": "Multi-Timeframe Trend Ribbon & 6-Chart Alignment",
+      "category": "quant-trend-ribbon",
+      "context": "Distinguishes immediate momentum from structural macro regimes across 3m, 5m, 15m, 30m, 1H, 4H grid.",
+      "rule": "Momentum Band: EMA 8 & EMA 21 (Yellow). Structural Band: SMA 50 & SMA 200 (Blue, secular line in the sand). Confirmed Uptrend: Yellow Band stacked above Blue Band. Top-Down Alignment: Macro (4H/1H) establishes compass; Intermediate (30m/15m) confirms structure; Granular (5m/3m) executes timing. Never take short trades when 4H/Daily trend ribbon is expanding upwards.",
+      "anti_pattern": "Counter-trend scalping on 1m/3m against expanding 1H/4H trend ribbons. Micro noise is invalidated by macro institutional capital.",
+      "discovery_date": "2026-09-03",
+      "tags": [
+        "quant",
+        "trend",
+        "ribbon",
+        "timeframe",
+        "moving-averages",
+        "trading"
+      ],
+      "source_scenario": "RSI Curriculum (Timeframes Hierarchy)"
+    },
+    {
+      "id": "MEM-FIB-TRIM",
+      "title": "Fibonacci Entry & Multi-Tier EMA Trimming Execution",
+      "category": "quant-execution",
+      "context": "Strategic entry on pullbacks rather than FOMO chasing, with scaled exits to lock in gains.",
+      "rule": "Enter long on pullbacks to Fib 38.2% (strong), 50% (medium), or 61.8% (Golden Pocket) confluence near EMA 21. Stop-loss: tight 2-3 points below entry Fib. Scaled Trimming: Exit 1/4 when price crosses below EMA 8; exit 1/2 when price crosses below EMA 21; exit final 1/4 when price crosses below SMA 50. In established trend, reasonable long entry is the Fib level right above EMA 21.",
+      "anti_pattern": "Chasing green candles with FOMO at highs without waiting for a Fibonacci pullback, or holding full position through EMA 8/21 breakdown without trimming.",
+      "discovery_date": "2026-09-03",
+      "tags": [
+        "quant",
+        "fibonacci",
+        "execution",
+        "trimming",
+        "stop-loss",
+        "risk-management"
+      ],
+      "source_scenario": "RSI Curriculum (Fib retracement & Rules)"
+    },
+    {
+      "id": "MEM-TRAPS-MAGNET",
+      "title": "80/20 Traps & Choppy Market Magnet Scalps",
+      "category": "quant-setups",
+      "context": "Handling momentum exhaustion traps and sideways equilibrium ranges.",
+      "rule": "Bull Trap Pattern: 0. RSI hits 80 at local high -> 1. Price pulls back on Fib -> 2. RSI makes multiple lows under RSI EMA 9 -> 3. Price bounces to previous high for trap resolution. Magnet Chop Scalp: When RSI hovers near 50 and EMAs compress flat, WMA 45 acts as a gravitational magnet. If RSI extends far from WMA 45, enter on crossover back over EMA 9 targeting the exact touch of WMA 45. Exit immediately upon touching WMA 45.",
+      "anti_pattern": "Expecting trend continuation in a sideways market where RSI hovers at 50; failing to take profit at WMA 45 in chop results in immediate mean-reversion reversal.",
+      "discovery_date": "2026-09-03",
+      "tags": [
+        "quant",
+        "rsi",
+        "traps",
+        "magnet",
+        "scalp",
+        "chop",
+        "mean-reversion"
+      ],
+      "source_scenario": "RSI Curriculum (Trap patterns & Magnet sideway)"
+    },
+    {
+      "id": "MEM-PSYCH-RULES",
+      "title": "Mark Douglas Probability Axioms & Consistency Protocol",
+      "category": "psychology",
+      "context": "Trading success is 80% psychology and 20% methodology. Eliminating fear through probability thinking.",
+      "rule": "Embrace the 5 Fundamental Truths: 1. Anything can happen. 2. You don't need to know what happens next to make money. 3. There is a random distribution between wins and losses for any edge. 4. An edge is only a higher probability of one thing over another. 5. Every moment in the market is unique. Execute the 7 Principles of Consistency: objectively identify edges, predefine risk on EVERY trade, accept risk completely, act without hesitation, pay yourself as market makes money available, monitor error susceptibility, and never violate rules.",
+      "anti_pattern": "Moving stop losses, revenge trading, or hesitating to enter a valid signal due to memory of past losses. Demanding the market conform to one's beliefs instead of making uncommitted probability assessments.",
+      "discovery_date": "2026-09-03",
+      "tags": [
+        "psychology",
+        "discipline",
+        "risk-management",
+        "probability",
+        "trading"
+      ],
+      "source_scenario": "RSI Curriculum (Trading Psychology)"
     }
   ]
 }

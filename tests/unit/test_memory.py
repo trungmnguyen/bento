@@ -66,6 +66,22 @@ class TestMemoryRules(unittest.TestCase):
         self.assertEqual(len(matched), 1)
         self.assertEqual(matched[0].id, "MEM-001")
 
+    def test_filter_rsi_curriculum_lessons_from_disk(self):
+        from bento.frameworks.fs_memory import FileSystemMemoryGateway
+        gateway = FileSystemMemoryGateway()
+        bank = gateway.load_memory()
+        
+        # Verify 8 total lessons
+        self.assertGreaterEqual(len(bank.lessons), 8)
+        
+        # Test query for RSI task
+        rsi_lessons = filter_relevant_lessons(bank, tags=["rsi"], task_description="Implement RSI crossover indicator")
+        lesson_ids = [l.id for l in rsi_lessons]
+        self.assertIn("MEM-RSI-RANGE", lesson_ids)
+        self.assertIn("MEM-RSI-MDRP", lesson_ids)
+        self.assertIn("MEM-RSI-STUDY", lesson_ids)
+
+
 
 class TestMemorySelfEvolution(unittest.TestCase):
     def test_auto_loop_distills_and_injects_into_subsequent_tasks(self):
