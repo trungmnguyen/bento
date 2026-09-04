@@ -95,14 +95,23 @@ bento auto --task examples/task_demo.md --contract examples/task_contract.json -
 
 ---
 
-### 6. Memory Bank & Overnight Dream Cycle (`bento memory`, `bento dream`)
+### 6. Level 5: Autonomous "Dreaming" & Trace Harvester (`bento dream`)
+
+Implements Anthropic-grade Harness Engineering (*"Turn yesterday's logs into new memory and skills — the harness wakes up smarter"*):
+- Ingests event-sourced traces from `.bento/traces/*.jsonl`.
+- Clusters multi-iteration repairs and sandbox crashes to synthesize new `MemoryLesson` rules & anti-patterns.
+- Crystallizes recurring command patterns into reusable procedural skill macros.
+- Executes regression benchmark sparring battery.
 
 ```bash
 # List active memory rules
 bento memory list
 
-# Run overnight Dream Cycle maintenance
-bento dream --benchmarks examples/
+# Run overnight Dream Cycle with trace harvesting
+bento dream --benchmarks examples/ --harvest
+
+# Run benchmarks only without log harvesting
+bento dream --benchmarks examples/ --no-harvest
 ```
 
 ---

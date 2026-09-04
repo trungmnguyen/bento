@@ -15,6 +15,7 @@ from bento.domain.ports import (
     MemoryGateway,
     StorageGateway,
     SwarmGateway,
+    TraceGateway,
     WorktreeGateway,
 )
 from bento.use_cases.auto_loop import AutoLoopUseCase
@@ -37,6 +38,7 @@ class CliController:
         git_gateway: GitGateway | None = None,
         memory_gateway: MemoryGateway | None = None,
         worktree_gateway: WorktreeGateway | None = None,
+        trace_gateway: TraceGateway | None = None,
     ):
         self._run_scenario = run_scenario_use_case
         self._run_suite = run_suite_use_case
@@ -45,6 +47,7 @@ class CliController:
         self._git = git_gateway
         self._memory = memory_gateway
         self._worktree = worktree_gateway
+        self._trace = trace_gateway
 
     def handle_run_scenario_file(
         self,
@@ -121,6 +124,7 @@ class CliController:
             run_scenario_use_case=self._run_scenario,
             git_gateway=self._git,
             memory_gateway=self._memory,
+            trace_gateway=self._trace,
         )
 
         result = auto_loop_uc.execute(
@@ -144,6 +148,7 @@ class CliController:
         self,
         benchmarks_dir: str = "examples",
         working_dir: str | None = None,
+        harvest_traces: bool = True,
         json_output: bool = False,
     ) -> tuple[int, str]:
         if not self._memory:
@@ -153,9 +158,14 @@ class CliController:
             memory_gateway=self._memory,
             storage_gateway=self._storage,
             run_suite_use_case=self._run_suite,
+            trace_gateway=self._trace,
         )
 
-        result = dream_uc.execute(benchmarks_dir=benchmarks_dir, working_dir=working_dir)
+        result = dream_uc.execute(
+            benchmarks_dir=benchmarks_dir,
+            working_dir=working_dir,
+            harvest_traces=harvest_traces,
+        )
 
         if json_output:
             output = self._presenter.format_json(result)

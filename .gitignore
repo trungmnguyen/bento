@@ -45,3 +45,7 @@ reports/
 
 # Bento background daemon artifacts
 .bento/bg/
+
+# Bento trace logs
+.bento/traces/
+

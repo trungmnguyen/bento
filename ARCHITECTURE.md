@@ -25,9 +25,9 @@
 - **Location:** `src/bento/domain/`
 - **Rules:** Pure Python logic, zero external dependencies, strictly NO I/O.
 - **Components:**
-  - `models.py`: Immutable domain entities (`Scenario`, `Step`, `Assertion`, `StepResult`, `ScenarioResult`, `SuiteResult`, `AutoLoopResult`, `MemoryBank`, `MemoryLesson`, `DreamCycleResult`, `ArenaResult`, `ArenaRound`, `SwarmRole`, `SwarmPipelineResult`, `OptimizerResult`).
-  - `rules.py`: Pure assertion rules, prompt synthesizers, memory distillation algorithms, AST Clean Architecture validators (`validate_clean_architecture_ast`), and candidate ranking algorithms.
-  - `ports.py`: Interface Protocols (`ExecutionGateway`, `StorageGateway`, `AgentGateway`, `SwarmGateway`, `WorktreeGateway`, `GitGateway`, `MemoryGateway`, `PresenterGateway`, `ClockGateway`).
+  - `models.py`: Immutable domain entities (`Scenario`, `Step`, `Assertion`, `StepResult`, `ScenarioResult`, `SuiteResult`, `AutoLoopResult`, `MemoryBank`, `MemoryLesson`, `DreamCycleResult`, `TraceEvent`, `CrystallizedSkill`, `ArenaResult`, `ArenaRound`, `SwarmRole`, `SwarmPipelineResult`, `OptimizerResult`).
+  - `rules.py`: Pure assertion rules, prompt synthesizers, memory distillation algorithms, AST Clean Architecture validators (`validate_clean_architecture_ast`), candidate ranking algorithms, and Level 5 trace analyzers (`analyze_traces_for_lessons`, `detect_recurring_skill_patterns`).
+  - `ports.py`: Interface Protocols (`ExecutionGateway`, `StorageGateway`, `AgentGateway`, `SwarmGateway`, `WorktreeGateway`, `GitGateway`, `MemoryGateway`, `TraceGateway`, `PresenterGateway`, `ClockGateway`).
   - `exceptions.py`: Domain exception hierarchy.
 
 ### 2. Use Cases (Application Orchestration)
@@ -37,9 +37,9 @@
   - `run_arena.py`: Coordinates Adversarial Red-Team (Attacker) vs Blue-Team (Builder) sparring rounds.
   - `run_swarm.py`: Coordinates Architect $\rightarrow$ Builder $\rightarrow$ Auditor $\rightarrow$ Judge swarm pipelines.
   - `optimize_prompts.py`: Benchmarks and ranks model / prompt candidates.
-  - `auto_loop.py`: Coordinates the autonomous *Builder <-> Judge* loop with memory injection and auto-distillation.
+  - `auto_loop.py`: Coordinates the autonomous *Builder <-> Judge* loop with memory injection, auto-distillation, and append-only trace emission.
   - `distill_memory.py`: Extracts lessons from self-healing runs and generates regression contracts.
-  - `dream_cycle.py`: Orchestrates overnight memory consolidation and benchmark battery execution.
+  - `dream_cycle.py`: Orchestrates overnight trace harvesting, offline memory consolidation, skill crystallization, and benchmark battery execution.
   - `run_scenario.py`: Executes scenario steps sequentially and evaluates assertion rules.
   - `run_suite.py`: Executes batches of scenarios and aggregates benchmark metrics.
 
@@ -47,7 +47,7 @@
 - **Location:** `src/bento/adapters/`
 - **Rules:** Translates data between external representations and domain formats.
 - **Components:**
-  - `parsers/scenario_parser.py`: Parses JSON / YAML / dict scenario definitions into validated Domain entities.
+  - `parsers/scenario_parser.py`: Parses and serializes JSON / YAML / dict scenario definitions into validated Domain entities.
   - `presenters/console_presenter.py`: Formats Domain results into ANSI-colored terminal summaries, Markdown tables, or JSON strings. (Zero `print` side-effects).
   - `controllers/cli_controller.py`: Translates CLI invocation arguments into Use Case requests and invokes presenters.
 
@@ -55,6 +55,7 @@
 - **Location:** `src/bento/frameworks/`
 - **Rules:** Concrete external tools, standard library CLI parsers, OS interactions, and file system operations.
 - **Components:**
+  - `fs_trace.py`: Concrete `FileSystemTraceGateway` managing append-only event trace logs in `.bento/traces/`.
   - `bg_runner.py`: Detached background daemon process manager (`bento bg`).
   - `watcher.py`: Ambient file modification watcher (`bento watch`).
   - `cli.py`: CLI entry point (`bento run`, `bento suite`, `bento auto`, `bento arena`, `bento swarm`, `bento optimize`, `bento dream`, `bento memory`, `bento init`).

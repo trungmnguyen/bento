@@ -1,5 +1,6 @@
 """AutoLoopUseCase: Autonomous closed-loop iteration engine with Memory Injection & Auto-Distillation."""
 from __future__ import annotations
+import datetime
 import time
 from bento.domain.models import (
     AutoLoopIteration,
@@ -8,8 +9,9 @@ from bento.domain.models import (
     MemoryLesson,
     Scenario,
     ScenarioResult,
+    TraceEvent,
 )
-from bento.domain.ports import AgentGateway, GitGateway, MemoryGateway
+from bento.domain.ports import AgentGateway, GitGateway, MemoryGateway, TraceGateway
 from bento.domain.rules import (
     build_corrective_agent_prompt,
     build_initial_agent_prompt,
@@ -26,11 +28,13 @@ class AutoLoopUseCase:
         run_scenario_use_case: RunScenarioUseCase,
         git_gateway: GitGateway | None = None,
         memory_gateway: MemoryGateway | None = None,
+        trace_gateway: TraceGateway | None = None,
     ):
         self._agent_gateway = agent_gateway
         self._run_scenario = run_scenario_use_case
         self._git_gateway = git_gateway
         self._memory_gateway = memory_gateway
+        self._trace_gateway = trace_gateway
 
     def execute(
         self,
@@ -83,6 +87,23 @@ class AutoLoopUseCase:
                 scenario_result=scenario_result,
             )
             iterations.append(iteration_record)
+
+            if self._trace_gateway:
+                now_iso = datetime.datetime.now().isoformat()
+                failed_msgs = [a.message for a in scenario_result.failed_assertions]
+                event = TraceEvent(
+                    timestamp=now_iso,
+                    task_name=scenario.name,
+                    iteration=i,
+                    event_type="iteration",
+                    prompt_sent=prompt[:500],
+                    agent_output=agent_response.content[:500],
+                    exit_code=agent_response.exit_code,
+                    passed=scenario_result.passed,
+                    failed_assertions=failed_msgs,
+                    tags=scenario.tags,
+                )
+                self._trace_gateway.append_trace_event(event, working_dir=effective_cwd)
 
             # Check for completion
             if scenario_result.passed:

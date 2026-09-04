@@ -14,6 +14,7 @@ from bento.domain.models import (
     AssertionResult,
     AssertionType,
     AutoLoopIteration,
+    CrystallizedSkill,
     MemoryBank,
     MemoryLesson,
     OptimizerCandidate,
@@ -23,6 +24,7 @@ from bento.domain.models import (
     StepResult,
     StepStatus,
     SuiteResult,
+    TraceEvent,
 )
 
 
@@ -390,3 +392,95 @@ def rank_optimizer_candidates(
     # Sort descending by score
     rankings.sort(key=lambda r: r.score, reverse=True)
     return rankings
+
+
+# --- Level 5: Dreaming Engine & Trace Synthesis Pure Rules ---
+
+def analyze_traces_for_lessons(
+    events: list[TraceEvent],
+    existing_lesson_ids: set[str] | None = None,
+) -> list[MemoryLesson]:
+    """Analyzes historical execution traces to synthesize lessons from multi-iteration recoveries and errors."""
+    existing_ids = existing_lesson_ids or set()
+    discovered_lessons: list[MemoryLesson] = []
+
+    # Group events by task name
+    events_by_task: dict[str, list[TraceEvent]] = {}
+    for ev in events:
+        events_by_task.setdefault(ev.task_name, []).append(ev)
+
+    for task_name, task_events in events_by_task.items():
+        # Sort chronologically or by iteration
+        task_events.sort(key=lambda e: (e.timestamp, e.iteration))
+
+        # Check for multi-iteration recovery: an early failure followed by a later pass
+        failures = [e for e in task_events if not e.passed or e.failed_assertions]
+        successes = [e for e in task_events if e.passed and not e.failed_assertions]
+
+        if failures and successes:
+            first_fail = failures[0]
+            last_success = successes[-1]
+
+            # Only consider it a recovery if success came at or after failure
+            if last_success.iteration > first_fail.iteration or (
+                last_success.iteration == first_fail.iteration and last_success.timestamp >= first_fail.timestamp
+            ):
+                fail_reasons = "; ".join(first_fail.failed_assertions) if first_fail.failed_assertions else "contract assertion failure"
+                hash_key = f"{task_name}_{fail_reasons}"
+                lesson_id = f"MEM-DREAM-{hashlib.md5(hash_key.encode()).hexdigest()[:8].upper()}"
+
+                if lesson_id not in existing_ids:
+                    discovery_date = (
+                        last_success.timestamp.split("T")[0]
+                        if "T" in last_success.timestamp
+                        else datetime.datetime.now().strftime("%Y-%m-%d")
+                    )
+                    all_tags = list(set(first_fail.tags + last_success.tags + ["dream-distilled", "harness-recovery"]))
+
+                    discovered_lessons.append(
+                        MemoryLesson(
+                            id=lesson_id,
+                            title=f"Autonomous Recovery Guard: {task_name}",
+                            category="auto-dream-distilled",
+                            context=f"Task '{task_name}' failed at iteration {first_fail.iteration} due to: [{fail_reasons}], but recovered cleanly at iteration {last_success.iteration}.",
+                            rule=f"Always satisfy contract requirements: {fail_reasons}",
+                            anti_pattern=f"Initial failing mode: {fail_reasons}",
+                            discovery_date=discovery_date,
+                            tags=all_tags,
+                            source_scenario=task_name,
+                        )
+                    )
+                    existing_ids.add(lesson_id)
+
+    return discovered_lessons
+
+
+def detect_recurring_skill_patterns(
+    events: list[TraceEvent],
+    min_occurrences: int = 2,
+) -> list[CrystallizedSkill]:
+    """Identifies recurring execution patterns across traces and crystallizes them into reusable procedural skills."""
+    skills: list[CrystallizedSkill] = []
+    events_by_task: dict[str, list[TraceEvent]] = {}
+    for ev in events:
+        events_by_task.setdefault(ev.task_name, []).append(ev)
+
+    for task_name, task_events in events_by_task.items():
+        if len(task_events) >= min_occurrences:
+            all_tags = list(set(tag for ev in task_events for tag in ev.tags))
+            skill_name = f"skill-{task_name.lower().replace(' ', '-')}"
+            skills.append(
+                CrystallizedSkill(
+                    name=skill_name,
+                    description=f"Autonomous skill macro synthesized from recurring task '{task_name}' ({len(task_events)} executions observed)",
+                    trigger_tags=all_tags,
+                    steps=[
+                        f"Step 1: Check pre-conditions for {task_name}",
+                        f"Step 2: Execute validated deterministic routine for {task_name}",
+                        f"Step 3: Verify output assertions",
+                    ],
+                )
+            )
+
+    return skills
+

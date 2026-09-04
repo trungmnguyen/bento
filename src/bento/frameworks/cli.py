@@ -12,6 +12,7 @@ from bento.frameworks.agent_drivers import (
 )
 from bento.frameworks.fs_memory import FileSystemMemoryGateway
 from bento.frameworks.fs_storage import FileSystemStorageGateway
+from bento.frameworks.fs_trace import FileSystemTraceGateway
 from bento.frameworks.git_driver import SubprocessGitGateway
 from bento.frameworks.subprocess_executor import SubprocessExecutionGateway
 from bento.frameworks.worktree_driver import SubprocessWorktreeGateway
@@ -52,6 +53,7 @@ def build_controller() -> CliController:
     git = SubprocessGitGateway()
     memory = FileSystemMemoryGateway()
     worktree = SubprocessWorktreeGateway()
+    trace = FileSystemTraceGateway()
     presenter = ConsolePresenter(use_color=sys.stdout.isatty())
     run_scenario_uc = RunScenarioUseCase(execution_gateway=executor)
     run_suite_uc = RunSuiteUseCase(run_scenario_use_case=run_scenario_uc)
@@ -64,6 +66,7 @@ def build_controller() -> CliController:
         git_gateway=git,
         memory_gateway=memory,
         worktree_gateway=worktree,
+        trace_gateway=trace,
     )
 
 
@@ -125,6 +128,8 @@ def main(args: list[str] | None = None) -> int:
     dream_parser = subparsers.add_parser("dream", help="Run overnight memory consolidation & benchmark sparring")
     dream_parser.add_argument("--benchmarks", default="examples", help="Directory containing benchmarks")
     dream_parser.add_argument("--cwd", default=None, help="Working directory")
+    dream_parser.add_argument("--harvest", dest="harvest", action="store_true", default=True, help="Harvest traces from recent runs (default: True)")
+    dream_parser.add_argument("--no-harvest", dest="harvest", action="store_false", help="Skip trace harvesting")
     dream_parser.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # bento memory
@@ -267,6 +272,7 @@ def main(args: list[str] | None = None) -> int:
         exit_code, output = controller.handle_dream_cycle(
             benchmarks_dir=parsed.benchmarks,
             working_dir=parsed.cwd,
+            harvest_traces=parsed.harvest,
             json_output=parsed.json,
         )
         print(output)

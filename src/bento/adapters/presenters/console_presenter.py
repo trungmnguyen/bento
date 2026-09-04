@@ -144,7 +144,20 @@ class ConsolePresenter(PresenterGateway):
         lines: list[str] = []
         lines.append("")
         lines.append(f"🌙 {self._c('1;35', 'Bento Dream Cycle Maintenance Completed')}")
-        lines.append(f"🧠 Memory Bank: {result.consolidated_lessons_count} active rules enforced")
+        lines.append(f"🧠 Memory Bank: {result.consolidated_lessons_count} active rules enforced ({result.new_lessons_discovered} newly harvested)")
+        if result.harvested_lessons:
+            lines.append("─" * 60)
+            lines.append(f"✨ {self._c('1;32', 'Harvested Lessons from Yesterday\'s Logs')}:")
+            for l in result.harvested_lessons:
+                lines.append(f"  - [{self._c('36', l.id)}] {self._c('1', l.title)}")
+                lines.append(f"    Rule: {self._c('32', l.rule)}")
+                if l.anti_pattern:
+                    lines.append(f"    Anti-Pattern: {self._c('31', l.anti_pattern)}")
+        if result.crystallized_skills:
+            lines.append("─" * 60)
+            lines.append(f"🛠️  {self._c('1;34', 'Crystallized Procedural Skills')}:")
+            for s in result.crystallized_skills:
+                lines.append(f"  - [{self._c('33', s.name)}] {s.description}")
         lines.append(f"⏱️  Duration: {result.total_duration_ms:.1f}ms")
         lines.append("─" * 60)
         lines.append(self.format_suite_result(result.suite_result))

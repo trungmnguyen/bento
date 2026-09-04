@@ -16,6 +16,7 @@ from bento.domain.models import (
     SuiteResult,
     SwarmPipelineResult,
     SwarmRole,
+    TraceEvent,
 )
 
 
@@ -99,6 +100,17 @@ class MemoryGateway(Protocol):
 
     def save_regression_scenario(self, scenario: Scenario, working_dir: str | None = None) -> str:
         """Saves an auto-generated regression scenario to the benchmark suite directory."""
+        ...
+
+
+@runtime_checkable
+class TraceGateway(Protocol):
+    def append_trace_event(self, event: TraceEvent, working_dir: str | None = None) -> None:
+        """Appends a structured trace event to persistent storage."""
+        ...
+
+    def load_recent_traces(self, max_traces: int = 50, working_dir: str | None = None) -> list[TraceEvent]:
+        """Loads historical trace events from storage."""
         ...
 
 

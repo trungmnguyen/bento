@@ -184,11 +184,35 @@ class MemoryBank:
 
 
 @dataclass(frozen=True)
+class TraceEvent:
+    timestamp: str
+    task_name: str
+    iteration: int
+    event_type: str  # "iteration", "task_completed", "task_failed", "sandbox_error"
+    prompt_sent: str = ""
+    agent_output: str = ""
+    exit_code: int = 0
+    passed: bool = False
+    failed_assertions: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class CrystallizedSkill:
+    name: str
+    description: str
+    trigger_tags: list[str] = field(default_factory=list)
+    steps: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class DreamCycleResult:
     consolidated_lessons_count: int
     new_lessons_discovered: int
     suite_result: SuiteResult
     total_duration_ms: float
+    harvested_lessons: list[MemoryLesson] = field(default_factory=list)
+    crystallized_skills: list[CrystallizedSkill] = field(default_factory=list)
 
 
 # --- Level 4: Adversarial Self-Play, Swarms & Optimizer Models ---

@@ -58,3 +58,40 @@ class ScenarioParser:
     def from_json(cls, json_str: str) -> Scenario:
         data = json.loads(json_str)
         return cls.from_dict(data)
+
+    @classmethod
+    def to_dict(cls, scenario: Scenario) -> dict[str, Any]:
+        return {
+            "name": scenario.name,
+            "description": scenario.description,
+            "tags": scenario.tags,
+            "working_dir": scenario.working_dir,
+            "max_loop_iterations": scenario.max_loop_iterations,
+            "metadata": scenario.metadata,
+            "steps": [
+                {
+                    "name": s.name,
+                    "command": s.command,
+                    "cwd": s.cwd,
+                    "env": s.env,
+                    "timeout_sec": s.timeout_sec,
+                    "max_retries": s.max_retries,
+                    "feedback_template": s.feedback_template,
+                    "assertions": [
+                        {
+                            "type": a.type.value if hasattr(a.type, "value") else str(a.type),
+                            "expected": a.expected,
+                            "target_field": a.target_field,
+                            "description": a.description,
+                        }
+                        for a in s.assertions
+                    ],
+                }
+                for s in scenario.steps
+            ],
+        }
+
+    @classmethod
+    def to_json(cls, scenario: Scenario, indent: int = 2) -> str:
+        return json.dumps(cls.to_dict(scenario), indent=indent)
+
