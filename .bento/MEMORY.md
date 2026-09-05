@@ -1,6 +1,6 @@
 # 🧠 Bento Persistent Memory Bank
 
-> Auto-distilled architectural rules and edge-case guards (8 rules stored).
+> Auto-distilled architectural rules and edge-case guards (9 rules stored).
 
 ### `[MEM-50790948]` Clean Architecture Port Rule
 - **Category:** `architecture` | **Discovered:** 2026-09-01
@@ -48,3 +48,8 @@
 - **Hard Rule:** Embrace the 5 Fundamental Truths: 1. Anything can happen. 2. You don't need to know what happens next to make money. 3. There is a random distribution between wins and losses for any edge. 4. An edge is only a higher probability of one thing over another. 5. Every moment in the market is unique. Execute the 7 Principles of Consistency: objectively identify edges, predefine risk on EVERY trade, accept risk completely, act without hesitation, pay yourself as market makes money available, monitor error susceptibility, and never violate rules.
 - **Anti-Pattern:** Moving stop losses, revenge trading, or hesitating to enter a valid signal due to memory of past losses. Demanding the market conform to one's beliefs instead of making uncommitted probability assessments.
 - **Tags:** psychology, discipline, risk-management, probability, trading
+
+### `[MEM-5B610E02]` Bento-Harness Orchestration Protocol
+- **Category:** `orchestration` | **Discovered:** 2026-09-04
+- **Hard Rule:** Whenever bento-harness skill is invoked, orchestrate tasks through Bento: check memory, define ground-truth contracts, execute with Builder/Auditor, and verify with bento run before declaring complete.
+- **Tags:** orchestra,workflow,contract
