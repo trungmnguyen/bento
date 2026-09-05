@@ -2,6 +2,7 @@
 import json
 import shutil
 import tempfile
+import time
 import unittest
 import urllib.error
 import urllib.request
@@ -54,6 +55,18 @@ class MockTraceGateway:
 
 
 class MockRunSuiteUseCase:
+    def __init__(self):
+        class MockRunScenario:
+            def execute(self, scenario):
+                from bento.domain.models import ScenarioResult
+                return ScenarioResult(
+                    scenario_name=getattr(scenario, "name", "mock_scenario"),
+                    passed=True,
+                    total_duration_ms=1.0,
+                    step_results=[],
+                )
+        self._run_scenario = MockRunScenario()
+
     def execute(self, scenarios, suite_name=""):
         from bento.domain.models import SuiteResult
         return SuiteResult(
@@ -266,6 +279,35 @@ class TestBentoWebServer(unittest.TestCase):
         status, body = self._get("/")
         self.assertEqual(status, 200)
         self.assertIn("Bento UI Test", body)
+
+    def test_api_bg_prune(self):
+        # Spawn a short-lived task
+        _, run_body = self._post("/api/bg/run", {"command": "echo 'quick'", "tag": "test-prune"})
+        time.sleep(0.3)
+
+        status, body = self._post("/api/bg/prune", {})
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertIn("pruned_tasks_count", data)
+
+    def test_api_memory_add(self):
+        payload = {
+            "title": "Clean Domain Ports",
+            "rule": "Domain entities must not depend on database or network models",
+            "category": "architecture",
+            "anti_pattern": "Passing ORM objects into pure calculations",
+            "tags": ["architecture", "clean-code"],
+        }
+        status, body = self._post("/api/memory/add", payload)
+        self.assertEqual(status, 201)
+        data = json.loads(body)
+        self.assertTrue(data.get("success"))
+        self.assertEqual(data["lesson"]["title"], "Clean Domain Ports")
+        self.assertTrue(data["lesson"]["id"].startswith("MEM-"))
+
+        # Test validation failure
+        bad_status, bad_body = self._post("/api/memory/add", {"title": ""})
+        self.assertEqual(bad_status, 400)
 
 
 if __name__ == "__main__":

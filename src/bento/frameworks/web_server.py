@@ -1,6 +1,7 @@
 """BentoWebServer: Zero-dependency embedded HTTP server serving REST API and React dashboard."""
 from __future__ import annotations
 import datetime
+import hashlib
 import json
 import mimetypes
 import os
@@ -13,7 +14,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from bento.adapters.parsers.scenario_parser import ScenarioParser
-from bento.domain.models import Scenario, TraceEvent
+from bento.domain.models import MemoryLesson, Scenario, TraceEvent
 from bento.domain.ports import MemoryGateway, StorageGateway, TraceGateway
 from bento.domain.rules import detect_recurring_skill_patterns
 from bento.frameworks.bg_runner import BackgroundTaskRunner
@@ -255,6 +256,101 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                         ],
                     }
                     for r in suite_res.scenario_results
+                ],
+            }
+            return self._send_json(data)
+
+        elif path == "/api/bg/prune":
+            pruned_count = self.bg_runner.prune_tasks(stopped_only=True)
+            return self._send_json({"pruned_tasks_count": pruned_count})
+
+        elif path == "/api/memory/add":
+            title = str(payload.get("title", "")).strip()
+            rule = str(payload.get("rule", "")).strip()
+            category = str(payload.get("category", "general")).strip() or "general"
+            anti_pattern = str(payload.get("anti_pattern", "")).strip()
+            tags_raw = payload.get("tags")
+            if isinstance(tags_raw, list):
+                tags = [str(t).strip() for t in tags_raw if str(t).strip()]
+            elif isinstance(tags_raw, str) and tags_raw.strip():
+                tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+            else:
+                tags = [category]
+
+            if not title or not rule:
+                return self._send_json({"error": "Title and rule are required fields."}, status=400)
+
+            h = hashlib.sha256(f"{title}_{rule}".encode()).hexdigest()[:8]
+            lesson = MemoryLesson(
+                id=f"MEM-{h.upper()}",
+                title=title,
+                category=category,
+                context="Added via Bento Web Dashboard",
+                rule=rule,
+                anti_pattern=anti_pattern,
+                discovery_date=datetime.datetime.now().strftime("%Y-%m-%d"),
+                tags=tags,
+            )
+            bank = self.memory_gateway.load_memory()
+            updated_bank = bank.add_lesson(lesson)
+            self.memory_gateway.save_memory(updated_bank)
+            return self._send_json({
+                "success": True,
+                "lesson": {
+                    "id": lesson.id,
+                    "title": lesson.title,
+                    "category": lesson.category,
+                    "context": lesson.context,
+                    "rule": lesson.rule,
+                    "anti_pattern": lesson.anti_pattern,
+                    "discovery_date": lesson.discovery_date,
+                    "tags": lesson.tags,
+                }
+            }, status=201)
+
+        elif path == "/api/benchmarks/run-one":
+            scenario_name = str(payload.get("name", "")).strip()
+            if not scenario_name:
+                return self._send_json({"error": "Scenario name is required"}, status=400)
+
+            scenarios = self._load_all_scenarios()
+            target_scenario = next((s for s in scenarios if s.name == scenario_name), None)
+            if not target_scenario:
+                return self._send_json({"error": f"Scenario '{scenario_name}' not found"}, status=404)
+
+            scenario_res = self.run_suite_uc._run_scenario.execute(target_scenario)
+
+            if self.trace_gateway:
+                failed_msgs = [
+                    sr.error_message
+                    for sr in scenario_res.step_results
+                    if sr.error_message
+                ]
+                event = TraceEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    task_name=scenario_res.scenario_name,
+                    iteration=1,
+                    event_type="web_benchmark_single_run",
+                    prompt_sent=f"Web Dashboard Single Tasting: {target_scenario.name}",
+                    agent_output=f"Passed: {scenario_res.passed}",
+                    exit_code=0 if scenario_res.passed else 1,
+                    passed=scenario_res.passed,
+                    failed_assertions=failed_msgs,
+                    tags=target_scenario.tags,
+                )
+                self.trace_gateway.append_trace_event(event)
+
+            data = {
+                "scenario_name": scenario_res.scenario_name,
+                "passed": scenario_res.passed,
+                "total_duration_ms": scenario_res.total_duration_ms,
+                "step_results": [
+                    {
+                        "step_name": sr.step_name,
+                        "status": sr.status.value,
+                        "error_message": sr.error_message,
+                    }
+                    for sr in scenario_res.step_results
                 ],
             }
             return self._send_json(data)
