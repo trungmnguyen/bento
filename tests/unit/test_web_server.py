@@ -253,7 +253,7 @@ class TestBentoWebServer(unittest.TestCase):
         self.assertEqual(status, 200)
         data = json.loads(body)
         self.assertEqual(data["task_id"], task_id)
-        self.assertIn("log_file", dir(self.bg_runner) if False else "logs")
+        self.assertIn("logs", data)
 
     def test_api_dream_endpoint(self):
         status, body = self._post("/api/dream", {})

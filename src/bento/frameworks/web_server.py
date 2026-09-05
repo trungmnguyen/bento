@@ -1,9 +1,11 @@
 """BentoWebServer: Zero-dependency embedded HTTP server serving REST API and React dashboard."""
 from __future__ import annotations
+import datetime
 import json
 import mimetypes
 import os
 import re
+import socket
 import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -11,7 +13,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from bento.adapters.parsers.scenario_parser import ScenarioParser
-from bento.domain.models import Scenario
+from bento.domain.models import Scenario, TraceEvent
 from bento.domain.ports import MemoryGateway, StorageGateway, TraceGateway
 from bento.domain.rules import detect_recurring_skill_patterns
 from bento.frameworks.bg_runner import BackgroundTaskRunner
@@ -209,6 +211,28 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         elif path == "/api/benchmarks/run":
             scenarios = self._load_all_scenarios()
             suite_res = self.run_suite_uc.execute(scenarios, suite_name="Bento Live Battery")
+
+            if self.trace_gateway:
+                for s, r in zip(scenarios, suite_res.scenario_results):
+                    failed_msgs = [
+                        sr.error_message
+                        for sr in r.step_results
+                        if sr.error_message
+                    ]
+                    event = TraceEvent(
+                        timestamp=datetime.datetime.now().isoformat(),
+                        task_name=r.scenario_name,
+                        iteration=1,
+                        event_type="web_benchmark_run",
+                        prompt_sent="Web Dashboard Bento Live Battery",
+                        agent_output=f"Passed: {r.passed}",
+                        exit_code=0 if r.passed else 1,
+                        passed=r.passed,
+                        failed_assertions=failed_msgs,
+                        tags=s.tags,
+                    )
+                    self.trace_gateway.append_trace_event(event)
+
             data = {
                 "suite_name": suite_res.suite_name,
                 "passed_scenarios": suite_res.passed_scenarios,
@@ -302,6 +326,16 @@ def _get_network_ip() -> str:
         return "127.0.0.1"
 
 
+class FastThreadingHTTPServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer that bypasses blocking reverse DNS lookups (socket.getfqdn) on bind."""
+    def server_bind(self):
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind(self.server_address)
+        self.server_address = self.socket.getsockname()
+        self.server_name = str(self.server_address[0])
+        self.server_port = self.server_address[1]
+
+
 class BentoWebServer:
     def __init__(
         self,
@@ -337,7 +371,7 @@ class BentoWebServer:
         handler_cls.static_dir = self.static_dir
         handler_cls.start_time = time.monotonic()
 
-        self._server = ThreadingHTTPServer((self.host, self.port), handler_cls)
+        self._server = FastThreadingHTTPServer((self.host, self.port), handler_cls)
         self.port = self._server.server_address[1]
         local_url = f"http://localhost:{self.port}"
         net_ip = _get_network_ip()

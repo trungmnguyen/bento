@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-09-04",
+  "updated_at": "2026-09-05",
   "lessons": [
     {
       "id": "MEM-50790948",
@@ -151,6 +151,19 @@
       "discovery_date": "2026-09-04",
       "tags": [
         "orchestra,workflow,contract"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-39FBCFF0",
+      "title": "Bento Trace Emitter Port",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "All scenario and suite execution controllers must emit structured TraceEvents to TraceGateway to feed the sensory dream harbor.",
+      "anti_pattern": "Running scenarios without emitting execution traces, starving the dream cycle of sensory data.",
+      "discovery_date": "2026-09-05",
+      "tags": [
+        "architecture"
       ],
       "source_scenario": ""
     }

@@ -1,6 +1,6 @@
 # 🧠 Bento Persistent Memory Bank
 
-> Auto-distilled architectural rules and edge-case guards (9 rules stored).
+> Auto-distilled architectural rules and edge-case guards (10 rules stored).
 
 ### `[MEM-50790948]` Clean Architecture Port Rule
 - **Category:** `architecture` | **Discovered:** 2026-09-01
@@ -53,3 +53,9 @@
 - **Category:** `orchestration` | **Discovered:** 2026-09-04
 - **Hard Rule:** Whenever bento-harness skill is invoked, orchestrate tasks through Bento: check memory, define ground-truth contracts, execute with Builder/Auditor, and verify with bento run before declaring complete.
 - **Tags:** orchestra,workflow,contract
+
+### `[MEM-39FBCFF0]` Bento Trace Emitter Port
+- **Category:** `architecture` | **Discovered:** 2026-09-05
+- **Hard Rule:** All scenario and suite execution controllers must emit structured TraceEvents to TraceGateway to feed the sensory dream harbor.
+- **Anti-Pattern:** Running scenarios without emitting execution traces, starving the dream cycle of sensory data.
+- **Tags:** architecture

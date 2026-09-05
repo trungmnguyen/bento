@@ -8,6 +8,8 @@ from bento.domain.models import (
     MemoryLesson,
     OptimizerCandidate,
     Scenario,
+    ScenarioResult,
+    TraceEvent,
 )
 from bento.domain.ports import (
     AgentGateway,
@@ -49,6 +51,36 @@ class CliController:
         self._worktree = worktree_gateway
         self._trace = trace_gateway
 
+    def _record_scenario_trace(
+        self,
+        scenario: Scenario,
+        result: ScenarioResult,
+        event_type: str = "scenario_run",
+        prompt: str = "",
+        working_dir: str | None = None,
+    ) -> None:
+        if not self._trace:
+            return
+        failed_msgs = [
+            f"{sr.step.name}: {ar.message}"
+            for sr in result.step_results
+            for ar in sr.assertion_results
+            if not ar.passed
+        ]
+        event = TraceEvent(
+            timestamp=datetime.datetime.now().isoformat(),
+            task_name=scenario.name,
+            iteration=1,
+            event_type=event_type,
+            prompt_sent=prompt or f"bento run {scenario.name}",
+            agent_output=f"Passed: {result.passed}, steps: {len(result.step_results)}",
+            exit_code=0 if result.passed else 1,
+            passed=result.passed,
+            failed_assertions=failed_msgs,
+            tags=scenario.tags,
+        )
+        self._trace.append_trace_event(event, working_dir=working_dir)
+
     def handle_run_scenario_file(
         self,
         file_path: str,
@@ -62,6 +94,13 @@ class CliController:
         content = self._storage.read_text(file_path)
         scenario = ScenarioParser.from_json(content)
         result = self._run_scenario.execute(scenario, working_dir_override)
+        self._record_scenario_trace(
+            scenario,
+            result,
+            event_type="scenario_run",
+            prompt=f"bento run {file_path}",
+            working_dir=working_dir_override,
+        )
 
         if json_output:
             output = self._presenter.format_json(result)
@@ -90,6 +129,14 @@ class CliController:
                 return 1, f"Error parsing scenario '{f_path}': {e}"
 
         result = self._run_suite.execute(scenarios, suite_name=suite_name)
+        if self._trace:
+            for s, s_res in zip(scenarios, result.scenario_results):
+                self._record_scenario_trace(
+                    s,
+                    s_res,
+                    event_type="suite_run",
+                    prompt=f"bento suite {directory}",
+                )
 
         if json_output:
             output = self._presenter.format_json(result)
