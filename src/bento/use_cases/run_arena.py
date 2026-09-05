@@ -1,5 +1,5 @@
-"""RunArenaUseCase: Coordinates Adversarial Red-Team (Attacker) vs Blue-Team (Builder) sparring loop."""
-from __future__ import annotations
+import datetime
+import hashlib
 import json
 import time
 from bento.adapters.parsers.scenario_parser import ScenarioParser
@@ -7,11 +7,13 @@ from bento.domain.models import (
     AgentResponse,
     ArenaResult,
     ArenaRound,
+    MemoryLesson,
     Scenario,
     ScenarioResult,
     StepStatus,
+    TraceEvent,
 )
-from bento.domain.ports import AgentGateway, MemoryGateway
+from bento.domain.ports import AgentGateway, MemoryGateway, TraceGateway
 from bento.domain.rules import (
     build_adversarial_attacker_prompt,
     build_adversarial_builder_prompt,
@@ -28,11 +30,13 @@ class RunArenaUseCase:
         builder_gateway: AgentGateway,
         run_scenario_use_case: RunScenarioUseCase,
         memory_gateway: MemoryGateway | None = None,
+        trace_gateway: TraceGateway | None = None,
     ):
         self._attacker = attacker_gateway
         self._builder = builder_gateway
         self._run_scenario = run_scenario_use_case
         self._memory = memory_gateway
+        self._trace = trace_gateway
 
     def execute(
         self,
@@ -97,9 +101,40 @@ class RunArenaUseCase:
                 if post_patch_eval.passed:
                     exploits_patched_count += 1
                     eval_result = post_patch_eval
-                    # Save hardened test into permanent regressions
+                    # Save hardened test into permanent regressions and distill memory rule
                     if self._memory:
                         self._memory.save_regression_scenario(attacker_scenario, working_dir=effective_cwd)
+                        h = hashlib.sha256(f"Arena_{attacker_scenario.name}_{r}".encode()).hexdigest()[:8]
+                        failed_msgs = [sr.error_message for sr in eval_result.step_results if sr.error_message]
+                        lesson = MemoryLesson(
+                            id=f"MEM-{h.upper()}",
+                            title=f"Adversarial Defense: {attacker_scenario.name}",
+                            category="adversarial-hardening",
+                            context=f"Discovered and patched in Bento Arena Round {r}",
+                            rule=f"Defend against exploit in '{attacker_scenario.name}'. Resisted by: {builder_resp.content[:150]}",
+                            anti_pattern=failed_msgs[0] if failed_msgs else f"Pathological failure in {attacker_scenario.name}",
+                            discovery_date=datetime.datetime.now().strftime("%Y-%m-%d"),
+                            tags=["arena", "adversarial", *attacker_scenario.tags],
+                        )
+                        bank = self._memory.load_memory(working_dir=effective_cwd)
+                        self._memory.save_memory(bank.add_lesson(lesson), working_dir=effective_cwd)
+
+            # Emit sensory trace event to feed Dream Harbor
+            if self._trace:
+                failed_msgs = [sr.error_message for sr in eval_result.step_results if sr.error_message]
+                trace_event = TraceEvent(
+                    timestamp=datetime.datetime.now().isoformat(),
+                    task_name=f"Arena: {attacker_scenario.name}",
+                    iteration=r,
+                    event_type="arena_round",
+                    prompt_sent=attacker_prompt[:500],
+                    agent_output=builder_resp.content[:500],
+                    exit_code=0 if eval_result.passed else 1,
+                    passed=eval_result.passed,
+                    failed_assertions=failed_msgs,
+                    tags=["arena", *attacker_scenario.tags],
+                )
+                self._trace.append_trace_event(trace_event, working_dir=effective_cwd)
 
             round_record = ArenaRound(
                 round_num=r,
