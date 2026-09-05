@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Square, RefreshCw, Clock, CheckCircle2, XCircle, Flame, Sparkles } from 'lucide-react';
+import { Square, RefreshCw, Clock, CheckCircle2, XCircle, Flame, Sparkles, Trash2 } from 'lucide-react';
 import { ChefTamagoIcon, SoyFishIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { BackgroundTask } from '../types';
 
@@ -15,6 +15,8 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const [newCmd, setNewCmd] = useState<string>('');
   const [newTag, setNewTag] = useState<string>('kitchen-task');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isPruning, setIsPruning] = useState<boolean>(false);
+  const [pruneMessage, setPruneMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchLogs = async (taskId: string) => {
@@ -69,6 +71,26 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     }
   };
 
+  const handlePrune = async () => {
+    setIsPruning(true);
+    setPruneMessage(null);
+    setActionError(null);
+    try {
+      const res = await fetch('/api/bg/prune', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setPruneMessage(`🧹 Kitchen Swept! Cleaned ${data.pruned_tasks_count || 0} finished task(s).`);
+        onRefresh();
+      } else {
+        setActionError('Failed to sweep kitchen.');
+      }
+    } catch (err) {
+      setActionError('Failed to sweep kitchen.');
+    } finally {
+      setIsPruning(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Kitchen Order Launch Panel */}
@@ -110,6 +132,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
           </button>
         </form>
         {actionError && <p className="text-bento-salmon text-xs mt-2">{actionError}</p>}
+        {pruneMessage && <p className="text-emerald-400 text-xs mt-2 font-medium">{pruneMessage}</p>}
       </div>
 
       {/* Task Process Table */}
@@ -118,13 +141,24 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
           <h2 className="text-base font-bold text-gray-100 flex items-center gap-2">
             <BentoBoxIcon className="w-5 h-5" /> Kitchen Orders & Daemons ({tasks.length})
           </h2>
-          <button
-            onClick={onRefresh}
-            className="p-2 hover:bg-bento-border rounded-xl text-gray-400 hover:text-white transition"
-            title="Refresh kitchen orders"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrune}
+              disabled={isPruning}
+              className="px-3 py-1.5 bg-bento-lacquer hover:bg-bento-border border border-bento-border rounded-xl text-xs font-semibold text-gray-300 hover:text-white transition flex items-center gap-1.5 disabled:opacity-50"
+              title="Prune finished tasks and dead logs"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-bento-salmon" />
+              <span>{isPruning ? 'Sweeping...' : 'Sweep Kitchen 🧹'}</span>
+            </button>
+            <button
+              onClick={onRefresh}
+              className="p-2 hover:bg-bento-border rounded-xl text-gray-400 hover:text-white transition"
+              title="Refresh kitchen orders"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {tasks.length === 0 ? (

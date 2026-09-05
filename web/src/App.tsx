@@ -284,7 +284,7 @@ export default function App() {
       {/* Main Compartment Canvas */}
       <main className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 flex-1 pb-safe">
         {activeTab === 'daemons' && <DaemonView tasks={tasks} onRefresh={fetchAllData} />}
-        {activeTab === 'memory' && <MemoryView lessons={lessons} />}
+        {activeTab === 'memory' && <MemoryView lessons={lessons} onRefresh={fetchAllData} />}
         {activeTab === 'traces' && <TracesView traces={traces} skills={skills} onRefresh={fetchAllData} />}
         {activeTab === 'benchmarks' && <BenchmarksView scenarios={scenarios} onRefresh={fetchAllData} />}
       </main>

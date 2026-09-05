@@ -10,8 +10,32 @@ interface BenchmarksViewProps {
 
 export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRefresh }) => {
   const [running, setRunning] = useState(false);
+  const [runningSingle, setRunningSingle] = useState<string | null>(null);
+  const [singleResults, setSingleResults] = useState<Record<string, any>>({});
   const [suiteResult, setSuiteResult] = useState<SuiteResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+
+  const handleRunSingle = async (scenarioName: string) => {
+    setRunningSingle(scenarioName);
+    try {
+      const res = await fetch('/api/benchmarks/run-one', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: scenarioName }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSingleResults((prev) => ({ ...prev, [scenarioName]: data }));
+        onRefresh();
+      } else {
+        setRunError(data.error || `Failed to run ${scenarioName}`);
+      }
+    } catch (err) {
+      setRunError(`Failed to run ${scenarioName}`);
+    } finally {
+      setRunningSingle(null);
+    }
+  };
 
   const handleRunSuite = async () => {
     setRunning(true);
@@ -118,12 +142,41 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         {scenarios.map((scenario) => (
           <div key={scenario.name} className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card flex flex-col justify-between hover:border-amber-400/40 transition">
             <div>
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex justify-between items-start mb-2 gap-2">
                 <h3 className="text-sm font-bold text-bento-rice flex items-center gap-2">
-                  <FileCode className="w-4 h-4 text-amber-400" /> {scenario.name}
+                  <FileCode className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>{scenario.name}</span>
                 </h3>
+                <button
+                  onClick={() => handleRunSingle(scenario.name)}
+                  disabled={runningSingle === scenario.name || running}
+                  className="shrink-0 bg-bento-lacquer hover:bg-bento-border border border-bento-border rounded-lg px-2.5 py-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1 disabled:opacity-50"
+                  title="Run single scenario contract"
+                >
+                  {runningSingle === scenario.name ? (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <ChopsticksIcon className="w-3 h-3" />
+                  )}
+                  <span>{runningSingle === scenario.name ? 'Tasting...' : 'Taste Flight 🥢'}</span>
+                </button>
               </div>
               <p className="text-xs text-gray-400 mb-3">{scenario.description || 'No description provided.'}</p>
+
+              {singleResults[scenario.name] && (
+                <div
+                  className={`mb-3 p-2.5 rounded-xl border text-xs font-mono flex items-center justify-between ${
+                    singleResults[scenario.name].passed
+                      ? 'bg-emerald-950/30 border-bento-matcha/40 text-emerald-300'
+                      : 'bg-rose-950/30 border-bento-salmon/40 text-rose-300'
+                  }`}
+                >
+                  <span className="font-bold flex items-center gap-1.5">
+                    {singleResults[scenario.name].passed ? 'PASSED ✓' : 'FAILED ✗'}
+                  </span>
+                  <span>{singleResults[scenario.name].total_duration_ms.toFixed(1)}ms</span>
+                </div>
+              )}
 
               <div className="space-y-2 mb-3">
                 {scenario.steps.map((step, sIdx) => (
