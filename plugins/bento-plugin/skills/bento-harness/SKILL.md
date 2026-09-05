@@ -1,78 +1,67 @@
 ---
 name: bento-harness
 description: >-
-  Autonomous Harness Engineering assistant (The Brain & Butler). Use to run Bento commands directly from chat
-  via native MCP tools or CLI, execute background testing daemons (bento bg), run closed-loop self-healing (bento auto),
-  query and persist architectural memory (bento memory), trigger dream cycles (bento dream), launch live web & terminal telemetry (bento ui / bento monitor), and conduct adversarial red-team sparring (bento arena).
+  Autonomous Harness Engineering assistant (The Brain & Butler). Use to run Bento CLI commands directly from chat,
+  execute background testing daemons (bento bg), run closed-loop self-healing (bento auto), query and persist
+  architectural memory (bento memory), trigger dream cycles (bento dream), launch live web & terminal telemetry (bento ui / bento monitor), and conduct adversarial red-team sparring (bento arena).
 ---
 
-# 🍱 Bento Harness Engineering: The Brain & Butler Runbook for LLMs
+# 🍱 Bento Harness Engineering: The Brain & Butler Runbook
 
 Bento is a deterministic harness engineering and memory system built with Clean Architecture.
 It functions as both the **Brain** (institutional memory, guardrails, and knowledge synthesis) and the **Butler** (ambient background execution valet and testing daemon).
 
-As an LLM, you can execute Bento either via **Native MCP Tools** (preferred when tool calls are available) or via **Terminal CLI Commands** (`bento <subcommand>`).
+As an AI agent, you interact with Bento directly via terminal CLI commands (`bento <subcommand>`) using `run_command`.
 
 ---
 
-## ⚡ Quick Reference: MCP Tools vs CLI Commands
+## ⚡ Command Quick Reference
 
-| Capability | Native MCP Tool | CLI Command Equivalent |
-| :--- | :--- | :--- |
-| **Verify Scenario** | `bento_run(scenario_file=..., verbose=...)` | `bento run <file.json> [--verbose]` |
-| **Run Test Suite** | `bento_suite(directory=..., suite_name=...)` | `bento suite <dir> [--name <name>]` |
-| **List Memory Bank** | `bento_memory_list(cwd=...)` | `bento memory list [--json]` |
-| **Add Rule to Memory** | `bento_memory_add(title=..., rule=..., ...)` | `bento memory add --title "..." --rule "..."` |
-| **Dream Cycle** | `bento_dream(benchmarks_dir=..., harvest=...)` | `bento dream [--benchmarks <dir>]` |
-| **Dispatch Background Task** | `bento_bg_run(command=..., tag=...)` | `bento bg run "<cmd>" --tag "<tag>"` |
-| **List Background Tasks** | `bento_bg_list(cwd=...)` | `bento bg list` |
-| **Task Status & Health** | `bento_bg_status(task_id=...)` | `bento bg status <task_id>` |
-| **Task Telemetry Logs** | `bento_bg_logs(task_id=..., lines=50)` | `bento bg logs <task_id> -n 50` |
-| **Kill Daemon Task** | `bento_bg_kill(task_id=...)` | `bento bg kill <task_id>` |
-| **Self-Healing Loop** | *(via bento_bg_run or CLI)* | `bento auto --task <t.md> --contract <c.json>` |
-| **Red-Team Arena** | *(via bento_bg_run or CLI)* | `bento arena --task <t.md> --contract <c.json>` |
-| **Multi-Agent Swarm** | *(via bento_bg_run or CLI)* | `bento swarm --task <t.md> --contract <c.json>` |
-| **Live Web UI** | *(via bento_bg_run or CLI)* | `bento ui [--port 8765] [--network] [--no-browser]` |
-| **Terminal Telemetry** | *(via run_command)* | `bento monitor [--port 8765]` |
+| Task | Command |
+| :--- | :--- |
+| **Inspect Memory Bank** | `bento memory list` |
+| **Add Architectural Rule** | `bento memory add --title "..." --rule "..." [--anti-pattern "..."]` |
+| **Verify Single Contract** | `bento run <contract.json> [--verbose]` |
+| **Run Scenario Suite** | `bento suite <directory> [--name "..."]` |
+| **Dispatch Background Task** | `bento bg run "<command>" --tag "<tag>"` |
+| **List Background Tasks** | `bento bg list` |
+| **Task Status & Health** | `bento bg status <task_id>` |
+| **Inspect Task Logs** | `bento bg logs <task_id> -n 50` |
+| **Terminate Background Task** | `bento bg kill <task_id>` |
+| **Closed-Loop Self-Healing** | `bento auto --task <task.md> --contract <contract.json>` |
+| **Adversarial Red-Teaming** | `bento arena --task <task.md> --contract <contract.json> --rounds 3` |
+| **Multi-Agent Swarm** | `bento swarm --task <task.md> --contract <contract.json>` |
+| **Overnight Dream Cycle** | `bento dream [--benchmarks <dir>] [--harvest]` |
+| **Live Web UI** | `bento ui --network --no-browser --port 8765` |
+| **Terminal Telemetry** | `bento monitor --port 8765` |
 
 ---
 
-## 🎩 1. The Butler: Background Operations (`bento bg` / `bento_bg_*`)
+## 🎩 1. The Butler: Background Operations (`bento bg`)
 
-When executing tasks taking >10 seconds, **never block interactive chat**. Dispatch the job to the Butler background runner.
+When running tasks taking >10 seconds (e.g. self-healing, dream cycles, test suites), **never block interactive chat**. Dispatch the task to the Butler background runner:
 
-### Running in Background
 ```bash
 # Start an auto-healing loop in background
 bento bg run "bento auto --task task.md --contract contract.json --max-iterations 5" --tag "auto-heal"
 
-# Run an overnight dream cycle
+# Run an overnight dream cycle in background
 bento bg run "bento dream --benchmarks examples/" --tag "dream"
 ```
-Or via MCP:
-```json
-{
-  "name": "bento_bg_run",
-  "arguments": {
-    "command": "bento dream --benchmarks examples/",
-    "tag": "dream-cycle"
-  }
-}
-```
 
-### Checking Tasks and Logs
+### Monitoring Background Tasks
 ```bash
 # List all active & past background tasks
 bento bg list
 
 # Inspect real-time stdout/stderr logs
-bento bg logs bg-123456 -n 40
+bento bg logs <task_id> -n 50
 
-# Check process exit code & execution time
-bento bg status bg-123456
+# Check process exit code & execution status
+bento bg status <task_id>
 
 # Terminate task if taking too long or diverging
-bento bg kill bg-123456
+bento bg kill <task_id>
 ```
 
 ---
@@ -85,13 +74,6 @@ Before writing trading strategies, mathematical algorithms, or Clean Architectur
 ```bash
 bento memory list
 ```
-Or via MCP:
-```json
-{
-  "name": "bento_memory_list",
-  "arguments": { "cwd": "." }
-}
-```
 
 ### Adding New Architectural Guardrails & Anti-Patterns
 When discovering recurring bugs or establishing architectural patterns:
@@ -103,19 +85,6 @@ bento memory add \
   --category "architecture" \
   --tags "clean-code,domain,ast"
 ```
-Or via MCP:
-```json
-{
-  "name": "bento_memory_add",
-  "arguments": {
-    "title": "Clean Architecture Boundary",
-    "rule": "Domain layer must never import I/O, subprocess, or network packages.",
-    "anti_pattern": "Calling print() or logging inside pure mathematical calculators.",
-    "category": "architecture",
-    "tags": ["clean-code", "domain"]
-  }
-}
-```
 
 ---
 
@@ -124,17 +93,8 @@ Or via MCP:
 The Dream Cycle harvests historical traces from `.bento/traces/`, synthesizes lessons learned from test runs and auto-heals, crystallizes them into skills in `.bento/skills/`, and verifies memory consistency against benchmarks.
 
 ```bash
-bento dream --benchmarks examples/
-```
-Or via MCP:
-```json
-{
-  "name": "bento_dream",
-  "arguments": {
-    "benchmarks_dir": "examples",
-    "harvest": true
-  }
-}
+# Full dream cycle with trace harvesting and benchmark sparring
+bento dream --benchmarks examples/ --harvest
 ```
 
 ---
@@ -173,16 +133,6 @@ bento run scenario.json --verbose
 
 # Run all contracts in a directory
 bento suite examples/ --name "Release Quality Gate"
-```
-Or via MCP:
-```json
-{
-  "name": "bento_run",
-  "arguments": {
-    "scenario_file": "scenario.json",
-    "verbose": true
-  }
-}
 ```
 
 ---

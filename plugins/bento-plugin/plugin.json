@@ -1,7 +1,7 @@
 {
   "name": "bento-plugin",
-  "version": "1.1.0",
-  "description": "Bento Harness Engineering System: The Brain & Butler for Autonomous Coding, Verification, and Lifelong Memory. Execute Bento commands directly from chat via native MCP tools or CLI.",
+  "version": "1.2.0",
+  "description": "Bento Harness Engineering System: The Brain & Butler for Autonomous Coding, Ground-Truth Verification, Background Daemons, and Lifelong Memory.",
   "author": {
     "name": "Trung Nguyen"
   },
@@ -14,7 +14,7 @@
     "verification",
     "memory",
     "butler",
-    "mcp",
+    "skill",
     "dream-cycle"
   ]
 }
