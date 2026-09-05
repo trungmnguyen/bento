@@ -102,8 +102,10 @@ export default function App() {
                 </span>
               </div>
               <p className="text-xs text-gray-400 font-mono flex items-center gap-1.5 mt-0.5">
-                <FolderGit2 className="w-3 h-3 text-gray-500" />
-                <span className="text-gray-300">{status.cwd || 'Dev/bento'}</span>
+                <FolderGit2 className="w-3 h-3 text-gray-500 shrink-0" />
+                <span className="text-gray-300 truncate max-w-[150px] xs:max-w-[220px] sm:max-w-md" title={status.cwd}>
+                  {status.cwd || 'Dev/bento'}
+                </span>
               </p>
             </div>
           </div>
@@ -136,7 +138,7 @@ export default function App() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`text-xs px-3 py-1.5 rounded-bento border font-medium transition ${
+                className={`text-xs px-3 py-1.5 rounded-bento border font-medium transition min-h-[38px] flex items-center ${
                   autoRefresh
                     ? 'bg-bento-salmon/20 text-bento-salmon border-bento-salmon/40 shadow-sm'
                     : 'bg-bento-surface text-gray-400 border-bento-border hover:text-white'
@@ -146,7 +148,7 @@ export default function App() {
               </button>
               <button
                 onClick={fetchAllData}
-                className="p-1.5 bg-bento-surface border border-bento-border hover:bg-bento-elevated rounded-bento text-gray-300 hover:text-white transition"
+                className="p-2 bg-bento-surface border border-bento-border hover:bg-bento-elevated rounded-bento text-gray-300 hover:text-white transition min-h-[38px] min-w-[38px] flex items-center justify-center"
                 title="Manual Refresh Bento"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-bento-salmon' : ''}`} />
@@ -155,61 +157,118 @@ export default function App() {
           </div>
         </div>
 
-        {/* Bento Compartment Tabs */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-2 border-t border-bento-border/70 pt-1">
-          <button
-            onClick={() => setActiveTab('daemons')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-t-2 ${
-              activeTab === 'daemons'
-                ? 'border-bento-tamago text-bento-tamago bg-bento-tamago/10 shadow-tamago-glow'
-                : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'
-            }`}
-          >
-            <ChefTamagoIcon className="w-4 h-4" /> Kitchen Chefs
-            {runningTasksCount > 0 && (
-              <span className="bg-bento-tamago text-gray-900 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
-                {runningTasksCount}
-              </span>
-            )}
-          </button>
+        {/* Bento Compartment Navigation (Industry-Standard Horizontally Scrollable Segmented Control) */}
+        <nav aria-label="Bento Compartments" className="border-t border-bento-border/60 bg-[#16131c]/70">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none py-2 -mx-1 px-1 sm:mx-0 sm:px-0">
+              {/* Tab 1: Kitchen Chefs */}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'daemons'}
+                onClick={() => setActiveTab('daemons')}
+                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
+                  activeTab === 'daemons'
+                    ? 'bg-bento-tamago/15 text-bento-tamago border-bento-tamago/40 shadow-tamago-glow ring-1 ring-bento-tamago/20'
+                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
+                }`}
+              >
+                <ChefTamagoIcon className="w-4 h-4 shrink-0" />
+                <span>Kitchen Chefs</span>
+                <span
+                  className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                    activeTab === 'daemons'
+                      ? 'bg-bento-tamago text-gray-950 shadow-sm'
+                      : runningTasksCount > 0
+                      ? 'bg-bento-tamago/20 text-bento-tamago'
+                      : 'bg-white/10 text-gray-400'
+                  }`}
+                >
+                  {runningTasksCount}
+                </span>
+              </button>
 
-          <button
-            onClick={() => setActiveTab('memory')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-t-2 ${
-              activeTab === 'memory'
-                ? 'border-bento-salmon text-bento-salmon bg-bento-salmon/10 shadow-bento-glow'
-                : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'
-            }`}
-          >
-            <OnigiriIcon className="w-4 h-4" /> Seasoned Recipes ({lessons.length})
-          </button>
+              {/* Tab 2: Seasoned Recipes */}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'memory'}
+                onClick={() => setActiveTab('memory')}
+                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
+                  activeTab === 'memory'
+                    ? 'bg-bento-salmon/15 text-bento-salmon border-bento-salmon/40 shadow-bento-glow ring-1 ring-bento-salmon/20'
+                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
+                }`}
+              >
+                <OnigiriIcon className="w-4 h-4 shrink-0" />
+                <span>Seasoned Recipes</span>
+                <span
+                  className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                    activeTab === 'memory'
+                      ? 'bg-bento-salmon text-white shadow-sm'
+                      : 'bg-white/10 text-gray-400'
+                  }`}
+                >
+                  {lessons.length}
+                </span>
+              </button>
 
-          <button
-            onClick={() => setActiveTab('traces')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-t-2 ${
-              activeTab === 'traces'
-                ? 'border-bento-matcha text-bento-matcha bg-bento-matcha/10 shadow-matcha-glow'
-                : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'
-            }`}
-          >
-            <MatchaCupIcon className="w-4 h-4" /> Night Dream & Tea ({traces.length})
-          </button>
+              {/* Tab 3: Night Dream & Tea */}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'traces'}
+                onClick={() => setActiveTab('traces')}
+                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
+                  activeTab === 'traces'
+                    ? 'bg-bento-matcha/15 text-bento-matcha border-bento-matcha/40 shadow-matcha-glow ring-1 ring-bento-matcha/20'
+                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
+                }`}
+              >
+                <MatchaCupIcon className="w-4 h-4 shrink-0" />
+                <span>Night Dream & Tea</span>
+                <span
+                  className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                    activeTab === 'traces'
+                      ? 'bg-bento-matcha text-gray-950 shadow-sm'
+                      : 'bg-white/10 text-gray-400'
+                  }`}
+                >
+                  {traces.length}
+                </span>
+              </button>
 
-          <button
-            onClick={() => setActiveTab('benchmarks')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-t-2 ${
-              activeTab === 'benchmarks'
-                ? 'border-amber-400 text-amber-300 bg-amber-400/10'
-                : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'
-            }`}
-          >
-            <ChopsticksIcon className="w-4 h-4" /> Tasting Battery ({scenarios.length})
-          </button>
-        </div>
+              {/* Tab 4: Tasting Battery */}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'benchmarks'}
+                onClick={() => setActiveTab('benchmarks')}
+                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
+                  activeTab === 'benchmarks'
+                    ? 'bg-amber-400/15 text-amber-300 border-amber-400/40 shadow-tamago-glow ring-1 ring-amber-400/20'
+                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
+                }`}
+              >
+                <ChopsticksIcon className="w-4 h-4 shrink-0" />
+                <span>Tasting Battery</span>
+                <span
+                  className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                    activeTab === 'benchmarks'
+                      ? 'bg-amber-400 text-gray-950 shadow-sm'
+                      : 'bg-white/10 text-gray-400'
+                  }`}
+                >
+                  {scenarios.length}
+                </span>
+              </button>
+            </div>
+          </div>
+        </nav>
       </header>
 
       {/* Main Compartment Canvas */}
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1">
+      <main className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 flex-1 pb-safe">
         {activeTab === 'daemons' && <DaemonView tasks={tasks} onRefresh={fetchAllData} />}
         {activeTab === 'memory' && <MemoryView lessons={lessons} />}
         {activeTab === 'traces' && <TracesView traces={traces} skills={skills} onRefresh={fetchAllData} />}
@@ -217,7 +276,7 @@ export default function App() {
       </main>
 
       {/* Joyful Bento Box Footer */}
-      <footer className="border-t border-bento-border/70 py-3 bg-[#131117] text-xs text-gray-500 text-center font-mono flex items-center justify-center gap-2">
+      <footer className="border-t border-bento-border/70 py-3 bg-[#131117] text-xs text-gray-500 text-center font-mono flex flex-wrap items-center justify-center gap-2 px-4 pb-safe">
         <span>🍱 Bento Harness · Packed Fresh with Zero Python Dependencies</span>
         <span>•</span>
         <span className="text-gray-400">Telemetry updated at {lastRefreshed.toLocaleTimeString()}</span>

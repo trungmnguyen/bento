@@ -34,11 +34,11 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
   return (
     <div className="space-y-6">
       {/* Run Battery Header: Tasting Battery */}
-      <div className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-bento-surface border border-bento-border rounded-bento p-4 sm:p-5 shadow-bento-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-base font-bold text-gray-100 flex items-center gap-2">
-            <ChopsticksIcon className="w-6 h-6 animate-bento-bounce" />
-            Tasting Battery · Verification Contracts & Benchmarks
+          <h2 className="text-sm sm:text-base font-bold text-gray-100 flex items-center gap-2">
+            <ChopsticksIcon className="w-5 h-5 sm:w-6 sm:h-6 animate-bento-bounce shrink-0" />
+            <span>Tasting Battery · Verification Contracts</span>
           </h2>
           <p className="text-xs text-gray-400 mt-1">
             Ground-truth deterministic contract assertions ({scenarios.length} tasting flights loaded).
@@ -47,10 +47,10 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         <button
           onClick={handleRunSuite}
           disabled={running}
-          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 text-gray-900 font-extrabold px-5 py-2.5 rounded-xl text-sm transition flex items-center gap-2 shadow-tamago-glow shrink-0"
+          className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 text-gray-900 font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-tamago-glow shrink-0 min-h-[42px] touch-manipulation"
         >
           {running ? <RefreshCw className="w-4 h-4 animate-spin text-gray-900" /> : <ChopsticksIcon className="w-4 h-4" />}
-          {running ? 'Tasting Battery Flights...' : 'Taste All Contracts 🥢'}
+          <span>{running ? 'Tasting Battery Flights...' : 'Taste All Contracts 🥢'}</span>
         </button>
       </div>
 

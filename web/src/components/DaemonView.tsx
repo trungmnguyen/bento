@@ -68,24 +68,24 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
         <h3 className="text-sm font-bold uppercase tracking-wider text-bento-tamago mb-3 flex items-center gap-2">
           <ChefTamagoIcon className="w-5 h-5" /> Cook New Butler Task (Background Runner)
         </h3>
-        <form onSubmit={handleLaunch} className="flex flex-wrap gap-3">
+        <form onSubmit={handleLaunch} className="flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3">
           <input
             type="text"
             placeholder="Command to cook in background (e.g. bento dream --benchmarks examples/)"
             value={newCmd}
             onChange={(e) => setNewCmd(e.target.value)}
-            className="flex-1 min-w-[300px] bg-bento-lacquer border border-bento-border rounded-xl px-4 py-2 text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition"
+            className="flex-1 min-w-0 bg-bento-lacquer border border-bento-border rounded-xl px-4 py-2.5 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition"
           />
           <input
             type="text"
             placeholder="Dish Tag"
             value={newTag}
             onChange={(e) => setNewTag(e.target.value)}
-            className="w-32 bg-bento-lacquer border border-bento-border rounded-xl px-3 py-2 text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition"
+            className="w-full sm:w-32 bg-bento-lacquer border border-bento-border rounded-xl px-3 py-2.5 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition"
           />
           <button
             type="submit"
-            className="bg-gradient-to-r from-bento-tamago to-amber-500 hover:from-amber-400 hover:to-amber-500 text-gray-900 font-extrabold px-5 py-2 rounded-xl text-sm transition flex items-center gap-2 shadow-tamago-glow"
+            className="w-full sm:w-auto bg-gradient-to-r from-bento-tamago to-amber-500 hover:from-amber-400 hover:to-amber-500 text-gray-900 font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-tamago-glow min-h-[42px] touch-manipulation"
           >
             <Flame className="w-4 h-4 fill-gray-900" /> Start Cooking
           </button>

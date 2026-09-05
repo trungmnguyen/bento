@@ -19,6 +19,20 @@
   background: #3e334e;
 }
 
+/* Hide scrollbar for smooth touch scroll strips on mobile */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Mobile Safe Area Padding */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Joyful micro-interactions */
 button:active {
   transform: scale(0.97);
