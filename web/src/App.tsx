@@ -177,14 +177,14 @@ export default function App() {
                 <span>Kitchen Chefs</span>
                 <span
                   className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
-                    activeTab === 'daemons'
+                    runningTasksCount > 0
+                      ? 'bg-bento-tamago text-gray-950 shadow-sm animate-pulse'
+                      : activeTab === 'daemons'
                       ? 'bg-bento-tamago text-gray-950 shadow-sm'
-                      : runningTasksCount > 0
-                      ? 'bg-bento-tamago/20 text-bento-tamago'
                       : 'bg-white/10 text-gray-400'
                   }`}
                 >
-                  {runningTasksCount}
+                  {runningTasksCount > 0 ? `${runningTasksCount} simmering` : tasks.length}
                 </span>
               </button>
 
