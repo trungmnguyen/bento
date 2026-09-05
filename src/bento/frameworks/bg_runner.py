@@ -58,7 +58,7 @@ class BackgroundTaskRunner:
     ) -> dict[str, Any]:
         bg_dir = self._get_bg_dir(working_dir)
         now_ts = int(time.time() * 1000)
-        short_id = f"bg-{now_ts % 1000000:06d}-{uuid.uuid4().hex[:4]}"
+        short_id = f"bg-{now_ts % 1000000:06d}-{uuid.uuid4().hex[:8]}"  # REL-12: 32-bit entropy
         
         log_file = bg_dir / "logs" / f"{short_id}.log"
         task_meta_file = bg_dir / "tasks" / f"{short_id}.json"

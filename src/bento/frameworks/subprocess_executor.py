@@ -44,17 +44,18 @@ class SubprocessExecutionGateway(ExecutionGateway):
             duration_ms = (time.monotonic() - start_time) * 1000.0
             stdout, stderr = "", ""
             if proc:
+                # REL-11: Graceful shutdown with wait() to prevent PID reuse TOCTOU
                 try:
                     pgid = os.getpgid(proc.pid)
                     os.killpg(pgid, signal.SIGTERM)
-                    time.sleep(0.05)
-                    os.killpg(pgid, signal.SIGKILL)
+                    try:
+                        proc.wait(timeout=0.5)
+                    except subprocess.TimeoutExpired:
+                        # Process didn't exit gracefully — escalate to SIGKILL
+                        os.killpg(pgid, signal.SIGKILL)
+                        proc.wait(timeout=1.0)
                 except (ProcessLookupError, OSError):
-                    pass
-                try:
-                    proc.kill()
-                except (ProcessLookupError, OSError):
-                    pass
+                    pass  # Already exited — safe to proceed
                 try:
                     out_bytes, err_bytes = proc.communicate(timeout=1.0)
                     stdout = out_bytes or ""

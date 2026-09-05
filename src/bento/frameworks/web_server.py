@@ -41,6 +41,9 @@ class BentoApiHandler(BaseHTTPRequestHandler):
     dream_uc: DreamCycleUseCase
     static_dir: Path
     start_time: float
+    # SEC-11: Bound concurrent SSE connections to prevent thread exhaustion
+    _active_sse_connections: int = 0
+    MAX_SSE_CONNECTIONS: int = 10
 
     def address_string(self) -> str:
         # Avoid blocking reverse DNS lookups (socket.getfqdn) on every request
@@ -170,6 +173,9 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             parts = path.split("/")
             if len(parts) != 5 or not re.match(r"^bg-[a-zA-Z0-9_\-]+$", parts[3]):
                 return self._send_json({"error": "Invalid task ID"}, status=400)
+            # SEC-11: Enforce concurrent SSE connection cap
+            if BentoApiHandler._active_sse_connections >= BentoApiHandler.MAX_SSE_CONNECTIONS:
+                return self._send_json({"error": "Too many concurrent SSE connections"}, status=429)
             task_id = parts[3]
             self._stream_task_logs(task_id, query_params=parsed.query)
             return
@@ -255,6 +261,10 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         path = parsed.path.rstrip("/")
 
         content_len = int(self.headers.get("Content-Length", 0))
+        MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB — SEC-10: Prevent OOM via unbounded payload
+        if content_len > MAX_BODY_SIZE:
+            self.send_error(413, "Payload Too Large")
+            return
         body = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
         try:
             payload = json.loads(body) if body else {}
@@ -626,6 +636,8 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             self.send_header("Vary", "Origin")
         self.end_headers()
 
+        # SEC-11: Track active SSE connections for exhaustion prevention
+        BentoApiHandler._active_sse_connections += 1
         try:
             for _ in range(600):  # Stream up to ~60s
                 chunk, new_offset, is_running = self.bg_runner.read_log_chunk(task_id, start_offset=offset)
@@ -642,6 +654,8 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                 time.sleep(0.1)
         except (BrokenPipeError, ConnectionResetError):
             pass
+        finally:
+            BentoApiHandler._active_sse_connections -= 1
 
     def _serve_static_file(self, req_path: str) -> None:
         if not self.static_dir.exists():

@@ -472,6 +472,27 @@ class TestBentoWebServer(unittest.TestCase):
         self.assertEqual(data["scenario_name"], "run_one_test_scenario")
         self.assertTrue(data["passed"])
 
+    def test_sec_10_payload_too_large(self):
+        # SEC-10: Request body exceeding 10MB returns 413 Payload Too Large
+        import http.client
+        conn = http.client.HTTPConnection("127.0.0.1", self.server.port, timeout=5.0)
+        conn.request("POST", "/api/benchmarks/create", headers={"Content-Length": "15000000"})
+        resp = conn.getresponse()
+        self.assertEqual(resp.status, 413)
+        conn.close()
+
+    def test_sec_11_sse_connection_cap(self):
+        # SEC-11: Exceeding MAX_SSE_CONNECTIONS returns 429 Too Many Requests
+        from bento.frameworks.web_server import BentoApiHandler
+        orig_count = BentoApiHandler._active_sse_connections
+        try:
+            BentoApiHandler._active_sse_connections = BentoApiHandler.MAX_SSE_CONNECTIONS
+            status, body = self._get("/api/bg/bg-test-123/stream")
+            self.assertEqual(status, 429)
+            self.assertIn("Too many concurrent SSE connections", body)
+        finally:
+            BentoApiHandler._active_sse_connections = orig_count
+
 
 if __name__ == "__main__":
     unittest.main()
