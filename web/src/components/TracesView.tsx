@@ -1,7 +1,17 @@
-import React, { useState } from 'react';
-import { Sparkles, CheckCircle2, XCircle, RefreshCw, Clock, Flame } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Sparkles,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Clock,
+  Activity,
+  TrendingUp,
+  BarChart3,
+} from 'lucide-react';
 import { MatchaCupIcon, SoyFishIcon, WasabiBadgeIcon, BentoBoxIcon } from './icons/BentoIcons';
-import { TraceEvent, CrystallizedSkill } from '../types';
+import { TraceEvent, CrystallizedSkill, TelemetryMetrics } from '../types';
+import { playZenBell, playClack } from '../utils/audio';
 
 interface TracesViewProps {
   traces: TraceEvent[];
@@ -13,15 +23,43 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
   const [dreaming, setDreaming] = useState(false);
   const [dreamMessage, setDreamMessage] = useState<string | null>(null);
 
+  // Telemetry Metrics State
+  const [telemetry, setTelemetry] = useState<TelemetryMetrics | null>(null);
+  const [sparklineStr, setSparklineStr] = useState<string>('');
+  const [loadingTelemetry, setLoadingTelemetry] = useState(false);
+
+  const fetchTelemetry = async () => {
+    setLoadingTelemetry(true);
+    try {
+      const res = await fetch('/api/telemetry');
+      if (res.ok) {
+        const data = await res.json();
+        setTelemetry(data.metrics);
+        setSparklineStr(data.sparkline || '');
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingTelemetry(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTelemetry();
+  }, [traces]);
+
   const handleTriggerDream = async () => {
+    playClack();
     setDreaming(true);
     setDreamMessage(null);
     try {
       const res = await fetch('/api/dream', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
+        playZenBell();
         setDreamMessage(`🍵 Overnight Tea Brewed! Dream harvested ${data.new_lessons_discovered || 0} new golden recipe lessons.`);
         onRefresh();
+        fetchTelemetry();
       } else {
         setDreamMessage('Tea steeping encountered an error.');
       }
@@ -32,8 +70,109 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
     }
   };
 
+  // Build SVG sparkline points
+  const sparklinePoints = React.useMemo(() => {
+    if (!telemetry || telemetry.recent_latencies.length < 2) return '';
+    const lats = telemetry.recent_latencies;
+    const minVal = Math.min(...lats);
+    const maxVal = Math.max(...lats);
+    const span = maxVal - minVal || 1.0;
+    const width = 280;
+    const height = 48;
+    const padding = 6;
+
+    return lats
+      .map((val, idx) => {
+        const x = padding + (idx / (lats.length - 1)) * (width - 2 * padding);
+        const y = height - padding - ((val - minVal) / span) * (height - 2 * padding);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(' ');
+  }, [telemetry]);
+
   return (
     <div className="space-y-6">
+      {/* Sensory Spark Telemetry Banner */}
+      {telemetry && (
+        <div className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card">
+          <div className="flex flex-wrap justify-between items-center mb-4 pb-3 border-b border-bento-border">
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-bento-matcha" />
+              <h3 className="text-sm font-bold text-gray-100">
+                Sensory Spark Telemetry · Quality & Latency Percentiles
+              </h3>
+            </div>
+            <div className="flex items-center gap-2 font-mono text-xs text-gray-400">
+              <span>{telemetry.total_runs} Total Executions</span>
+              <span className="text-gray-600">|</span>
+              <span className="text-emerald-400">{telemetry.passed_runs} Passed</span>
+              <span className="text-gray-600">|</span>
+              <span className="text-rose-400">{telemetry.failed_runs} Failed</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+            <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3">
+              <div className="text-[11px] text-gray-400 font-semibold uppercase">Pass Rate</div>
+              <div className="text-lg font-bold text-bento-matcha font-mono mt-0.5">
+                {telemetry.pass_rate.toFixed(1)}%
+              </div>
+            </div>
+
+            <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3">
+              <div className="text-[11px] text-gray-400 font-semibold uppercase">P50 (Median)</div>
+              <div className="text-lg font-bold text-amber-300 font-mono mt-0.5">
+                {telemetry.p50_latency_ms.toFixed(1)}ms
+              </div>
+            </div>
+
+            <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3">
+              <div className="text-[11px] text-gray-400 font-semibold uppercase">P90 (Tail)</div>
+              <div className="text-lg font-bold text-orange-300 font-mono mt-0.5">
+                {telemetry.p90_latency_ms.toFixed(1)}ms
+              </div>
+            </div>
+
+            <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3">
+              <div className="text-[11px] text-gray-400 font-semibold uppercase">P99 (Anomaly)</div>
+              <div className="text-lg font-bold text-rose-300 font-mono mt-0.5">
+                {telemetry.p99_latency_ms.toFixed(1)}ms
+              </div>
+            </div>
+
+            <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3 col-span-2 sm:col-span-1">
+              <div className="text-[11px] text-gray-400 font-semibold uppercase">Average</div>
+              <div className="text-lg font-bold text-cyan-300 font-mono mt-0.5">
+                {telemetry.avg_latency_ms.toFixed(1)}ms
+              </div>
+            </div>
+          </div>
+
+          {/* Sparkline Graphic */}
+          {sparklinePoints && (
+            <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <BarChart3 className="w-4 h-4 text-bento-matcha" />
+                <span>Recent Latency Trend:</span>
+                <span className="font-mono text-emerald-400 text-sm tracking-widest">{sparklineStr}</span>
+              </div>
+              <div className="h-12 w-72 flex items-center justify-end">
+                <svg viewBox="0 0 280 48" className="w-full h-full overflow-visible">
+                  <polyline
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    points={sparklinePoints}
+                  />
+                </svg>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Dream Cycle Banner: Matcha Tea House */}
       <div className="bg-gradient-to-r from-[#1b271e] to-[#261f2d] border border-bento-matcha/40 rounded-bento p-5 shadow-bento-card flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
@@ -102,7 +241,11 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
             <BentoBoxIcon className="w-5 h-5" /> Tasting Notes Timeline · Sensory Execution Traces ({traces.length})
           </h3>
           <button
-            onClick={onRefresh}
+            onClick={() => {
+              playClack();
+              onRefresh();
+              fetchTelemetry();
+            }}
             className="p-1.5 hover:bg-bento-border rounded-xl text-gray-400 hover:text-white transition"
             title="Refresh Traces"
           >

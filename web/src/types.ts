@@ -88,3 +88,63 @@ export interface SuiteResult {
     }[];
   }[];
 }
+
+export interface MemoryGraphNode {
+  id: string;
+  label: string;
+  node_type: 'category_hub' | 'golden_rule' | 'anti_pattern' | 'scenario';
+  category: string;
+  weight: number;
+  x: number;
+  y: number;
+  details: Record<string, any>;
+  tags: string[];
+}
+
+export interface MemoryGraphEdge {
+  source: string;
+  target: string;
+  relation: string;
+  weight: number;
+}
+
+export interface MemoryGraph {
+  nodes: MemoryGraphNode[];
+  edges: MemoryGraphEdge[];
+  categories: string[];
+  total_rules: number;
+  total_anti_patterns: number;
+}
+
+export interface PreflightAssertionResult {
+  type: string;
+  target_field: string;
+  expected: any;
+  actual_value: any;
+  passed: boolean;
+  error_message?: string | null;
+}
+
+export interface PreflightResult {
+  command: string;
+  exit_code: number;
+  stdout: string;
+  stderr: string;
+  duration_ms: number;
+  all_passed: boolean;
+  assertion_results: PreflightAssertionResult[];
+}
+
+export interface TelemetryMetrics {
+  total_runs: number;
+  passed_runs: number;
+  failed_runs: number;
+  pass_rate: number;
+  p50_latency_ms: number;
+  p90_latency_ms: number;
+  p99_latency_ms: number;
+  avg_latency_ms: number;
+  recent_latencies: number[];
+  recent_pass_flags: boolean[];
+}
+

@@ -12,6 +12,9 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const [selectedTask, setSelectedTask] = useState<BackgroundTask | null>(null);
   const [logContent, setLogContent] = useState<string>('');
   const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
+  const [autoScroll, setAutoScroll] = useState<boolean>(true);
+  const logEndRef = React.useRef<HTMLDivElement>(null);
   const [newCmd, setNewCmd] = useState<string>('');
   const [newTag, setNewTag] = useState<string>('kitchen-task');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -31,6 +34,57 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
       setLoadingLogs(false);
     }
   };
+
+  React.useEffect(() => {
+    if (!selectedTask) return;
+
+    setLogContent('');
+    setLoadingLogs(true);
+    setIsStreaming(true);
+
+    const eventSource = new EventSource(`/api/bg/${selectedTask.task_id}/stream`);
+
+    eventSource.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.chunk) {
+          setLogContent((prev) => prev + data.chunk);
+        }
+        if (data.status === 'COMPLETED' || data.status === 'STOPPED') {
+          setIsStreaming(false);
+          eventSource.close();
+          onRefresh();
+        }
+      } catch {
+        // ignore parse error
+      } finally {
+        setLoadingLogs(false);
+      }
+    };
+
+    eventSource.addEventListener('close', () => {
+      setIsStreaming(false);
+      eventSource.close();
+      onRefresh();
+    });
+
+    eventSource.onerror = () => {
+      setIsStreaming(false);
+      eventSource.close();
+      fetchLogs(selectedTask.task_id);
+    };
+
+    return () => {
+      eventSource.close();
+      setIsStreaming(false);
+    };
+  }, [selectedTask?.task_id]);
+
+  React.useEffect(() => {
+    if (autoScroll && logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logContent, autoScroll]);
 
   const handleKill = async (taskId: string) => {
     try {
@@ -269,13 +323,34 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
           <div className="w-full max-w-2xl bg-bento-surface border-l border-bento-border h-full flex flex-col p-6 shadow-2xl">
             <div className="flex justify-between items-start pb-4 border-b border-bento-border">
               <div>
-                <h3 className="text-base font-bold text-gray-100 flex items-center gap-2">
-                  <SoyFishIcon className="w-6 h-6 text-bento-salmon" />
-                  Task Output Logs: <span className="font-mono text-bento-tamago">{selectedTask.task_id}</span>
-                </h3>
+                <div className="flex items-center gap-2.5">
+                  <h3 className="text-base font-bold text-gray-100 flex items-center gap-2">
+                    <SoyFishIcon className="w-6 h-6 text-bento-salmon" />
+                    Task Output Logs: <span className="font-mono text-bento-tamago">{selectedTask.task_id}</span>
+                  </h3>
+                  {isStreaming ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-bento-tamago/15 text-bento-tamago border border-bento-tamago/30 shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-bento-tamago animate-ping" />
+                      Live Simmering (SSE)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-gray-500 font-mono">Stream closed</span>
+                  )}
+                </div>
                 <p className="text-xs text-gray-400 font-mono mt-1">{selectedTask.command}</p>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setAutoScroll((prev) => !prev)}
+                  className={`text-[11px] px-2.5 py-1 rounded-xl border font-mono transition ${
+                    autoScroll
+                      ? 'bg-bento-matcha/15 text-bento-matcha border-bento-matcha/40 font-bold'
+                      : 'bg-bento-elevated text-gray-400 border-bento-border'
+                  }`}
+                  title="Toggle automatic scrolling to bottom"
+                >
+                  Auto-scroll: {autoScroll ? 'ON' : 'OFF'}
+                </button>
                 <button
                   onClick={() => fetchLogs(selectedTask.task_id)}
                   className="p-1.5 hover:bg-bento-border rounded-xl text-gray-300 hover:text-white"
@@ -294,6 +369,8 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
 
             <div className="flex-1 my-4 bg-bento-lacquer border border-bento-border rounded-xl p-4 font-mono text-xs text-bento-rice overflow-y-auto whitespace-pre-wrap">
               {logContent || 'Log buffer is empty.'}
+              {isStreaming && <span className="inline-block w-2 h-3.5 bg-bento-tamago animate-pulse ml-0.5 align-middle" />}
+              <div ref={logEndRef} />
             </div>
 
             <div className="pt-3 border-t border-bento-border flex justify-between items-center text-xs text-gray-400">
