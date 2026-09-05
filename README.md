@@ -150,7 +150,7 @@ bento watch examples/basic_test.json --dir src/
 
 ---
 
-### 9. Antigravity Skill & Plugin (`bento-plugin` / `bento-harness`)
+### 9. Antigravity Skill & Plugin (`bento-plugin` / `bento`)
 
 Bento is integrated with **Google Antigravity (AGY)** as an official plugin and skill (`plugins/bento-plugin/` and `~/.gemini/config/plugins/bento-plugin/`). AI agents can execute Bento directly from chat via CLI commands without any heavy middleware:
 
@@ -160,7 +160,7 @@ Bento is integrated with **Google Antigravity (AGY)** as an official plugin and 
 - **Butler Background Daemons:** `bento bg run "<cmd>"`, `bento bg list`, `bento bg status`, `bento bg logs`
 - **Telemetry & Dashboards:** `bento ui`, `bento monitor`
 
-See [`SKILL.md`](.agents/skills/bento-harness/SKILL.md) and [`plugins/bento-plugin/`](plugins/bento-plugin/) for complete specifications and runbooks.
+See [`SKILL.md`](.agents/skills/bento/SKILL.md) and [`plugins/bento-plugin/`](plugins/bento-plugin/) for complete specifications and runbooks.
 
 ---
 

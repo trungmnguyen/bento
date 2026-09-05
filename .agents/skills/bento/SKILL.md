@@ -1,5 +1,5 @@
 ---
-name: bento-harness
+name: bento
 description: >-
   Autonomous Harness Engineering assistant (The Brain & Butler). Use to run Bento CLI commands directly from chat,
   execute background testing daemons (bento bg), run closed-loop self-healing (bento auto), query and persist

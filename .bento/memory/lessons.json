@@ -143,10 +143,10 @@
     },
     {
       "id": "MEM-5B610E02",
-      "title": "Bento-Harness Orchestration Protocol",
+      "title": "Bento Orchestration Protocol",
       "category": "orchestration",
       "context": "Manual rule addition via bento memory CLI",
-      "rule": "Whenever bento-harness skill is invoked, orchestrate tasks through Bento: check memory, define ground-truth contracts, execute with Builder/Auditor, and verify with bento run before declaring complete.",
+      "rule": "Whenever bento skill is invoked, orchestrate tasks through Bento: check memory, define ground-truth contracts, execute with Builder/Auditor, and verify with bento run before declaring complete.",
       "anti_pattern": "",
       "discovery_date": "2026-09-04",
       "tags": [

@@ -49,9 +49,9 @@
 - **Anti-Pattern:** Moving stop losses, revenge trading, or hesitating to enter a valid signal due to memory of past losses. Demanding the market conform to one's beliefs instead of making uncommitted probability assessments.
 - **Tags:** psychology, discipline, risk-management, probability, trading
 
-### `[MEM-5B610E02]` Bento-Harness Orchestration Protocol
+### `[MEM-5B610E02]` Bento Orchestration Protocol
 - **Category:** `orchestration` | **Discovered:** 2026-09-04
-- **Hard Rule:** Whenever bento-harness skill is invoked, orchestrate tasks through Bento: check memory, define ground-truth contracts, execute with Builder/Auditor, and verify with bento run before declaring complete.
+- **Hard Rule:** Whenever bento skill is invoked, orchestrate tasks through Bento: check memory, define ground-truth contracts, execute with Builder/Auditor, and verify with bento run before declaring complete.
 - **Tags:** orchestra,workflow,contract
 
 ### `[MEM-39FBCFF0]` Bento Trace Emitter Port
