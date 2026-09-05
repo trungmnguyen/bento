@@ -244,6 +244,7 @@ class CliController:
             builder_gateway=builder_gateway,
             run_scenario_use_case=self._run_scenario,
             memory_gateway=self._memory,
+            trace_gateway=self._trace,
         )
 
         result = arena_uc.execute(
@@ -442,6 +443,19 @@ class CliController:
         if killed:
             return 0, f"🎩 Successfully terminated background task '{task_id}'."
         return 1, f"Error: Could not terminate task '{task_id}'."
+
+    def handle_bg_prune(
+        self,
+        stopped_only: bool = True,
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        from bento.frameworks.bg_runner import BackgroundTaskRunner
+        runner = BackgroundTaskRunner()
+        count = runner.prune_tasks(stopped_only=stopped_only, working_dir=working_dir)
+        if json_output:
+            return 0, self._presenter.format_json({"pruned_tasks_count": count})
+        return 0, f"🧹 Swept kitchen: Pruned {count} stopped background task(s) and associated logs."
 
     def handle_watch(
         self,

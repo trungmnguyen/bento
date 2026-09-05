@@ -175,6 +175,11 @@ def main(args: list[str] | None = None) -> int:
     bg_kill.add_argument("task_id", help="Background task ID to kill")
     bg_kill.add_argument("--cwd", default=None, help="Working directory")
 
+    bg_prune = bg_sub.add_parser("prune", help="Sweep kitchen: remove stopped tasks and dead logs")
+    bg_prune.add_argument("--all", action="store_true", help="Prune all stopped tasks (default: True)")
+    bg_prune.add_argument("--cwd", default=None, help="Working directory")
+    bg_prune.add_argument("--json", action="store_true", help="Output raw JSON")
+
     # bento watch (Ambient File Watcher)
     watch_parser = subparsers.add_parser("watch", help="Continuously watch files and auto-evaluate contract on save")
     watch_parser.add_argument("scenario_file", help="Path to scenario JSON to evaluate on save")
@@ -347,6 +352,14 @@ def main(args: list[str] | None = None) -> int:
             exit_code, output = controller.handle_bg_kill(
                 task_id=parsed.task_id,
                 working_dir=parsed.cwd,
+            )
+            print(output)
+            return exit_code
+        elif parsed.bg_action == "prune":
+            exit_code, output = controller.handle_bg_prune(
+                stopped_only=True,
+                working_dir=parsed.cwd,
+                json_output=parsed.json,
             )
             print(output)
             return exit_code

@@ -187,3 +187,32 @@ class BackgroundTaskRunner:
             status["status"] = "KILLED"
             task_file.write_text(json.dumps(status, indent=2), encoding="utf-8")
         return True
+
+    def prune_tasks(self, stopped_only: bool = True, working_dir: str | None = None) -> int:
+        """Prune background task metadata and associated log files."""
+        bg_dir = self._get_bg_dir(working_dir)
+        task_files = list((bg_dir / "tasks").glob("*.json"))
+        pruned_count = 0
+
+        for tf in task_files:
+            try:
+                info = json.loads(tf.read_text(encoding="utf-8"))
+                pid = info.get("pid", -1)
+                is_alive = self._is_pid_alive(pid)
+
+                if stopped_only and is_alive:
+                    continue
+
+                task_id = info.get("id", tf.stem)
+                # Remove task json
+                tf.unlink(missing_ok=True)
+                # Remove log file
+                log_file = bg_dir / "logs" / f"{task_id}.log"
+                if log_file.exists():
+                    log_file.unlink(missing_ok=True)
+
+                pruned_count += 1
+            except Exception:
+                continue
+
+        return pruned_count

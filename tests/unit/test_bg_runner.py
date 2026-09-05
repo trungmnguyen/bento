@@ -68,3 +68,25 @@ class TestBackgroundTaskRunner(unittest.TestCase):
         time.sleep(0.2)
         status_after = self.runner.get_status(task_id, working_dir=self.test_dir)
         self.assertFalse(status_after["is_alive"])
+
+    def test_prune_tasks(self):
+        task = self.runner.start_task(
+            command="python3 -c 'exit(0)'",
+            tag="quick-task",
+            working_dir=self.test_dir,
+        )
+        task_id = task["id"]
+        time.sleep(0.3)
+
+        # Confirm task finished
+        status = self.runner.get_status(task_id, working_dir=self.test_dir)
+        self.assertFalse(status["is_alive"])
+
+        # Prune tasks
+        pruned = self.runner.prune_tasks(stopped_only=True, working_dir=self.test_dir)
+        self.assertEqual(pruned, 1)
+
+        # Confirm task is gone
+        tasks = self.runner.list_tasks(working_dir=self.test_dir)
+        self.assertEqual(len(tasks), 0)
+        self.assertIsNone(self.runner.get_status(task_id, working_dir=self.test_dir))
