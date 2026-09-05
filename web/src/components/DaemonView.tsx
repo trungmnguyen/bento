@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Square, RefreshCw, Terminal, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Square, RefreshCw, Clock, CheckCircle2, XCircle, Flame, Sparkles } from 'lucide-react';
+import { ChefTamagoIcon, SoyFishIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { BackgroundTask } from '../types';
 
 interface DaemonViewProps {
@@ -12,7 +13,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const [logContent, setLogContent] = useState<string>('');
   const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
   const [newCmd, setNewCmd] = useState<string>('');
-  const [newTag, setNewTag] = useState<string>('task');
+  const [newTag, setNewTag] = useState<string>('kitchen-task');
   const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchLogs = async (taskId: string) => {
@@ -38,7 +39,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
         }
       }
     } catch (err) {
-      setActionError('Failed to terminate task.');
+      setActionError('Failed to stop task.');
     }
   };
 
@@ -62,56 +63,56 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
 
   return (
     <div className="space-y-6">
-      {/* Launch Control Panel */}
-      <div className="bg-card border border-border rounded-xl p-5 shadow-lg">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
-          <Terminal className="w-4 h-4 text-blue-400" /> Launch Butler Daemon Task
+      {/* Kitchen Order Launch Panel */}
+      <div className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-bento-tamago mb-3 flex items-center gap-2">
+          <ChefTamagoIcon className="w-5 h-5" /> Cook New Butler Task (Background Runner)
         </h3>
         <form onSubmit={handleLaunch} className="flex flex-wrap gap-3">
           <input
             type="text"
-            placeholder="Command to run in background (e.g. bento dream --benchmarks examples/)"
+            placeholder="Command to cook in background (e.g. bento dream --benchmarks examples/)"
             value={newCmd}
             onChange={(e) => setNewCmd(e.target.value)}
-            className="flex-1 min-w-[300px] bg-background border border-border rounded-lg px-4 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono"
+            className="flex-1 min-w-[300px] bg-bento-lacquer border border-bento-border rounded-xl px-4 py-2 text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition"
           />
           <input
             type="text"
-            placeholder="Tag / Label"
+            placeholder="Dish Tag"
             value={newTag}
             onChange={(e) => setNewTag(e.target.value)}
-            className="w-32 bg-background border border-border rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono"
+            className="w-32 bg-bento-lacquer border border-bento-border rounded-xl px-3 py-2 text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition"
           />
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-5 py-2 rounded-lg text-sm transition flex items-center gap-2"
+            className="bg-gradient-to-r from-bento-tamago to-amber-500 hover:from-amber-400 hover:to-amber-500 text-gray-900 font-extrabold px-5 py-2 rounded-xl text-sm transition flex items-center gap-2 shadow-tamago-glow"
           >
-            <Play className="w-4 h-4" /> Start Detached
+            <Flame className="w-4 h-4 fill-gray-900" /> Start Cooking
           </button>
         </form>
-        {actionError && <p className="text-red-400 text-xs mt-2">{actionError}</p>}
+        {actionError && <p className="text-bento-salmon text-xs mt-2">{actionError}</p>}
       </div>
 
       {/* Task Process Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-lg">
-        <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-[#151924]">
-          <h2 className="text-base font-semibold text-gray-200 flex items-center gap-2">
-            Butler Daemon Processes ({tasks.length})
+      <div className="bg-bento-surface border border-bento-border rounded-bento overflow-hidden shadow-bento-card">
+        <div className="px-6 py-4 border-b border-bento-border flex justify-between items-center bg-bento-elevated">
+          <h2 className="text-base font-bold text-gray-100 flex items-center gap-2">
+            <BentoBoxIcon className="w-5 h-5" /> Kitchen Orders & Daemons ({tasks.length})
           </h2>
           <button
             onClick={onRefresh}
-            className="p-1.5 hover:bg-border rounded-lg text-gray-400 hover:text-white transition"
-            title="Refresh process list"
+            className="p-2 hover:bg-bento-border rounded-xl text-gray-400 hover:text-white transition"
+            title="Refresh kitchen orders"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
 
         {tasks.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
-            <Clock className="w-8 h-8 mx-auto mb-3 opacity-40" />
-            <p className="text-sm">No background Butler tasks currently running.</p>
-            <p className="text-xs text-gray-600 mt-1">Start a task via CLI: <code>bento bg run "..."</code></p>
+          <div className="p-12 text-center text-gray-400">
+            <ChefTamagoIcon className="w-12 h-12 mx-auto mb-3 opacity-60 animate-bento-bounce" />
+            <p className="text-sm font-medium text-gray-300">Kitchen stove is clear! No background tasks cooking.</p>
+            <p className="text-xs text-gray-500 mt-1 font-mono">Launch a task with: <code>bento bg run "..."</code></p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -126,47 +127,55 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                   <th className="px-6 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/60">
+              <tbody className="divide-y divide-bento-border/70">
                 {tasks.map((task) => {
                   const isRunning = task.status === 'RUNNING';
                   return (
                     <tr
                       key={task.task_id}
-                      className="hover:bg-background/40 transition cursor-pointer"
+                      className="hover:bg-bento-elevated/70 transition cursor-pointer"
                       onClick={() => {
                         setSelectedTask(task);
                         fetchLogs(task.task_id);
                       }}
                     >
-                      <td className="px-6 py-4 font-mono font-medium text-blue-400">
+                      <td className="px-6 py-4 font-mono font-medium text-bento-tamago">
                         {task.task_id}
-                        <span className="block text-xs text-gray-500 font-sans">{task.tag}</span>
+                        <span className="block text-xs text-gray-400 font-sans mt-0.5 font-normal">#{task.tag}</span>
                       </td>
-                      <td className="px-6 py-4 font-mono text-gray-400">{task.pid || '—'}</td>
+                      <td className="px-6 py-4 font-mono text-gray-400 text-xs">{task.pid || '—'}</td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                             isRunning
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              ? 'bg-bento-tamago/15 text-bento-tamago border border-bento-tamago/30 shadow-sm'
                               : task.status === 'COMPLETED'
-                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                              ? 'bg-bento-matcha/15 text-bento-matcha border border-bento-matcha/30'
+                              : 'bg-bento-salmon/15 text-bento-salmon border border-bento-salmon/30'
                           }`}
                         >
                           {isRunning ? (
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-bento-tamago animate-ping" />
+                              Sizzling
+                            </>
                           ) : task.status === 'COMPLETED' ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Ready to Serve
+                            </>
                           ) : (
-                            <XCircle className="w-3.5 h-3.5" />
+                            <>
+                              <XCircle className="w-3.5 h-3.5" />
+                              Burnt / Failed
+                            </>
                           )}
-                          {task.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs text-gray-300 max-w-xs truncate">
+                      <td className="px-6 py-4 font-mono text-xs text-gray-200 max-w-xs truncate">
                         {task.command}
                       </td>
-                      <td className="px-6 py-4 text-xs text-gray-400">
+                      <td className="px-6 py-4 text-xs text-gray-400 font-mono">
                         {task.duration_sec.toFixed(1)}s
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
@@ -176,9 +185,9 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                               e.stopPropagation();
                               handleKill(task.task_id);
                             }}
-                            className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded transition"
+                            className="text-xs bg-bento-salmon/15 hover:bg-bento-salmon/25 text-bento-salmon border border-bento-salmon/40 px-3 py-1 rounded-xl transition font-medium"
                           >
-                            Kill
+                            Remove Pot
                           </button>
                         )}
                         <button
@@ -187,9 +196,9 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                             setSelectedTask(task);
                             fetchLogs(task.task_id);
                           }}
-                          className="text-xs bg-border hover:bg-gray-700 text-gray-200 px-3 py-1 rounded transition"
+                          className="text-xs bg-bento-elevated hover:bg-bento-border text-gray-200 px-3 py-1 rounded-xl border border-bento-border transition"
                         >
-                          Logs
+                          Taste Logs
                         </button>
                       </td>
                     </tr>
@@ -203,43 +212,43 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
 
       {/* Log Viewer Modal / Drawer */}
       {selectedTask && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end">
-          <div className="w-full max-w-2xl bg-card border-l border-border h-full flex flex-col p-6 shadow-2xl">
-            <div className="flex justify-between items-start pb-4 border-b border-border">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-end">
+          <div className="w-full max-w-2xl bg-bento-surface border-l border-bento-border h-full flex flex-col p-6 shadow-2xl">
+            <div className="flex justify-between items-start pb-4 border-b border-bento-border">
               <div>
-                <h3 className="text-lg font-semibold text-gray-100 flex items-center gap-2">
-                  <Terminal className="w-5 h-5 text-blue-400" />
-                  Task Logs: <span className="font-mono text-blue-400">{selectedTask.task_id}</span>
+                <h3 className="text-base font-bold text-gray-100 flex items-center gap-2">
+                  <SoyFishIcon className="w-6 h-6 text-bento-salmon" />
+                  Task Output Logs: <span className="font-mono text-bento-tamago">{selectedTask.task_id}</span>
                 </h3>
                 <p className="text-xs text-gray-400 font-mono mt-1">{selectedTask.command}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => fetchLogs(selectedTask.task_id)}
-                  className="p-1.5 hover:bg-border rounded text-gray-400 hover:text-white"
+                  className="p-1.5 hover:bg-bento-border rounded-xl text-gray-300 hover:text-white"
                   title="Reload Logs"
                 >
-                  <RefreshCw className={`w-4 h-4 ${loadingLogs ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${loadingLogs ? 'animate-spin text-bento-salmon' : ''}`} />
                 </button>
                 <button
                   onClick={() => setSelectedTask(null)}
-                  className="px-3 py-1 bg-border hover:bg-gray-700 text-xs rounded text-gray-300"
+                  className="px-3 py-1 bg-bento-elevated hover:bg-bento-border text-xs rounded-xl text-gray-300 border border-bento-border"
                 >
                   Close
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 my-4 bg-[#090b10] border border-border rounded-lg p-4 font-mono text-xs text-gray-300 overflow-y-auto whitespace-pre-wrap">
+            <div className="flex-1 my-4 bg-bento-lacquer border border-bento-border rounded-xl p-4 font-mono text-xs text-bento-rice overflow-y-auto whitespace-pre-wrap">
               {logContent || 'Log buffer is empty.'}
             </div>
 
-            <div className="pt-3 border-t border-border flex justify-between items-center text-xs text-gray-500">
-              <span>Status: <strong className="text-gray-300">{selectedTask.status}</strong></span>
+            <div className="pt-3 border-t border-bento-border flex justify-between items-center text-xs text-gray-400">
+              <span>Status: <strong className="text-bento-tamago">{selectedTask.status}</strong></span>
               {selectedTask.status === 'RUNNING' && (
                 <button
                   onClick={() => handleKill(selectedTask.task_id)}
-                  className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 px-4 py-1.5 rounded transition font-medium"
+                  className="bg-bento-salmon/20 hover:bg-bento-salmon/30 text-bento-salmon border border-bento-salmon/50 px-4 py-1.5 rounded-xl transition font-bold"
                 >
                   Terminate Process (SIGTERM)
                 </button>

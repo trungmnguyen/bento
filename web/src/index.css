@@ -2,18 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Dark Scrollbar */
+/* Custom Bento Lacquer Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #090a0f;
+  background: #131117;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1f2433;
-  border-radius: 4px;
+  background: #2a2334;
+  border-radius: 9999px;
+  border: 2px solid #131117;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2e364d;
+  background: #3e334e;
 }
+
+/* Joyful micro-interactions */
+button:active {
+  transform: scale(0.97);
+}
+
+@keyframes steam-float {
+  0% {
+    transform: translateY(0) scale(0.95);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-4px) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(0.95);
+    opacity: 0.7;
+  }
+}
+
+.animate-steam {
+  animation: steam-float 2.5s ease-in-out infinite;
+}
+
+@keyframes bento-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-bento-bounce {
+  animation: bento-bounce 2s ease-in-out infinite;
+}
+

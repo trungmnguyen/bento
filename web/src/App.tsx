@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { RefreshCw, FolderGit2, Sparkles } from 'lucide-react';
 import {
-  Terminal,
-  Brain,
-  Moon,
-  CheckSquare,
-  Activity,
-  RefreshCw,
-  Cpu,
-  Layers,
-  FolderGit2,
-} from 'lucide-react';
+  BentoBoxIcon,
+  OnigiriIcon,
+  ChefTamagoIcon,
+  MatchaCupIcon,
+  ChopsticksIcon,
+} from './components/icons/BentoIcons';
 import { DaemonView } from './components/DaemonView';
 import { MemoryView } from './components/MemoryView';
 import { TracesView } from './components/TracesView';
@@ -85,81 +82,92 @@ export default function App() {
   const runningTasksCount = tasks.filter((t) => t.status === 'RUNNING').length;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-gray-100">
-      {/* Top Telemetry Header */}
-      <header className="border-b border-border bg-[#0d0f17]/90 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-xl shadow-lg shadow-blue-500/20">
-              🍱
+    <div className="min-h-screen flex flex-col bg-background text-gray-100 selection:bg-bento-salmon selection:text-white">
+      {/* Top Bento Telemetry Header */}
+      <header className="border-b border-bento-border bg-[#18141f]/95 backdrop-blur-md sticky top-0 z-40 shadow-bento-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-4">
+          
+          {/* Logo & Kitchen Tagline */}
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-bento bg-gradient-to-tr from-bento-salmon to-rose-600 p-1 flex items-center justify-center shadow-bento-glow hover:rotate-3 transition duration-200 cursor-pointer">
+              <BentoBoxIcon className="w-8 h-8 drop-shadow" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-tight text-white">BENTO HARNESS</h1>
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                  Telemetry Monitor
+                <h1 className="text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                  BENTO <span className="text-bento-salmon">HARNESS</span>
+                </h1>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-bento-salmon/15 text-bento-salmon border border-bento-salmon/30 flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5 animate-spin" /> Bento Kitchen
                 </span>
               </div>
               <p className="text-xs text-gray-400 font-mono flex items-center gap-1.5 mt-0.5">
                 <FolderGit2 className="w-3 h-3 text-gray-500" />
-                {status.cwd || 'Dev/bento'}
+                <span className="text-gray-300">{status.cwd || 'Dev/bento'}</span>
               </p>
             </div>
           </div>
 
-          {/* Quick Metrics Strip */}
+          {/* Bento Food Metrics Strip */}
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 bg-card border border-border px-3 py-1.5 rounded-lg text-xs font-mono">
-              <span className="flex items-center gap-1 text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block mr-0.5" />
-                {status.status}
+            <div className="hidden sm:flex items-center gap-3 bg-bento-surface border border-bento-border px-3.5 py-1.5 rounded-bento text-xs font-mono shadow-inner">
+              <span className="flex items-center gap-1.5 text-bento-matcha font-medium">
+                <span className="w-2 h-2 rounded-full bg-bento-matcha animate-ping inline-block" />
+                Freshly Serving
               </span>
-              <span className="text-gray-600">|</span>
-              <span className="text-gray-300 flex items-center gap-1">
-                <Cpu className="w-3.5 h-3.5 text-blue-400" /> {runningTasksCount} Daemon{runningTasksCount !== 1 ? 's' : ''}
+              <span className="text-bento-border">|</span>
+              <span className="text-gray-300 flex items-center gap-1.5">
+                <ChefTamagoIcon className="w-4 h-4" />
+                <span className="text-bento-tamago font-semibold">{runningTasksCount}</span> Simmering
               </span>
-              <span className="text-gray-600">|</span>
-              <span className="text-gray-300 flex items-center gap-1">
-                <Brain className="w-3.5 h-3.5 text-indigo-400" /> {lessons.length} Rules
+              <span className="text-bento-border">|</span>
+              <span className="text-gray-300 flex items-center gap-1.5">
+                <OnigiriIcon className="w-4 h-4" />
+                <span className="text-bento-rice font-semibold">{lessons.length}</span> Recipes
+              </span>
+              <span className="text-bento-border">|</span>
+              <span className="text-gray-300 flex items-center gap-1.5">
+                <MatchaCupIcon className="w-4 h-4" />
+                <span className="text-bento-matcha font-semibold">{traces.length}</span> Tastes
               </span>
             </div>
 
-            {/* Refresh Control */}
+            {/* Refresh Controls */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${
+                className={`text-xs px-3 py-1.5 rounded-bento border font-medium transition ${
                   autoRefresh
-                    ? 'bg-blue-600/20 text-blue-300 border-blue-500/30'
-                    : 'bg-card text-gray-400 border-border hover:text-white'
+                    ? 'bg-bento-salmon/20 text-bento-salmon border-bento-salmon/40 shadow-sm'
+                    : 'bg-bento-surface text-gray-400 border-bento-border hover:text-white'
                 }`}
               >
-                Auto (3s): {autoRefresh ? 'ON' : 'OFF'}
+                Auto: {autoRefresh ? '3s 🥢' : 'PAUSED'}
               </button>
               <button
                 onClick={fetchAllData}
-                className="p-1.5 bg-card border border-border hover:bg-border rounded-lg text-gray-400 hover:text-white transition"
-                title="Manual Refresh"
+                className="p-1.5 bg-bento-surface border border-bento-border hover:bg-bento-elevated rounded-bento text-gray-300 hover:text-white transition"
+                title="Manual Refresh Bento"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-bento-salmon' : ''}`} />
               </button>
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 border-t border-border/50">
+        {/* Bento Compartment Tabs */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-2 border-t border-bento-border/70 pt-1">
           <button
             onClick={() => setActiveTab('daemons')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-t-2 ${
               activeTab === 'daemons'
-                ? 'border-blue-500 text-blue-400 bg-blue-500/5'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
+                ? 'border-bento-tamago text-bento-tamago bg-bento-tamago/10 shadow-tamago-glow'
+                : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'
             }`}
           >
-            <Terminal className="w-4 h-4" /> Butler Daemons
+            <ChefTamagoIcon className="w-4 h-4" /> Kitchen Chefs
             {runningTasksCount > 0 && (
-              <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+              <span className="bg-bento-tamago text-gray-900 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
                 {runningTasksCount}
               </span>
             )}
@@ -167,40 +175,40 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('memory')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-t-2 ${
               activeTab === 'memory'
-                ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
+                ? 'border-bento-salmon text-bento-salmon bg-bento-salmon/10 shadow-bento-glow'
+                : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'
             }`}
           >
-            <Brain className="w-4 h-4" /> Memory Bank ({lessons.length})
+            <OnigiriIcon className="w-4 h-4" /> Seasoned Recipes ({lessons.length})
           </button>
 
           <button
             onClick={() => setActiveTab('traces')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-t-2 ${
               activeTab === 'traces'
-                ? 'border-purple-500 text-purple-400 bg-purple-500/5'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
+                ? 'border-bento-matcha text-bento-matcha bg-bento-matcha/10 shadow-matcha-glow'
+                : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'
             }`}
           >
-            <Moon className="w-4 h-4" /> Dreaming & Traces ({traces.length})
+            <MatchaCupIcon className="w-4 h-4" /> Night Dream & Tea ({traces.length})
           </button>
 
           <button
             onClick={() => setActiveTab('benchmarks')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-t-2 ${
               activeTab === 'benchmarks'
-                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
+                ? 'border-amber-400 text-amber-300 bg-amber-400/10'
+                : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'
             }`}
           >
-            <CheckSquare className="w-4 h-4" /> Contracts ({scenarios.length})
+            <ChopsticksIcon className="w-4 h-4" /> Tasting Battery ({scenarios.length})
           </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
+      {/* Main Compartment Canvas */}
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1">
         {activeTab === 'daemons' && <DaemonView tasks={tasks} onRefresh={fetchAllData} />}
         {activeTab === 'memory' && <MemoryView lessons={lessons} />}
@@ -208,9 +216,11 @@ export default function App() {
         {activeTab === 'benchmarks' && <BenchmarksView scenarios={scenarios} onRefresh={fetchAllData} />}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border/60 py-3 bg-[#0d0f17] text-xs text-gray-500 text-center font-mono">
-        Bento Harness 0.5.0 • Clean Architecture Enforced • Telemetry Updated: {lastRefreshed.toLocaleTimeString()}
+      {/* Joyful Bento Box Footer */}
+      <footer className="border-t border-bento-border/70 py-3 bg-[#131117] text-xs text-gray-500 text-center font-mono flex items-center justify-center gap-2">
+        <span>🍱 Bento Harness · Packed Fresh with Zero Python Dependencies</span>
+        <span>•</span>
+        <span className="text-gray-400">Telemetry updated at {lastRefreshed.toLocaleTimeString()}</span>
       </footer>
     </div>
   );
