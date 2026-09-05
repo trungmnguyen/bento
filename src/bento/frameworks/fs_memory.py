@@ -62,7 +62,7 @@ class FileSystemMemoryGateway(MemoryGateway):
             "updated_at": memory.updated_at,
             "lessons": raw_lessons,
         }
-        json_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        self._atomic_write_text(json_file, json.dumps(payload, indent=2))
 
         # 2. Save Human-Readable Markdown (MEMORY.md)
         md_file = bento_dir / "MEMORY.md"
@@ -82,7 +82,21 @@ class FileSystemMemoryGateway(MemoryGateway):
                 lines.append(f"- **Tags:** {', '.join(l.tags)}")
             lines.append("")
 
-        md_file.write_text("\n".join(lines), encoding="utf-8")
+        self._atomic_write_text(md_file, "\n".join(lines))
+
+    def _atomic_write_text(self, path: Path, content: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp_file = path.with_suffix(f"{path.suffix}.tmp.{os.getpid()}")
+        try:
+            temp_file.write_text(content, encoding="utf-8")
+            os.replace(temp_file, path)
+        except Exception:
+            if temp_file.exists():
+                try:
+                    temp_file.unlink()
+                except Exception:
+                    pass
+            raise
 
     def save_regression_scenario(self, scenario: Scenario, working_dir: str | None = None) -> str:
         bento_dir = self._get_bento_dir(working_dir)

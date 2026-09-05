@@ -6,6 +6,7 @@ import os
 import signal
 import subprocess
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -57,7 +58,7 @@ class BackgroundTaskRunner:
     ) -> dict[str, Any]:
         bg_dir = self._get_bg_dir(working_dir)
         now_ts = int(time.time() * 1000)
-        short_id = f"bg-{now_ts % 1000000:06d}"
+        short_id = f"bg-{now_ts % 1000000:06d}-{uuid.uuid4().hex[:4]}"
         
         log_file = bg_dir / "logs" / f"{short_id}.log"
         task_meta_file = bg_dir / "tasks" / f"{short_id}.json"
@@ -85,6 +86,7 @@ class BackgroundTaskRunner:
 
         task_info = {
             "id": short_id,
+            "task_id": short_id,
             "tag": tag,
             "command": command,
             "pid": process.pid,
@@ -105,6 +107,10 @@ class BackgroundTaskRunner:
         for tf in sorted(task_files, reverse=True):
             try:
                 info = json.loads(tf.read_text(encoding="utf-8"))
+                if "task_id" not in info and "id" in info:
+                    info["task_id"] = info["id"]
+                elif "id" not in info and "task_id" in info:
+                    info["id"] = info["task_id"]
                 pid = info.get("pid", -1)
                 if self._is_pid_alive(pid):
                     info["status"] = "RUNNING"
@@ -148,6 +154,34 @@ class BackgroundTaskRunner:
         except Exception as e:
             return f"Error reading log: {e}"
 
+    def read_log_chunk(
+        self,
+        task_id: str,
+        start_offset: int = 0,
+        working_dir: str | None = None,
+    ) -> tuple[str, int, bool]:
+        """Read newly appended chunk from task log starting at byte offset.
+
+        Returns:
+            (chunk_text, next_offset, is_running)
+        """
+        bg_dir = self._get_bg_dir(working_dir)
+        log_file = bg_dir / "logs" / f"{task_id}.log"
+        status = self.get_status(task_id, working_dir=working_dir)
+        is_running = (status.get("status") == "RUNNING") if status else False
+
+        if not log_file.exists():
+            return "", start_offset, is_running
+
+        try:
+            with open(log_file, "r", encoding="utf-8", errors="replace") as f:
+                f.seek(start_offset)
+                chunk = f.read()
+                new_offset = f.tell()
+                return chunk, new_offset, is_running
+        except Exception:
+            return "", start_offset, is_running
+
     def kill_task(self, task_id: str, working_dir: str | None = None) -> bool:
         status = self.get_status(task_id, working_dir=working_dir)
         if not status:
@@ -169,7 +203,7 @@ class BackgroundTaskRunner:
             except Exception:
                 pass
 
-        time.sleep(0.15)
+        time.sleep(0.5)
         if self._is_pid_alive(pid):
             try:
                 pgid = os.getpgid(pid)

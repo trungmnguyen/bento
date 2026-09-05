@@ -41,7 +41,10 @@ class TerminalMonitor:
 
     def render_screen(self) -> str:
         tasks = self.bg_runner.list_tasks()
-        running_tasks = [t for t in tasks if t.status == "RUNNING"]
+        running_tasks = [
+            t for t in tasks
+            if (t.get("status") if isinstance(t, dict) else getattr(t, "status", None)) == "RUNNING"
+        ]
         memory = self.memory_gateway.load_memory()
         traces = self.trace_gateway.load_recent_traces(10) if self.trace_gateway else []
 
@@ -72,11 +75,22 @@ class TerminalMonitor:
             lines.append("  (No background tasks active. Launch with 'bento bg run <cmd>')")
         else:
             for t in tasks[:5]:
-                status_color = "32" if t.status == "RUNNING" else ("34" if t.status == "COMPLETED" else "31")
-                status_badge = self._c(status_color, f"[{t.status}]")
+                status = t.get("status", "STOPPED") if isinstance(t, dict) else getattr(t, "status", "STOPPED")
+                task_id = (t.get("id") or t.get("task_id", "—")) if isinstance(t, dict) else getattr(t, "task_id", getattr(t, "id", "—"))
+                pid = t.get("pid", "—") if isinstance(t, dict) else getattr(t, "pid", "—")
+                cmd = t.get("command", "") if isinstance(t, dict) else getattr(t, "command", "")
+                started_at = t.get("started_at") if isinstance(t, dict) else getattr(t, "started_at", None)
+                duration_sec = 0.0
+                if started_at:
+                    try:
+                        duration_sec = (datetime.datetime.now() - datetime.datetime.fromisoformat(started_at)).total_seconds()
+                    except Exception:
+                        pass
+                status_color = "32" if status == "RUNNING" else ("34" if status == "COMPLETED" else "31")
+                status_badge = self._c(status_color, f"[{status}]")
                 lines.append(
-                    f"  {self._c('1', t.task_id)} {status_badge} PID: {t.pid or '—'} "
-                    f"Runtime: {t.duration_sec:.1f}s | {self._c('90', t.command[:35])}"
+                    f"  {self._c('1', str(task_id))} {status_badge} PID: {pid or '—'} "
+                    f"Runtime: {duration_sec:.1f}s | {self._c('90', str(cmd)[:35])}"
                 )
         lines.append(self._c("90", "─" * 70))
 
@@ -165,7 +179,7 @@ class TerminalMonitor:
                         except Exception:
                             continue
             res = self.run_suite_uc.execute(scenarios, suite_name="Terminal Live Battery")
-            self._action_message = f"Suite Complete: {res.passed_scenarios}/{res.total_scenarios} passed ({res.pass_rate * 100:.0f}%) in {res.total_duration_ms:.0f}ms"
+            self._action_message = f"Suite Complete: {res.passed_scenarios}/{res.total_scenarios} passed ({res.pass_rate:.0f}%) in {res.total_duration_ms:.0f}ms"
         except Exception as e:
             self._action_message = f"Error running suite: {e}"
 
@@ -180,7 +194,9 @@ class TerminalMonitor:
         tasks = self.bg_runner.list_tasks()
         killed_count = 0
         for t in tasks:
-            if t.status == "RUNNING":
-                if self.bg_runner.kill_task(t.task_id):
+            status = t.get("status") if isinstance(t, dict) else getattr(t, "status", None)
+            task_id = (t.get("id") or t.get("task_id")) if isinstance(t, dict) else getattr(t, "task_id", getattr(t, "id", None))
+            if status == "RUNNING" and task_id:
+                if self.bg_runner.kill_task(task_id):
                     killed_count += 1
         self._action_message = f"Terminated {killed_count} active daemon task(s)."

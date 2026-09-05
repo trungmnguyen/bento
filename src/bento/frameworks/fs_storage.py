@@ -19,7 +19,7 @@ class FileSystemStorageGateway(StorageGateway):
 
     def list_files(self, directory: str, pattern: str = "*") -> list[str]:
         search_path = os.path.join(directory, pattern)
-        return glob.glob(search_path)
+        return glob.glob(search_path, recursive=True)
 
     def file_exists(self, path: str) -> bool:
         return os.path.exists(path)
