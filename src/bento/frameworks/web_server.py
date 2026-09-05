@@ -53,7 +53,10 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         if path == "/api/status":
             memory = self.memory_gateway.load_memory()
             tasks = self.bg_runner.list_tasks()
-            active_tasks = [t for t in tasks if t.status == "RUNNING"]
+            active_tasks = [
+                t for t in tasks
+                if (getattr(t, "status", None) or (t.get("status") if isinstance(t, dict) else None)) == "RUNNING"
+            ]
             traces = self.trace_gateway.load_recent_traces(100) if self.trace_gateway else []
             scenarios = self._load_all_scenarios()
 
@@ -70,20 +73,32 @@ class BentoApiHandler(BaseHTTPRequestHandler):
 
         elif path == "/api/bg":
             tasks = self.bg_runner.list_tasks()
-            data = [
-                {
-                    "task_id": t.task_id,
-                    "tag": t.tag,
-                    "command": t.command,
-                    "pid": t.pid,
-                    "status": t.status,
-                    "start_time": t.start_time,
-                    "duration_sec": t.duration_sec,
-                    "log_file": str(t.log_file),
-                    "exit_code": t.exit_code,
-                }
-                for t in tasks
-            ]
+            data = []
+            for t in tasks:
+                if isinstance(t, dict):
+                    data.append({
+                        "task_id": t.get("id", t.get("task_id", "")),
+                        "tag": t.get("tag", "task"),
+                        "command": t.get("command", ""),
+                        "pid": t.get("pid", 0),
+                        "status": t.get("status", "STOPPED"),
+                        "start_time": t.get("started_at", t.get("start_time", "")),
+                        "duration_sec": t.get("duration_sec", 0),
+                        "log_file": str(t.get("log_file", "")),
+                        "exit_code": t.get("exit_code"),
+                    })
+                else:
+                    data.append({
+                        "task_id": getattr(t, "task_id", getattr(t, "id", "")),
+                        "tag": getattr(t, "tag", "task"),
+                        "command": getattr(t, "command", ""),
+                        "pid": getattr(t, "pid", 0),
+                        "status": getattr(t, "status", "STOPPED"),
+                        "start_time": getattr(t, "start_time", getattr(t, "started_at", "")),
+                        "duration_sec": getattr(t, "duration_sec", 0),
+                        "log_file": str(getattr(t, "log_file", "")),
+                        "exit_code": getattr(t, "exit_code", None),
+                    })
             return self._send_json(data)
 
         elif path.startswith("/api/bg/") and path.endswith("/logs"):
