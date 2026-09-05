@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import re
 import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -27,6 +28,14 @@ class BentoApiHandler(BaseHTTPRequestHandler):
     dream_uc: DreamCycleUseCase
     static_dir: Path
     start_time: float
+
+    def address_string(self) -> str:
+        # Avoid blocking reverse DNS lookups (socket.getfqdn) on every request
+        return str(self.client_address[0])
+
+    def log_message(self, format: str, *args: any) -> None:
+        # Suppress standard logging to avoid stderr pollution in tests and ambient monitoring
+        pass
 
     def _send_json(self, data: any, status: int = 200) -> None:
         payload = json.dumps(data, default=lambda o: getattr(o, "__dict__", str(o))).encode("utf-8")
@@ -104,6 +113,8 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/bg/") and path.endswith("/logs"):
             # /api/bg/<id>/logs
             parts = path.split("/")
+            if len(parts) != 5 or not re.match(r"^bg-\d+$", parts[3]):
+                return self._send_json({"error": "Invalid task ID"}, status=400)
             task_id = parts[3]
             logs = self.bg_runner.get_logs(task_id, lines=200)
             return self._send_json({"task_id": task_id, "logs": logs})
@@ -182,11 +193,15 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             if not cmd:
                 return self._send_json({"error": "Command is required"}, status=400)
             task = self.bg_runner.start_task(cmd, tag=tag)
-            return self._send_json({"started": True, "task_id": task.task_id, "pid": task.pid})
+            task_id = task.get("id", getattr(task, "task_id", "")) if isinstance(task, dict) else getattr(task, "task_id", "")
+            pid = task.get("pid", getattr(task, "pid", 0)) if isinstance(task, dict) else getattr(task, "pid", 0)
+            return self._send_json({"started": True, "task_id": task_id, "pid": pid})
 
         elif path.startswith("/api/bg/") and path.endswith("/kill"):
             # /api/bg/<id>/kill
             parts = path.split("/")
+            if len(parts) != 5 or not re.match(r"^bg-\d+$", parts[3]):
+                return self._send_json({"error": "Invalid task ID"}, status=400)
             task_id = parts[3]
             killed = self.bg_runner.kill_task(task_id)
             return self._send_json({"task_id": task_id, "killed": killed})

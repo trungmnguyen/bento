@@ -132,13 +132,21 @@ class TestBentoWebServer(unittest.TestCase):
         self.base_url = f"http://127.0.0.1:{self.server.port}"
 
     def tearDown(self):
+        for task in self.bg_runner.list_tasks(working_dir=self.test_dir):
+            try:
+                self.bg_runner.kill_task(task.get("id", ""), working_dir=self.test_dir)
+            except Exception:
+                pass
         self.server.stop()
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def _get(self, endpoint: str):
         req = urllib.request.Request(f"{self.base_url}{endpoint}")
-        with urllib.request.urlopen(req) as resp:
-            return resp.status, resp.read().decode("utf-8")
+        try:
+            with urllib.request.urlopen(req) as resp:
+                return resp.status, resp.read().decode("utf-8")
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode("utf-8")
 
     def _post(self, endpoint: str, payload: dict):
         data = json.dumps(payload).encode("utf-8")
@@ -152,6 +160,17 @@ class TestBentoWebServer(unittest.TestCase):
                 return resp.status, resp.read().decode("utf-8")
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode("utf-8")
+
+    def _raw_request(self, method: str, path: str, payload: dict | None = None) -> tuple[int, str]:
+        import http.client
+        conn = http.client.HTTPConnection("127.0.0.1", self.server.port, timeout=5.0)
+        body = json.dumps(payload).encode("utf-8") if payload is not None else None
+        headers = {"Content-Type": "application/json"} if body else {}
+        conn.request(method, path, body=body, headers=headers)
+        resp = conn.getresponse()
+        data = resp.read().decode("utf-8")
+        conn.close()
+        return resp.status, data
 
     def test_api_status(self):
         status, body = self._get("/api/status")
@@ -196,6 +215,46 @@ class TestBentoWebServer(unittest.TestCase):
         data = json.loads(body)
         self.assertIn("error", data)
 
+    def test_api_bg_run_success(self):
+        status, body = self._post("/api/bg/run", {"command": "echo 'bento test'", "tag": "unit-test"})
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertTrue(data.get("started"))
+        self.assertTrue(data.get("task_id", "").startswith("bg-"))
+        self.assertGreater(data.get("pid", 0), 0)
+
+    def test_api_bg_logs_path_traversal_rejected(self):
+        status, body = self._raw_request("GET", "/api/bg/../../logs")
+        self.assertEqual(status, 400)
+        data = json.loads(body)
+        self.assertIn("error", data)
+
+        # Non-bg format
+        status, body = self._raw_request("GET", "/api/bg/malicious_payload/logs")
+        self.assertEqual(status, 400)
+
+    def test_api_bg_kill_path_traversal_rejected(self):
+        status, body = self._raw_request("POST", "/api/bg/../../kill", {})
+        self.assertEqual(status, 400)
+        data = json.loads(body)
+        self.assertIn("error", data)
+
+        # Non-bg format
+        status, body = self._raw_request("POST", "/api/bg/malicious_payload/kill", {})
+        self.assertEqual(status, 400)
+
+    def test_api_bg_logs_valid(self):
+        # First spawn a task
+        _, run_body = self._post("/api/bg/run", {"command": "echo 'log output test'", "tag": "log-test"})
+        task_id = json.loads(run_body)["task_id"]
+
+        # Fetch logs
+        status, body = self._get(f"/api/bg/{task_id}/logs")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertEqual(data["task_id"], task_id)
+        self.assertIn("log_file", dir(self.bg_runner) if False else "logs")
+
     def test_api_dream_endpoint(self):
         status, body = self._post("/api/dream", {})
         self.assertEqual(status, 200)
@@ -211,3 +270,4 @@ class TestBentoWebServer(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
