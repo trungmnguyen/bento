@@ -112,6 +112,52 @@ class TestAutoLoop(unittest.TestCase):
         self.assertEqual(result.total_iterations, 3)
         self.assertFalse(result.succeeded)
 
+    def test_auto_loop_with_trace_gateway_records_failed_assertions(self):
+        class RecordingTraceGateway:
+            def __init__(self):
+                self.events = []
+            def append_trace_event(self, event, working_dir=None):
+                self.events.append(event)
+
+        trace_gw = RecordingTraceGateway()
+        mock_exec = MockExecutionGatewayWithState()
+        mock_agent = MockAgentDriver()
+        run_scenario_uc = RunScenarioUseCase(execution_gateway=mock_exec)
+
+        auto_loop_uc = AutoLoopUseCase(
+            agent_gateway=mock_agent,
+            run_scenario_use_case=run_scenario_uc,
+            trace_gateway=trace_gw,
+        )
+
+        scenario = Scenario(
+            name="Indicator With Trace",
+            steps=[
+                Step(
+                    name="Calculate RSI",
+                    command="python3 calc.py",
+                    assertions=[
+                        Assertion(type=AssertionType.CONTAINS, expected="ok", target_field="stdout"),
+                    ],
+                )
+            ],
+        )
+
+        result = auto_loop_uc.execute(
+            task_description="Fix calc.py",
+            scenario=scenario,
+            max_iterations=2,
+        )
+
+        self.assertTrue(result.succeeded)
+        self.assertEqual(len(trace_gw.events), 2)
+        # First event had failed assertions
+        self.assertFalse(trace_gw.events[0].passed)
+        self.assertGreater(len(trace_gw.events[0].failed_assertions), 0)
+        # Second event passed
+        self.assertTrue(trace_gw.events[1].passed)
+
+
 
 class TestPromptSynthesisRules(unittest.TestCase):
     def test_build_initial_prompt(self):

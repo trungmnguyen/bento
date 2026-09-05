@@ -39,6 +39,9 @@ class MockStorageGateway:
     def exists(self, path: str) -> bool:
         return path in self.files
 
+    def file_exists(self, path: str) -> bool:
+        return path in self.files
+
     def list_files(self, directory: str, pattern: str = "*") -> list[str]:
         return [f for f in self.files.keys() if f.startswith(directory)]
 
@@ -46,6 +49,9 @@ class MockStorageGateway:
 class MockTraceGateway:
     def __init__(self, traces: list[TraceEvent] | None = None):
         self.traces = traces or []
+
+    def append_trace_event(self, event: TraceEvent, working_dir=None) -> None:
+        self.traces.append(event)
 
     def record_trace(self, event: TraceEvent, working_dir=None) -> None:
         self.traces.append(event)
@@ -57,15 +63,19 @@ class MockTraceGateway:
 class MockRunSuiteUseCase:
     def __init__(self):
         class MockRunScenario:
+            def __init__(self):
+                self._execution_gateway = MockExecutionGateway()
+
             def execute(self, scenario):
-                from bento.domain.models import ScenarioResult
+                from bento.domain.models import ScenarioResult, StepStatus
                 return ScenarioResult(
                     scenario_name=getattr(scenario, "name", "mock_scenario"),
-                    passed=True,
+                    status=StepStatus.PASSED,
                     total_duration_ms=1.0,
                     step_results=[],
                 )
-        self._run_scenario = MockRunScenario()
+        self._run_scenario_use_case = MockRunScenario()
+        self._run_scenario = self._run_scenario_use_case
 
     def execute(self, scenarios, suite_name=""):
         from bento.domain.models import SuiteResult
@@ -97,6 +107,13 @@ class MockDreamUseCase:
         )
 
 
+class MockExecutionGateway:
+    def execute_command(self, command: str, cwd=None, env=None, timeout_sec=30.0):
+        if "fail" in command:
+            return 1, "", "command failed", 10.0
+        return 0, f"mock output for {command}", "", 5.0
+
+
 class TestBentoWebServer(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
@@ -124,6 +141,7 @@ class TestBentoWebServer(unittest.TestCase):
         ])
         self.run_suite_uc = MockRunSuiteUseCase()
         self.dream_uc = MockDreamUseCase()
+        self.exec_gw = MockExecutionGateway()
 
         # Create dummy static directory
         self.static_dir = Path(self.test_dir) / "dist"
@@ -137,6 +155,7 @@ class TestBentoWebServer(unittest.TestCase):
             run_suite_uc=self.run_suite_uc,
             dream_uc=self.dream_uc,
             trace_gateway=self.trace_gw,
+            execution_gateway=self.exec_gw,
             host="127.0.0.1",
             port=0,
             static_dir=self.static_dir,
@@ -308,6 +327,150 @@ class TestBentoWebServer(unittest.TestCase):
         # Test validation failure
         bad_status, bad_body = self._post("/api/memory/add", {"title": ""})
         self.assertEqual(bad_status, 400)
+
+    def test_path_traversal_blocked(self):
+        # Attempt to read outside static_dir
+        status, body = self._get("/../../../../etc/passwd")
+        self.assertIn(status, [403, 404])
+        self.assertNotIn("root:", body)
+
+    def test_cross_origin_post_blocked(self):
+        # Cross-origin request from malicious site must be rejected with 403
+        data = json.dumps({"command": "echo hacked"}).encode("utf-8")
+        req = urllib.request.Request(
+            f"{self.base_url}/api/bg/run",
+            data=data,
+            headers={
+                "Content-Type": "application/json",
+                "Origin": "https://malicious-site.com",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req) as resp:
+                status = resp.status
+        except urllib.error.HTTPError as e:
+            status = e.code
+
+        self.assertEqual(status, 403)
+
+    def test_api_bg_stream_endpoint(self):
+        # Start a background task
+        _, run_body = self._post("/api/bg/run", {"command": "echo 'stream test'", "tag": "test-stream"})
+        task_id = json.loads(run_body)["task_id"]
+
+        # Request SSE stream
+        req = urllib.request.Request(f"{self.base_url}/api/bg/{task_id}/stream")
+        with urllib.request.urlopen(req) as resp:
+            self.assertEqual(resp.status, 200)
+            content_type = resp.headers.get("Content-Type", "")
+            self.assertIn("text/event-stream", content_type)
+            chunk = resp.read(100).decode("utf-8", errors="replace")
+            self.assertIn("data:", chunk)
+
+    def test_api_bg_stream_not_found(self):
+        # SEC-06: Non-existent task returns 404
+        status, _ = self._get("/api/bg/bg-999999/stream")
+        self.assertEqual(status, 404)
+
+    def test_api_memory_graph_endpoint(self):
+        # Green Team Flavor Graph
+        status, body = self._get("/api/memory/graph")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertIn("nodes", data)
+        self.assertIn("edges", data)
+        self.assertIn("categories", data)
+        self.assertGreater(len(data["nodes"]), 0)
+
+    def test_api_benchmarks_create(self):
+        # Tasting Studio Create Scenario
+        payload = {
+            "name": "unit_test_flight",
+            "description": "Crafted in Tasting Studio",
+            "tags": ["unit", "studio"],
+            "steps": [
+                {
+                    "name": "check_echo",
+                    "command": "echo hello",
+                    "timeout_sec": 10.0,
+                    "assertions": [
+                        {
+                            "type": "CONTAINS",
+                            "target_field": "stdout",
+                            "expected": "hello",
+                        }
+                    ],
+                }
+            ],
+        }
+        status, body = self._post("/api/benchmarks/create", payload)
+        self.assertEqual(status, 201)
+        data = json.loads(body)
+        self.assertTrue(data.get("success"))
+        self.assertEqual(data["scenario"]["name"], "unit_test_flight")
+
+    def test_api_benchmarks_preflight(self):
+        # Tasting Studio Preflight Execution
+        payload = {
+            "command": "echo test_preflight",
+            "assertions": [
+                {
+                    "type": "CONTAINS",
+                    "target_field": "stdout",
+                    "expected": "test_preflight",
+                }
+            ],
+        }
+        status, body = self._post("/api/benchmarks/preflight", payload)
+        self.assertEqual(status, 200)
+    def test_api_benchmarks_create_overwrite_conflict(self):
+        # SEC-10: Attempting to create duplicate benchmark without overwrite=true returns 409
+        payload = {
+            "name": "conflict_test_flight",
+            "description": "Conflict check",
+            "steps": [{"name": "s1", "command": "echo 1"}],
+        }
+        # First creation succeeds
+        status1, _ = self._post("/api/benchmarks/create", payload)
+        self.assertEqual(status1, 201)
+
+        # Second creation without overwrite returns 409 Conflict
+        status2, body2 = self._post("/api/benchmarks/create", payload)
+        self.assertEqual(status2, 409)
+        self.assertIn("already exists", json.loads(body2)["error"])
+
+        # Second creation with overwrite=true succeeds
+        payload["overwrite"] = True
+        status3, _ = self._post("/api/benchmarks/create", payload)
+        self.assertEqual(status3, 201)
+
+    def test_api_telemetry_endpoint(self):
+        # Sensory Spark Telemetry Endpoint
+        status, body = self._get("/api/telemetry")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertIn("metrics", data)
+        self.assertIn("sparkline", data)
+        metrics = data["metrics"]
+        self.assertIn("pass_rate", metrics)
+        self.assertIn("p50_latency_ms", metrics)
+        self.assertIn("p90_latency_ms", metrics)
+        self.assertIn("p99_latency_ms", metrics)
+
+    def test_api_benchmarks_run_one(self):
+        # BUG-06: Verifies run-one correctly uses scenario runner without AttributeError
+        # Set up a mock scenario in storage
+        scen_payload = {
+            "name": "run_one_test_scenario",
+            "description": "Test run-one",
+            "steps": [{"name": "s1", "command": "echo 1"}],
+        }
+        self.storage_gw.files["benchmarks/run_one_test_scenario.json"] = json.dumps(scen_payload)
+        status, body = self._post("/api/benchmarks/run-one", {"name": "run_one_test_scenario"})
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertEqual(data["scenario_name"], "run_one_test_scenario")
+        self.assertTrue(data["passed"])
 
 
 if __name__ == "__main__":
