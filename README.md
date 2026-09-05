@@ -150,9 +150,17 @@ bento watch examples/basic_test.json --dir src/
 
 ---
 
-### 9. Antigravity Skill (`bento-harness`)
+### 9. Antigravity Skill & MCP Plugin (`bento-plugin` / `bento-harness`)
 
-Bento is integrated with **Google Antigravity (AGY)** as an official skill (`.agents/skills/bento-harness/SKILL.md` and `~/.gemini/config/plugins/bento-plugin/`). AI agents can autonomously query Bento's memory bank, delegate background tasks, and run verification contracts.
+Bento is integrated with **Google Antigravity (AGY)** as an official plugin and skill (`plugins/bento-plugin/` and `~/.gemini/config/plugins/bento-plugin/`). AI agents and LLMs can execute Bento directly from chat via native **Model Context Protocol (MCP)** tools or CLI commands:
+
+- **Verification:** `bento_run`, `bento_suite`
+- **Memory Bank:** `bento_memory_list`, `bento_memory_add`
+- **Autonomous Dream:** `bento_dream`
+- **Butler Background Daemons:** `bento_bg_run`, `bento_bg_list`, `bento_bg_status`, `bento_bg_logs`, `bento_bg_kill`
+- **Telemetry & Dashboards:** `bento ui`, `bento monitor`
+
+See [`SKILL.md`](.agents/skills/bento-harness/SKILL.md) and [`plugins/bento-plugin/`](plugins/bento-plugin/) for complete specifications and runbooks.
 
 ---
 

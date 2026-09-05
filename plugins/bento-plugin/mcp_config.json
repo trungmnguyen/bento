@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "bento": {
+      "command": "python3.12",
+      "args": [
+        "/Users/tmnguyen/.gemini/config/plugins/bento-plugin/scripts/bento_mcp_server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "/Users/tmnguyen/Dev/bento/src"
+      }
+    }
+  }
+}
