@@ -164,6 +164,21 @@ See [`SKILL.md`](.agents/skills/bento-harness/SKILL.md) and [`plugins/bento-plug
 
 ---
 
+### 10. Bento Web Monitor Dashboard: The 4 Compartments (`bento ui`)
+
+The Bento Web Monitor is a joyful, real-time telemetry dashboard accessible on desktop and mobile (`bento ui --network --no-browser --port 8765`). It is organized around 4 culinary compartments mapping directly to core Harness Engineering operations:
+
+| Compartment (Tab) | Culinary Persona | Engineering Role | Core Benefit |
+| :--- | :--- | :--- | :--- |
+| **🍳 Kitchen Chefs** | Head Chef's Stove | **Butler Daemon Runner (`bento bg`)** | Tracks detached background processes, displays live PID/runtime, streams terminal logs, and launches background tasks without blocking interactive workflows. |
+| **🍙 Seasoned Recipes** | Secret Recipe Book | **Lifelong Memory Bank (`bento memory`)** | Visualizes active domain axioms, Clean Architecture guardrails, and negative anti-patterns stored in `.bento/memory/` to prevent regressions. |
+| **🍵 Night Dream & Tea** | Nightly Tea & Reflection | **Level 5 Autonomous Dreaming (`bento dream`)** | Ingests execution traces (`.bento/traces/`), displays crystallized skill macros, and triggers overnight memory consolidation. |
+| **🍱 Tasting Battery** | Bento Tasting Flights | **Deterministic Verification (`bento run` / `bento suite`)** | Displays scenario contracts (`scenario.json`), assertions, and provides a one-click *"Taste All Contracts 🥢"* quality gate with live pass rates. |
+
+For frontend implementation details and mobile responsiveness guidelines, see [`web/README.md`](web/README.md).
+
+---
+
 ## 🧪 Running Tests
 
 ```bash

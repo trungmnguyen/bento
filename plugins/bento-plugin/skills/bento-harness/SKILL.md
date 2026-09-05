@@ -181,7 +181,12 @@ bento swarm --task spec.md --contract test_spec.json
 ## 📊 8. Web Monitor Dashboard & Live Terminal Telemetry
 
 ### Interactive Web Dashboard (`bento ui`)
-Launches the Bento Monitor web app with a Joyful Bento Theme, displaying live background Butler daemons, persistent memory rules, benchmark pass rates, and dream cycles.
+Launches the Bento Monitor web app with a Joyful Bento Theme across 4 compartments:
+- **🍳 Kitchen Chefs:** Monitors and controls detached background Butler tasks (`bento bg`).
+- **🍙 Seasoned Recipes:** Explores domain axioms and anti-patterns stored in the Memory Bank (`bento memory`).
+- **🍵 Night Dream & Tea:** Visualizes event traces and triggers autonomous dream cycles (`bento dream`).
+- **🍱 Tasting Battery:** Evaluates deterministic verification contracts (`bento run` / `bento suite`).
+
 ```bash
 # Serve locally and on LAN (viewable from mobile devices)
 bento ui --network --no-browser --port 8765
