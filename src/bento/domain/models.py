@@ -399,4 +399,31 @@ class OrchestraSprintResult:
     total_duration_ms: float
 
 
+# --- Level 6: Arena Head-to-Head Matchup Models ---
 
+@dataclass(frozen=True)
+class ArenaMatchup:
+    """Specification for a head-to-head contract comparison."""
+    challenger: str  # Path to challenger contract JSON
+    defender: str    # Path to defender contract JSON
+    metric: str = "pass_rate"  # Comparison metric: pass_rate, duration, assertions
+
+
+@dataclass(frozen=True)
+class ArenaScorecard:
+    """Comparative result of an arena head-to-head matchup."""
+    challenger_name: str
+    defender_name: str
+    challenger_passed: int
+    challenger_failed: int
+    challenger_total_steps: int
+    challenger_duration_ms: float
+    defender_passed: int
+    defender_failed: int
+    defender_total_steps: int
+    defender_duration_ms: float
+    winner: str  # "challenger", "defender", or "tie"
+    metric_used: str
+    margin: float  # Winning margin (e.g., pass rate difference)
+    challenger_result: ScenarioResult | None = None
+    defender_result: ScenarioResult | None = None

@@ -102,10 +102,13 @@ def main(args: list[str] | None = None) -> int:
     auto_parser.add_argument("--json", action="store_true", help="Output raw JSON result")
     auto_parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
-    # bento arena (Level 4: Adversarial Self-Play)
-    arena_parser = subparsers.add_parser("arena", help="Run adversarial Red-Team (Attacker) vs Blue-Team (Builder) sparring")
-    arena_parser.add_argument("--task", required=True, help="Path to task objective markdown file")
-    arena_parser.add_argument("--contract", required=True, help="Path to base contract JSON")
+    # bento arena (Level 4: Adversarial Self-Play & Head-to-Head Sparring)
+    arena_parser = subparsers.add_parser("arena", help="Run adversarial Red-Team sparring or head-to-head contract match")
+    arena_parser.add_argument("--task", default=None, help="Path to task objective markdown file (for agent sparring)")
+    arena_parser.add_argument("--contract", default=None, help="Path to base contract JSON (for agent sparring)")
+    arena_parser.add_argument("--challenger", default=None, help="Path to challenger contract JSON (for head-to-head)")
+    arena_parser.add_argument("--defender", default=None, help="Path to defender contract JSON (for head-to-head)")
+    arena_parser.add_argument("--metric", choices=["pass_rate", "duration", "assertions"], default="pass_rate", help="Metric to compare (pass_rate, duration, assertions)")
     arena_parser.add_argument("--rounds", type=int, default=3, help="Number of sparring rounds (default: 3)")
     arena_parser.add_argument("--driver", choices=["claude", "generic", "mock"], default="claude", help="Agent driver")
     arena_parser.add_argument("--cwd", default=None, help="Override working directory")
@@ -269,19 +272,33 @@ def main(args: list[str] | None = None) -> int:
         return exit_code
 
     elif parsed.command == "arena":
-        attacker = ClaudeCodeDriver() if parsed.driver == "claude" else MockAgentDriver()
-        builder = ClaudeCodeDriver() if parsed.driver == "claude" else MockAgentDriver()
-        exit_code, output = controller.handle_arena(
-            task_file=parsed.task,
-            contract_file=parsed.contract,
-            attacker_gateway=attacker,
-            builder_gateway=builder,
-            rounds=parsed.rounds,
-            working_dir=parsed.cwd,
-            json_output=parsed.json,
-        )
-        print(output)
-        return exit_code
+        if parsed.challenger and parsed.defender:
+            exit_code, output = controller.handle_arena_match(
+                challenger_file=parsed.challenger,
+                defender_file=parsed.defender,
+                metric=parsed.metric,
+                working_dir=parsed.cwd,
+                json_output=parsed.json,
+            )
+            print(output)
+            return exit_code
+        elif parsed.task and parsed.contract:
+            attacker = ClaudeCodeDriver() if parsed.driver == "claude" else MockAgentDriver()
+            builder = ClaudeCodeDriver() if parsed.driver == "claude" else MockAgentDriver()
+            exit_code, output = controller.handle_arena(
+                task_file=parsed.task,
+                contract_file=parsed.contract,
+                attacker_gateway=attacker,
+                builder_gateway=builder,
+                rounds=parsed.rounds,
+                working_dir=parsed.cwd,
+                json_output=parsed.json,
+            )
+            print(output)
+            return exit_code
+        else:
+            print("Error: 'bento arena' requires either (--challenger and --defender) for head-to-head or (--task and --contract) for agent sparring.")
+            return 1
 
     elif parsed.command == "swarm":
         if parsed.driver == "claude":

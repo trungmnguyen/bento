@@ -5,7 +5,9 @@ Zero side-effects: Returns pure strings and does not call print().
 from __future__ import annotations
 import json
 from bento.domain.models import (
+    ArenaMatchup,
     ArenaResult,
+    ArenaScorecard,
     AutoLoopResult,
     AutoLoopStatus,
     DreamCycleResult,
@@ -185,6 +187,44 @@ class ConsolePresenter(PresenterGateway):
                 lines.append(f"    {self._c('36', 'Builder Patch:')} Applied defense and re-verified green.")
 
         lines.append("─" * 60)
+        return "\n".join(lines)
+
+    def format_arena_scorecard(self, scorecard: ArenaScorecard) -> str:
+        lines: list[str] = []
+        lines.append("")
+        if scorecard.winner == "challenger":
+            badge = self._c("32;1", f"🏆 CHALLENGER VICTORY ({scorecard.challenger_name})")
+        elif scorecard.winner == "defender":
+            badge = self._c("34;1", f"🛡️ DEFENDER VICTORY ({scorecard.defender_name})")
+        else:
+            badge = self._c("33;1", "🤝 DRAW / TIE")
+
+        lines.append(f"⚔️ {self._c('1', 'BENTO ARENA: HEAD-TO-HEAD SPARRING')} [{badge}]")
+        lines.append(f"📊 Evaluated Metric: {scorecard.metric_used.upper()} | Winning Margin: {scorecard.margin:.2f}")
+        lines.append("═" * 65)
+        lines.append(f"  {'Metric':<25} {'Challenger':<20} {'Defender':<20}")
+        lines.append("─" * 65)
+
+        c_rate = f"{(scorecard.challenger_passed / scorecard.challenger_total_steps * 100):.1f}%" if scorecard.challenger_total_steps > 0 else "0.0%"
+        d_rate = f"{(scorecard.defender_passed / scorecard.defender_total_steps * 100):.1f}%" if scorecard.defender_total_steps > 0 else "0.0%"
+
+        c_steps = f"{scorecard.challenger_passed}/{scorecard.challenger_total_steps} passed"
+        d_steps = f"{scorecard.defender_passed}/{scorecard.defender_total_steps} passed"
+
+        c_dur = f"{scorecard.challenger_duration_ms:.1f}ms"
+        d_dur = f"{scorecard.defender_duration_ms:.1f}ms"
+
+        lines.append(f"  {'Pass Rate':<25} {c_rate:<20} {d_rate:<20}")
+        lines.append(f"  {'Steps Verified':<25} {c_steps:<20} {d_steps:<20}")
+        lines.append(f"  {'Execution Duration':<25} {c_dur:<20} {d_dur:<20}")
+        lines.append("═" * 65)
+        if scorecard.winner == "challenger":
+            lines.append(f"  🏆 Winner: {self._c('32;1', scorecard.challenger_name)} outclassed defender on {scorecard.metric_used}.")
+        elif scorecard.winner == "defender":
+            lines.append(f"  🛡️ Winner: {self._c('34;1', scorecard.defender_name)} defended against challenger on {scorecard.metric_used}.")
+        else:
+            lines.append("  🤝 Match ended in a tie across evaluated metrics.")
+        lines.append("─" * 65)
         return "\n".join(lines)
 
     def format_swarm_result(self, result: SwarmPipelineResult) -> str:

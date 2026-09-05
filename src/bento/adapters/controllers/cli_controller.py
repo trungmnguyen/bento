@@ -266,6 +266,44 @@ class CliController:
         exit_code = 0 if result.hardened else 1
         return exit_code, output
 
+    def handle_arena_match(
+        self,
+        challenger_file: str,
+        defender_file: str,
+        metric: str = "pass_rate",
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        from bento.domain.models import ArenaMatchup
+        from bento.use_cases.arena_match import RunArenaMatchUseCase
+
+        if not self._storage.file_exists(challenger_file):
+            return 1, f"Error: Challenger contract file '{challenger_file}' not found."
+        if not self._storage.file_exists(defender_file):
+            return 1, f"Error: Defender contract file '{defender_file}' not found."
+
+        matchup = ArenaMatchup(
+            challenger=challenger_file,
+            defender=defender_file,
+            metric=metric,
+        )
+        arena_match_uc = RunArenaMatchUseCase(
+            storage_gateway=self._storage,
+            run_scenario_use_case=self._run_scenario,
+            trace_gateway=self._trace,
+        )
+        try:
+            scorecard = arena_match_uc.execute(matchup, working_dir=working_dir)
+        except Exception as e:
+            return 1, f"Error executing arena matchup: {e}"
+
+        if json_output:
+            output = self._presenter.format_json(scorecard)
+        else:
+            output = self._presenter.format_arena_scorecard(scorecard)
+
+        return 0, output
+
     def handle_swarm(
         self,
         task_file: str,
