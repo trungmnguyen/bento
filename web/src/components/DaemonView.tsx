@@ -14,6 +14,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
   const [newCmd, setNewCmd] = useState<string>('');
   const [newTag, setNewTag] = useState<string>('kitchen-task');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchLogs = async (taskId: string) => {
@@ -45,7 +46,9 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
 
   const handleLaunch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCmd.trim()) return;
+    if (!newCmd.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    setActionError(null);
     try {
       const res = await fetch('/api/bg/run', {
         method: 'POST',
@@ -55,9 +58,14 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
       if (res.ok) {
         setNewCmd('');
         onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error || 'Failed to launch task.');
       }
     } catch (err) {
       setActionError('Failed to launch task.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -73,21 +81,32 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
             type="text"
             placeholder="Command to cook in background (e.g. bento dream --benchmarks examples/)"
             value={newCmd}
+            disabled={isSubmitting}
             onChange={(e) => setNewCmd(e.target.value)}
-            className="flex-1 min-w-0 bg-bento-lacquer border border-bento-border rounded-xl px-4 py-2.5 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition"
+            className="flex-1 min-w-0 bg-bento-lacquer border border-bento-border rounded-xl px-4 py-2.5 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition disabled:opacity-50"
           />
           <input
             type="text"
             placeholder="Dish Tag"
             value={newTag}
+            disabled={isSubmitting}
             onChange={(e) => setNewTag(e.target.value)}
-            className="w-full sm:w-32 bg-bento-lacquer border border-bento-border rounded-xl px-3 py-2.5 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition"
+            className="w-full sm:w-32 bg-bento-lacquer border border-bento-border rounded-xl px-3 py-2.5 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition disabled:opacity-50"
           />
           <button
             type="submit"
-            className="w-full sm:w-auto bg-gradient-to-r from-bento-tamago to-amber-500 hover:from-amber-400 hover:to-amber-500 text-gray-900 font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-tamago-glow min-h-[42px] touch-manipulation"
+            disabled={isSubmitting || !newCmd.trim()}
+            className="w-full sm:w-auto bg-gradient-to-r from-bento-tamago to-amber-500 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-tamago-glow min-h-[42px] touch-manipulation"
           >
-            <Flame className="w-4 h-4 fill-gray-900" /> Start Cooking
+            {isSubmitting ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-gray-900" /> Cooking...
+              </>
+            ) : (
+              <>
+                <Flame className="w-4 h-4 fill-gray-900" /> Start Cooking
+              </>
+            )}
           </button>
         </form>
         {actionError && <p className="text-bento-salmon text-xs mt-2">{actionError}</p>}

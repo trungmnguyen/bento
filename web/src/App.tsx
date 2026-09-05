@@ -35,6 +35,7 @@ export default function App() {
     benchmarks_count: 0,
     cwd: '',
   });
+  const [isOffline, setIsOffline] = useState<boolean>(false);
   const [tasks, setTasks] = useState<BackgroundTask[]>([]);
   const [lessons, setLessons] = useState<MemoryLesson[]>([]);
   const [traces, setTraces] = useState<TraceEvent[]>([]);
@@ -52,7 +53,12 @@ export default function App() {
         fetch('/api/benchmarks').then((r) => r.json()).catch(() => []),
       ]);
 
-      if (statusRes) setStatus(statusRes);
+      if (statusRes) {
+        setStatus(statusRes);
+        setIsOffline(false);
+      } else {
+        setIsOffline(true);
+      }
       if (Array.isArray(bgRes)) setTasks(bgRes);
       if (Array.isArray(memRes)) setLessons(memRes);
       if (tracesRes) {
@@ -83,6 +89,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-gray-100 selection:bg-bento-salmon selection:text-white">
+      {/* Offline / Reconnecting Banner */}
+      {isOffline && (
+        <div className="bg-gradient-to-r from-rose-950 via-red-900 to-rose-950 border-b border-rose-500/40 text-rose-200 px-4 py-1.5 text-xs text-center font-mono flex items-center justify-center gap-2 sticky top-0 z-50 shadow-md">
+          <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+          <span>Disconnected from Bento Daemon · Reconnecting...</span>
+        </div>
+      )}
+
       {/* Top Bento Telemetry Header */}
       <header className="border-b border-bento-border bg-[#18141f]/95 backdrop-blur-md sticky top-0 z-40 shadow-bento-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-4">

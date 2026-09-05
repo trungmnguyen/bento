@@ -1,0 +1,97 @@
+{
+  "name": "Dashboard Resilience & Security Verification Rig",
+  "description": "Deterministic ground-truth contract asserting web monitor resilience, path traversal immunity, and frontend bundle integrity",
+  "tags": [
+    "dashboard",
+    "security",
+    "web",
+    "resilience"
+  ],
+  "steps": [
+    {
+      "name": "Verify Domain AST Purity (Zero I/O in Domain)",
+      "command": "python3 -c \"import os, ast; violations = [f for root, _, files in os.walk('src/bento/domain') for f in files if f.endswith('.py') and any(isinstance(node, ast.Import) and any(n.name in ('os', 'sys', 'subprocess', 'requests', 'urllib') for n in node.names) for node in ast.walk(ast.parse(open(os.path.join(root, f)).read())))]; exit(len(violations))\"",
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "Zero unauthorized I/O imports in domain layer"
+        }
+      ]
+    },
+    {
+      "name": "Verify Web Server Path Traversal Protection Code",
+      "command": "grep -F \"parts[3]\" src/bento/frameworks/web_server.py",
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "Web server regex protects task_id against directory traversal"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "re.match",
+          "description": "re.match is used on parts[3]"
+        }
+      ]
+    },
+    {
+      "name": "Verify Double-Click Protection & Submitting State in DaemonView",
+      "command": "grep -E \"isSubmitting\" web/src/components/DaemonView.tsx",
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "DaemonView implements isSubmitting state"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "disabled={isSubmitting || !newCmd.trim()}",
+          "description": "Start Cooking button disables during task submission"
+        }
+      ]
+    },
+    {
+      "name": "Verify Ambient Offline Reconnecting Banner in App.tsx",
+      "command": "grep -C 3 \"isOffline\" web/src/App.tsx",
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "App.tsx includes isOffline tracking and banner"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "Disconnected from Bento Daemon",
+          "description": "App.tsx renders disconnected status indicator"
+        }
+      ]
+    },
+    {
+      "name": "Verify Production Vite & TypeScript Bundle Build",
+      "command": "cd web && npm run build",
+      "timeout_sec": 30,
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "Production Vite build succeeds with 0"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "built in",
+          "description": "Vite build report confirms clean output"
+        }
+      ]
+    }
+  ]
+}

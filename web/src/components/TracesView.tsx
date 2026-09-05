@@ -48,7 +48,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
         <button
           onClick={handleTriggerDream}
           disabled={dreaming}
-          className="bg-gradient-to-r from-bento-matcha to-emerald-600 hover:from-bento-matcha-hover hover:to-emerald-500 disabled:opacity-50 text-white font-extrabold px-5 py-2.5 rounded-xl text-sm transition flex items-center gap-2 shadow-matcha-glow shrink-0"
+          className="w-full sm:w-auto justify-center bg-gradient-to-r from-bento-matcha to-emerald-600 hover:from-bento-matcha-hover hover:to-emerald-500 disabled:opacity-50 text-white font-extrabold px-5 py-2.5 rounded-xl text-sm transition flex items-center gap-2 shadow-matcha-glow shrink-0 min-h-[42px] touch-manipulation"
         >
           {dreaming ? <RefreshCw className="w-4 h-4 animate-spin" /> : <MatchaCupIcon className="w-4 h-4" />}
           {dreaming ? 'Steeping & Dreaming...' : 'Brew Overnight Dream 🍵'}
