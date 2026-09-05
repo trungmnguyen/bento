@@ -1,0 +1,68 @@
+{
+  "name": "Mobile UI & Navigation Verification",
+  "description": "Deterministic contract assertions verifying industry-standard mobile navigation tabs and clean production build",
+  "tags": ["ui", "mobile", "ux", "tailwind"],
+  "steps": [
+    {
+      "name": "Check CSS scrollbar-none and touch utilities",
+      "command": "grep -E \"scrollbar-none\" web/src/index.css",
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "grep exits with 0"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "scrollbar-none",
+          "description": "CSS contains scrollbar-none"
+        }
+      ]
+    },
+    {
+      "name": "Check App.tsx responsive navigation classes",
+      "command": "grep -E \"overflow-x-auto|whitespace-nowrap\" web/src/App.tsx",
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "grep exits with 0"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "overflow-x-auto",
+          "description": "App.tsx includes overflow-x-auto"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "whitespace-nowrap",
+          "description": "App.tsx includes whitespace-nowrap"
+        }
+      ]
+    },
+    {
+      "name": "Verify Production Vite & TypeScript Bundle Build",
+      "command": "cd web && npm run build",
+      "timeout_sec": 30,
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "Vite build exits with 0"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "built in",
+          "description": "Vite report confirms build completion"
+        }
+      ]
+    }
+  ]
+}
