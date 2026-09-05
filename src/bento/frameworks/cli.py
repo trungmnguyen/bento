@@ -189,6 +189,7 @@ def main(args: list[str] | None = None) -> int:
     ui_parser = subparsers.add_parser("ui", help="Launch the Bento Monitor web dashboard")
     ui_parser.add_argument("--port", type=int, default=8765, help="Port to bind web server (default: 8765)")
     ui_parser.add_argument("--host", default="127.0.0.1", help="Host to bind web server (default: 127.0.0.1)")
+    ui_parser.add_argument("--network", action="store_true", help="Bind to 0.0.0.0 for phone/LAN access on same Wi-Fi")
     ui_parser.add_argument("--no-browser", action="store_true", help="Do not automatically open browser")
 
     # bento monitor (Live ANSI Terminal Watcher)
@@ -367,9 +368,10 @@ def main(args: list[str] | None = None) -> int:
         return 0
 
     elif parsed.command == "ui":
+        host = "0.0.0.0" if getattr(parsed, "network", False) else parsed.host
         return controller.handle_start_ui(
             port=parsed.port,
-            host=parsed.host,
+            host=host,
             open_browser=not parsed.no_browser,
             block=True,
         )

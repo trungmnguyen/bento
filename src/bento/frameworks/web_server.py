@@ -260,6 +260,18 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             self.send_error(404, "File Not Found")
 
 
+def _get_network_ip() -> str:
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
 class BentoWebServer:
     def __init__(
         self,
@@ -297,7 +309,17 @@ class BentoWebServer:
 
         self._server = ThreadingHTTPServer((self.host, self.port), handler_cls)
         self.port = self._server.server_address[1]
-        print(f"🍱 Bento Web Monitor running at: http://{self.host}:{self.port}")
+        local_url = f"http://localhost:{self.port}"
+        net_ip = _get_network_ip()
+        net_url = f"http://{net_ip}:{self.port}"
+
+        print("🍱 Bento Web Monitor is serving!")
+        print(f"   • Local (Mac):    {local_url}")
+        if self.host in ("0.0.0.0", ""):
+            print(f"   • Network (Phone): {net_url}  📱 (Open this on your phone on the same Wi-Fi)")
+        else:
+            print(f"   • Phone Access:   Use 'bento ui --network' or '--host 0.0.0.0'")
+
         if block:
             try:
                 self._server.serve_forever()
