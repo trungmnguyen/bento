@@ -58,13 +58,24 @@
   - `fs_trace.py`: Concrete `FileSystemTraceGateway` managing append-only event trace logs in `.bento/traces/`.
   - `bg_runner.py`: Detached background daemon process manager (`bento bg`).
   - `watcher.py`: Ambient file modification watcher (`bento watch`).
-  - `cli.py`: CLI entry point (`bento run`, `bento suite`, `bento auto`, `bento arena`, `bento swarm`, `bento optimize`, `bento dream`, `bento memory`, `bento init`).
+  - `web_server.py`: Zero-dependency embedded HTTP server serving REST API and React dashboard (`bento ui`).
+  - `terminal_monitor.py`: Live interactive ANSI terminal telemetry watch and keyboard shortcuts (`bento monitor`).
+  - `cli.py`: CLI entry point (`bento run`, `bento suite`, `bento auto`, `bento arena`, `bento swarm`, `bento optimize`, `bento dream`, `bento memory`, `bento bg`, `bento watch`, `bento init`, `bento ui`, `bento monitor`).
   - `agent_drivers.py`: Concrete `AgentGateway` & `SwarmGateway` implementations (`ClaudeCodeDriver`, `GenericCommandDriver`, `SwarmDispatcherDriver`, `MockAgentDriver`).
   - `worktree_driver.py`: Concrete `WorktreeGateway` implementing isolated git worktree branch creation and merging.
   - `fs_memory.py`: Concrete `MemoryGateway` persisting to `.bento/memory/lessons.json` and human-readable `.bento/MEMORY.md`.
   - `git_driver.py`: Concrete `GitGateway` implementation for automated atomic commits.
   - `subprocess_executor.py`: Concrete `ExecutionGateway` implementing sub-process execution.
   - `fs_storage.py`: Concrete `StorageGateway` reading files and saving output artifacts.
+
+### 5. Web Frontend (`web/`)
+- **Technology:** Vite 6 + React 19 + TypeScript + TailwindCSS + Lucide Icons.
+- **Views:**
+  - `DaemonView.tsx`: Butler process list, status badges, log streaming modal, and kill actions.
+  - `MemoryView.tsx`: Enforced rules search, tag filter chips, hard rule & anti-pattern callout cards.
+  - `TracesView.tsx`: Sensory traces timeline, failed assertions inspect, crystallized skill macros, and one-click "Trigger Dream Cycle" button.
+  - `BenchmarksView.tsx`: Scenarios list, assertions view, and live suite runner.
+- **Production Build:** Static assets compiled into `web/dist/` and served directly by `bento ui` with zero external dependencies.
 
 ---
 

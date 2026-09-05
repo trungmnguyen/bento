@@ -421,3 +421,71 @@ class CliController:
 
         watcher.run_watch_loop(on_change_callback=on_change, max_cycles=max_cycles)
         return 0
+
+    def handle_start_ui(
+        self,
+        port: int = 8765,
+        host: str = "127.0.0.1",
+        open_browser: bool = True,
+        block: bool = True,
+    ) -> int:
+        import webbrowser
+        from bento.frameworks.bg_runner import BackgroundTaskRunner
+        from bento.frameworks.web_server import BentoWebServer
+        from bento.use_cases.dream_cycle import DreamCycleUseCase
+
+        bg_runner = BackgroundTaskRunner()
+        dream_uc = DreamCycleUseCase(
+            memory_gateway=self._memory,
+            storage_gateway=self._storage,
+            run_suite_use_case=self._run_suite,
+            trace_gateway=self._trace,
+        )
+
+        server = BentoWebServer(
+            bg_runner=bg_runner,
+            memory_gateway=self._memory,
+            storage_gateway=self._storage,
+            run_suite_uc=self._run_suite,
+            dream_uc=dream_uc,
+            trace_gateway=self._trace,
+            host=host,
+            port=port,
+        )
+
+        if open_browser:
+            webbrowser.open(f"http://{host}:{port}")
+
+        server.start(block=block)
+        return 0
+
+    def handle_start_monitor(
+        self,
+        refresh_interval: float = 1.0,
+        max_cycles: int | None = None,
+    ) -> int:
+        from bento.frameworks.bg_runner import BackgroundTaskRunner
+        from bento.frameworks.terminal_monitor import TerminalMonitor
+        from bento.use_cases.dream_cycle import DreamCycleUseCase
+
+        bg_runner = BackgroundTaskRunner()
+        dream_uc = DreamCycleUseCase(
+            memory_gateway=self._memory,
+            storage_gateway=self._storage,
+            run_suite_use_case=self._run_suite,
+            trace_gateway=self._trace,
+        )
+
+        monitor = TerminalMonitor(
+            bg_runner=bg_runner,
+            memory_gateway=self._memory,
+            storage_gateway=self._storage,
+            run_suite_uc=self._run_suite,
+            dream_uc=dream_uc,
+            trace_gateway=self._trace,
+            refresh_interval=refresh_interval,
+        )
+
+        monitor.run_loop(max_cycles=max_cycles)
+        return 0
+

@@ -49,3 +49,8 @@ reports/
 # Bento trace logs
 .bento/traces/
 
+# Web frontend artifacts
+web/node_modules/
+.vite/
+
+

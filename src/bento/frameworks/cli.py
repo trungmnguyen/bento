@@ -185,6 +185,16 @@ def main(args: list[str] | None = None) -> int:
     init_parser = subparsers.add_parser("init", help="Scaffold a sample scenario file")
     init_parser.add_argument("output_path", default="scenario.json", nargs="?", help="Output file path")
 
+    # bento ui (React Web Dashboard)
+    ui_parser = subparsers.add_parser("ui", help="Launch the Bento Monitor web dashboard")
+    ui_parser.add_argument("--port", type=int, default=8765, help="Port to bind web server (default: 8765)")
+    ui_parser.add_argument("--host", default="127.0.0.1", help="Host to bind web server (default: 127.0.0.1)")
+    ui_parser.add_argument("--no-browser", action="store_true", help="Do not automatically open browser")
+
+    # bento monitor (Live ANSI Terminal Watcher)
+    monitor_parser = subparsers.add_parser("monitor", help="Launch live interactive terminal telemetry watch")
+    monitor_parser.add_argument("--interval", type=float, default=1.0, help="Refresh interval in seconds (default: 1.0)")
+
     parsed = parser.parse_args(args)
 
     if not parsed.command:
@@ -355,6 +365,19 @@ def main(args: list[str] | None = None) -> int:
         storage.write_text(parsed.output_path, SAMPLE_SCENARIO_TEMPLATE.strip())
         print(f"🍱 Initialized sample scenario template at: {parsed.output_path}")
         return 0
+
+    elif parsed.command == "ui":
+        return controller.handle_start_ui(
+            port=parsed.port,
+            host=parsed.host,
+            open_browser=not parsed.no_browser,
+            block=True,
+        )
+
+    elif parsed.command == "monitor":
+        return controller.handle_start_monitor(
+            refresh_interval=parsed.interval,
+        )
 
     return 0
 

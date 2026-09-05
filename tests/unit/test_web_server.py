@@ -1,0 +1,213 @@
+"""Unit tests for BentoWebServer (REST API & Static File Serving)."""
+import json
+import shutil
+import tempfile
+import unittest
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+from bento.domain.models import MemoryBank, MemoryLesson, TraceEvent
+from bento.frameworks.bg_runner import BackgroundTaskRunner
+from bento.frameworks.web_server import BentoWebServer
+from bento.use_cases.dream_cycle import DreamCycleUseCase
+from bento.use_cases.run_suite import RunSuiteUseCase
+
+
+class MockMemoryGateway:
+    def __init__(self, lessons: list[MemoryLesson] | None = None):
+        self.memory = MemoryBank(lessons=lessons or [])
+
+    def load_memory(self, working_dir=None) -> MemoryBank:
+        return self.memory
+
+    def save_memory(self, memory: MemoryBank, working_dir=None) -> None:
+        self.memory = memory
+
+
+class MockStorageGateway:
+    def __init__(self):
+        self.files = {}
+
+    def read_text(self, path: str) -> str:
+        return self.files.get(path, "")
+
+    def write_text(self, path: str, content: str) -> None:
+        self.files[path] = content
+
+    def exists(self, path: str) -> bool:
+        return path in self.files
+
+    def list_files(self, directory: str, pattern: str = "*") -> list[str]:
+        return [f for f in self.files.keys() if f.startswith(directory)]
+
+
+class MockTraceGateway:
+    def __init__(self, traces: list[TraceEvent] | None = None):
+        self.traces = traces or []
+
+    def record_trace(self, event: TraceEvent, working_dir=None) -> None:
+        self.traces.append(event)
+
+    def load_recent_traces(self, limit: int = 50, working_dir=None) -> list[TraceEvent]:
+        return self.traces[:limit]
+
+
+class MockRunSuiteUseCase:
+    def execute(self, scenarios, suite_name=""):
+        from bento.domain.models import SuiteResult
+        return SuiteResult(
+            suite_name=suite_name,
+            total_scenarios=len(scenarios),
+            passed_scenarios=len(scenarios),
+            failed_scenarios=0,
+            total_duration_ms=5.0,
+            scenario_results=[],
+        )
+
+
+class MockDreamUseCase:
+    def execute(self, benchmarks_dir="examples", harvest_traces=True):
+        from bento.domain.models import DreamCycleResult, SuiteResult
+        return DreamCycleResult(
+            consolidated_lessons_count=3,
+            new_lessons_discovered=1,
+            suite_result=SuiteResult(
+                suite_name="Dream Suite",
+                total_scenarios=1,
+                passed_scenarios=1,
+                failed_scenarios=0,
+                total_duration_ms=2.0,
+                scenario_results=[],
+            ),
+            total_duration_ms=10.0,
+        )
+
+
+class TestBentoWebServer(unittest.TestCase):
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.bg_runner = BackgroundTaskRunner(base_dir=self.test_dir)
+        self.sample_lesson = MemoryLesson(
+            id="MEM-001",
+            title="Always Test Before Push",
+            category="git",
+            context="Pushing untested code breaks CI",
+            rule="Run full test suite locally before pushing",
+            anti_pattern="git push -f without tests",
+            discovery_date="2026-09-04",
+            tags=["git", "ci"],
+        )
+        self.memory_gw = MockMemoryGateway(lessons=[self.sample_lesson])
+        self.storage_gw = MockStorageGateway()
+        self.trace_gw = MockTraceGateway(traces=[
+            TraceEvent(
+                timestamp="2026-09-04T12:00:00",
+                task_name="Verify Server",
+                iteration=1,
+                event_type="test",
+                passed=True,
+            )
+        ])
+        self.run_suite_uc = MockRunSuiteUseCase()
+        self.dream_uc = MockDreamUseCase()
+
+        # Create dummy static directory
+        self.static_dir = Path(self.test_dir) / "dist"
+        self.static_dir.mkdir(parents=True, exist_ok=True)
+        (self.static_dir / "index.html").write_text("<html><body>Bento UI Test</body></html>", encoding="utf-8")
+
+        self.server = BentoWebServer(
+            bg_runner=self.bg_runner,
+            memory_gateway=self.memory_gw,
+            storage_gateway=self.storage_gw,
+            run_suite_uc=self.run_suite_uc,
+            dream_uc=self.dream_uc,
+            trace_gateway=self.trace_gw,
+            host="127.0.0.1",
+            port=0,
+            static_dir=self.static_dir,
+        )
+        self.server.start(block=False)
+        self.base_url = f"http://127.0.0.1:{self.server.port}"
+
+    def tearDown(self):
+        self.server.stop()
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def _get(self, endpoint: str):
+        req = urllib.request.Request(f"{self.base_url}{endpoint}")
+        with urllib.request.urlopen(req) as resp:
+            return resp.status, resp.read().decode("utf-8")
+
+    def _post(self, endpoint: str, payload: dict):
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            f"{self.base_url}{endpoint}",
+            data=data,
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req) as resp:
+                return resp.status, resp.read().decode("utf-8")
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode("utf-8")
+
+    def test_api_status(self):
+        status, body = self._get("/api/status")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertEqual(data["status"], "ACTIVE")
+        self.assertEqual(data["total_lessons_count"], 1)
+        self.assertEqual(data["recent_traces_count"], 1)
+
+    def test_api_bg_list(self):
+        status, body = self._get("/api/bg")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertIsInstance(data, list)
+
+    def test_api_memory(self):
+        status, body = self._get("/api/memory")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["id"], "MEM-001")
+        self.assertEqual(data[0]["title"], "Always Test Before Push")
+
+    def test_api_traces(self):
+        status, body = self._get("/api/traces")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertIn("traces", data)
+        self.assertIn("skills", data)
+        self.assertEqual(len(data["traces"]), 1)
+        self.assertEqual(data["traces"][0]["task_name"], "Verify Server")
+
+    def test_api_benchmarks(self):
+        status, body = self._get("/api/benchmarks")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertIsInstance(data, list)
+
+    def test_api_bg_run_validation_fails_on_empty(self):
+        status, body = self._post("/api/bg/run", {})
+        self.assertEqual(status, 400)
+        data = json.loads(body)
+        self.assertIn("error", data)
+
+    def test_api_dream_endpoint(self):
+        status, body = self._post("/api/dream", {})
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertEqual(data["new_lessons_discovered"], 1)
+        self.assertTrue(data["all_passed"])
+
+    def test_serve_static_index(self):
+        status, body = self._get("/")
+        self.assertEqual(status, 200)
+        self.assertIn("Bento UI Test", body)
+
+
+if __name__ == "__main__":
+    unittest.main()
