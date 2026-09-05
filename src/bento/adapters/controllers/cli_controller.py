@@ -2,9 +2,12 @@
 from __future__ import annotations
 import datetime
 import hashlib
+from pathlib import Path
 from bento.adapters.parsers.scenario_parser import ScenarioParser
 from bento.adapters.presenters.console_presenter import ConsolePresenter
 from bento.domain.models import (
+    ArchitectureReport,
+    ArchitectureViolation,
     MemoryLesson,
     OptimizerCandidate,
     Scenario,
@@ -28,6 +31,7 @@ from bento.use_cases.run_arena import RunArenaUseCase
 from bento.use_cases.run_scenario import RunScenarioUseCase
 from bento.use_cases.run_suite import RunSuiteUseCase
 from bento.use_cases.run_swarm import RunSwarmUseCase
+from bento.use_cases.validate_architecture import ValidateArchitectureUseCase
 
 
 class CliController:
@@ -62,7 +66,7 @@ class CliController:
         if not self._trace:
             return
         failed_msgs = [
-            f"{sr.step.name}: {ar.message}"
+            f"{sr.step_name}: {ar.message}"
             for sr in result.step_results
             for ar in sr.assertion_results
             if not ar.passed
@@ -297,6 +301,60 @@ class CliController:
         exit_code = 0 if result.passed else 1
         return exit_code, output
 
+    def handle_orchestra(
+        self,
+        rounds: int = 1,
+        contract_file: str | None = None,
+        benchmarks_dir: str | None = "examples",
+        task_file: str | None = None,
+        auto_approve: bool = False,
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        from bento.use_cases.orchestra_sprint import OrchestraSprintUseCase
+
+        scenario = None
+        if contract_file:
+            if not self._storage.file_exists(contract_file):
+                return 1, f"Error: Contract file '{contract_file}' not found."
+            scenario = ScenarioParser.from_json(self._storage.read_text(contract_file))
+
+        task_content = None
+        if task_file:
+            if self._storage.file_exists(task_file):
+                task_content = self._storage.read_text(task_file)
+            else:
+                task_content = task_file
+
+        orchestra_uc = OrchestraSprintUseCase(
+            storage_gateway=self._storage,
+            run_scenario_use_case=self._run_scenario,
+            run_suite_use_case=self._run_suite,
+            memory_gateway=self._memory,
+            trace_gateway=self._trace,
+        )
+
+        result = orchestra_uc.execute(
+            rounds=rounds,
+            target_scenario=scenario,
+            benchmarks_dir=benchmarks_dir,
+            task_description=task_content,
+            auto_approve=auto_approve,
+            working_dir=working_dir,
+        )
+
+        if json_output:
+            output = self._presenter.format_json(result)
+        else:
+            if hasattr(self._presenter, "format_orchestra_result"):
+                output = self._presenter.format_orchestra_result(result)
+            else:
+                output = self._presenter.format_json(result)
+
+        exit_code = 0 if result.all_passed else 1
+        return exit_code, output
+
+
     def handle_optimize(
         self,
         suite_dir: str = "examples",
@@ -510,6 +568,7 @@ class CliController:
             run_suite_uc=self._run_suite,
             dream_uc=dream_uc,
             trace_gateway=self._trace,
+            execution_gateway=getattr(self._run_scenario, "_execution_gateway", None),
             host=host,
             port=port,
         )
@@ -549,4 +608,76 @@ class CliController:
 
         monitor.run_loop(max_cycles=max_cycles)
         return 0
+
+    def handle_check(self, target_dir: str = "src/bento/domain") -> int:
+        validator = ValidateArchitectureUseCase(self._storage)
+        report = validator.execute(target_dir=target_dir)
+
+        print(f"\n🍱 BENTO CLEAN ARCHITECTURE AST CHECK: {target_dir}")
+        print("─" * 65)
+        print(f"📁 Files Inspected: {report.files_checked}")
+
+        if report.passed:
+            print("✨ 100% PURE DOMAIN VERIFIED: Zero I/O, zero external dependencies. 🍵")
+            print("─" * 65)
+            return 0
+        else:
+            print(f"❌ VIOLATIONS FOUND: {len(report.violations)} Clean Architecture violations detected!")
+            for v in report.violations:
+                print(f"  • {v.file_path}:{v.line_number} [{v.rule}] {v.message}")
+            print("─" * 65)
+            return 1
+
+    def handle_completion(self, shell: str = "zsh") -> int:
+        subcommands = [
+            "run", "suite", "auto", "watch", "arena", "dream", "eval",
+            "optimize", "swarm", "memory", "bg", "ui", "monitor", "check", "completion",
+        ]
+        if shell == "zsh":
+            script = """#compdef bento
+_bento() {
+    local -a commands
+    commands=(
+        'run:Execute a single deterministic scenario contract'
+        'suite:Execute a directory of benchmark contracts'
+        'auto:Run closed-loop agentic self-healing'
+        'watch:Watch files and auto-evaluate contract on change'
+        'arena:Run adversarial Red-Team sparring'
+        'dream:Execute overnight trace harvesting & memory synthesis'
+        'eval:Direct assertion evaluation against output'
+        'optimize:Hill-climbing prompt optimization'
+        'swarm:Run multi-agent verification swarm'
+        'memory:Manage persistent institutional memory bank'
+        'bg:Manage background Butler daemons'
+        'ui:Launch interactive Web UI dashboard'
+        'monitor:Launch real-time telemetry TUI monitor'
+        'check:Verify Clean Architecture AST domain purity'
+        'completion:Generate shell autocompletion script'
+    )
+    _describe -t commands 'bento command' commands
+}
+_bento "$@"
+"""
+        else:
+            joined_cmds = " ".join(subcommands)
+            script = f"""# bash completion for bento
+_bento_completions() {{
+    local cur="${{COMP_WORDS[COMP_CWORD]}}"
+    local commands="{joined_cmds}"
+    COMPREPLY=( $(compgen -W "${{commands}}" -- "${{cur}}") )
+}}
+complete -F _bento_completions bento
+"""
+        print(script.strip())
+        return 0
+
+    def handle_new_contract(self, output_dir: str = "benchmarks", dry_run: bool = True) -> int:
+        from bento.frameworks.interactive_wizard import InteractiveContractWizard
+        exec_gw = getattr(self._run_scenario, "_execution_gateway", None)
+        if not exec_gw:
+            self._presenter.display_error("Execution gateway unavailable for contract dry-run.")
+            return 1
+        wizard = InteractiveContractWizard(execution_gateway=exec_gw, storage_gateway=self._storage)
+        return wizard.run_interactive(output_dir=output_dir, dry_run=dry_run)
+
 

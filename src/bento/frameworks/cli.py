@@ -201,6 +201,31 @@ def main(args: list[str] | None = None) -> int:
     monitor_parser = subparsers.add_parser("monitor", help="Launch live interactive terminal telemetry watch")
     monitor_parser.add_argument("--interval", type=float, default=1.0, help="Refresh interval in seconds (default: 1.0)")
 
+    # bento check (Clean Architecture AST Purity Linter)
+    check_parser = subparsers.add_parser("check", help="Verify Clean Architecture AST domain purity")
+    check_parser.add_argument("--target", default="src/bento/domain", help="Target domain directory to inspect (default: src/bento/domain)")
+
+    # bento completion (Shell Autocompletion)
+    completion_parser = subparsers.add_parser("completion", help="Generate shell autocompletion script")
+    completion_parser.add_argument("shell", choices=["zsh", "bash"], default="zsh", nargs="?", help="Shell type (zsh or bash)")
+
+    # bento new (Bento Origami Interactive Wizard)
+    new_parser = subparsers.add_parser("new", help="Scaffold verification contracts interactively (Bento Origami)")
+    new_sub = new_parser.add_subparsers(dest="new_action", help="Scaffold targets")
+    new_contract = new_sub.add_parser("contract", help="Launch interactive terminal contract wizard")
+    new_contract.add_argument("--output", default="benchmarks", help="Output directory for crafted contract (default: benchmarks)")
+    new_contract.add_argument("--no-dry-run", action="store_true", help="Skip terminal pre-flight tasting")
+
+    # bento orchestra (Continuous Triad Sprint Orchestration)
+    orchestra_parser = subparsers.add_parser("orchestra", help="Orchestrate continuous Triad Sprint (Wasabi 🌶️ + Matcha 🍵 -> Patron 🥢 -> Chef 🍳)")
+    orchestra_parser.add_argument("--rounds", type=int, default=1, help="Number of sprint rounds to run (default: 1)")
+    orchestra_parser.add_argument("--contract", default=None, help="Target scenario contract JSON to verify")
+    orchestra_parser.add_argument("--benchmarks", default="examples", help="Directory of benchmark contracts (default: examples)")
+    orchestra_parser.add_argument("--task", default=None, help="Task description or markdown file")
+    orchestra_parser.add_argument("--auto-approve", action="store_true", help="Auto-approve patron review gate without interactive block")
+    orchestra_parser.add_argument("--cwd", default=None, help="Working directory")
+    orchestra_parser.add_argument("--json", action="store_true", help="Output raw JSON")
+
     parsed = parser.parse_args(args)
 
     if not parsed.command:
@@ -279,6 +304,19 @@ def main(args: list[str] | None = None) -> int:
     elif parsed.command == "optimize":
         exit_code, output = controller.handle_optimize(
             suite_dir=parsed.suite,
+            json_output=parsed.json,
+        )
+        print(output)
+        return exit_code
+
+    elif parsed.command == "orchestra":
+        exit_code, output = controller.handle_orchestra(
+            rounds=parsed.rounds,
+            contract_file=parsed.contract,
+            benchmarks_dir=parsed.benchmarks,
+            task_file=parsed.task,
+            auto_approve=parsed.auto_approve,
+            working_dir=parsed.cwd,
             json_output=parsed.json,
         )
         print(output)
@@ -393,6 +431,21 @@ def main(args: list[str] | None = None) -> int:
         return controller.handle_start_monitor(
             refresh_interval=parsed.interval,
         )
+
+    elif parsed.command == "check":
+        return controller.handle_check(target_dir=parsed.target)
+
+    elif parsed.command == "completion":
+        return controller.handle_completion(shell=parsed.shell)
+
+    elif parsed.command == "new":
+        if parsed.new_action == "contract":
+            return controller.handle_new_contract(
+                output_dir=parsed.output,
+                dry_run=not parsed.no_dry_run,
+            )
+        new_parser.print_help()
+        return 0
 
     return 0
 

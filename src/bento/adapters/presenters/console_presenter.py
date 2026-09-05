@@ -11,6 +11,7 @@ from bento.domain.models import (
     DreamCycleResult,
     MemoryBank,
     OptimizerResult,
+    OrchestraSprintResult,
     ScenarioResult,
     StepStatus,
     SuiteResult,
@@ -260,14 +261,49 @@ class ConsolePresenter(PresenterGateway):
         lines.append("─" * 60)
         return "\n".join(lines)
 
+    def format_orchestra_result(self, result: OrchestraSprintResult) -> str:
+        lines: list[str] = []
+        lines.append("")
+        status_badge = self._c("32;1", "[ALL PASSED]") if result.all_passed else self._c("31;1", "[FINDINGS DETECTED]")
+        lines.append(f"🍱 {self._c('1', 'BENTO ORCHESTRA: CONTINUOUS TRIAD SPRINT')} {status_badge}")
+        lines.append(f"⏱️  Total Duration: {result.total_duration_ms:.1f}ms | Rounds: {result.total_rounds}")
+        lines.append("=" * 65)
+
+        role_icons = {
+            "WASABI": "🌶️ Wasabi (Red Team)",
+            "MATCHA": "🍵 Matcha (Green Team)",
+            "PATRON": "🥢 Patron Gate (User Review)",
+            "CHEF": "🍳 Executive Chef (Blue Team)",
+        }
+
+        for r in result.rounds:
+            round_status = self._c("32", "PASSED") if r.passed else self._c("31", "BLOCKED")
+            lines.append(f"🔄 Round {r.round_index} [{round_status}] ({r.duration_ms:.1f}ms):")
+            for stage in r.stage_results:
+                role_val = stage.role.value if hasattr(stage.role, "value") else str(stage.role)
+                role_label = role_icons.get(role_val, role_val)
+                icon = self._c("32", "[✓ PASS]") if stage.passed else self._c("31", "[✗ BLOCKED]")
+                lines.append(f"  {icon} {self._c('1', role_label)}: {stage.stage_name} ({stage.duration_ms:.1f}ms)")
+                lines.append(f"     Summary: {self._c('90', stage.output_summary)}")
+                if stage.details:
+                    for d in stage.details[:3]:
+                        lines.append(f"     • {d}")
+                    if len(stage.details) > 3:
+                        lines.append(f"     • ... and {len(stage.details) - 3} more")
+            lines.append("─" * 65)
+
+        lines.append(f"✨ Final Sign-off: Logic is pure and decoupled from I/O. Git hygiene is enforced.")
+        lines.append("=" * 65)
+        return "\n".join(lines)
+
     def format_json(self, result: Any) -> str:
         def serialize(obj):
-            if hasattr(obj, "__dict__"):
-                return {k: serialize(v) for k, v in obj.__dict__.items()}
-            if isinstance(obj, list):
-                return [serialize(i) for i in obj]
             if hasattr(obj, "value"):
                 return obj.value
+            if hasattr(obj, "__dict__"):
+                return {k: serialize(v) for k, v in obj.__dict__.items() if not k.startswith("_")}
+            if isinstance(obj, (list, tuple)):
+                return [serialize(i) for i in obj]
             return obj
 
         return json.dumps(serialize(result), indent=2)

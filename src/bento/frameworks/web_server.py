@@ -13,10 +13,19 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from dataclasses import asdict
+
 from bento.adapters.parsers.scenario_parser import ScenarioParser
-from bento.domain.models import MemoryLesson, Scenario, TraceEvent
-from bento.domain.ports import MemoryGateway, StorageGateway, TraceGateway
-from bento.domain.rules import detect_recurring_skill_patterns
+from bento.domain.models import Assertion, AssertionType, MemoryLesson, Scenario, TraceEvent
+from bento.domain.ports import ExecutionGateway, MemoryGateway, StorageGateway, TraceGateway
+from bento.domain.rules import (
+    build_memory_graph,
+    calculate_telemetry_metrics,
+    detect_recurring_skill_patterns,
+    evaluate_assertion,
+    generate_unicode_sparkline,
+    validate_scenario,
+)
 from bento.frameworks.bg_runner import BackgroundTaskRunner
 from bento.use_cases.dream_cycle import DreamCycleUseCase
 from bento.use_cases.run_suite import RunSuiteUseCase
@@ -27,6 +36,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
     memory_gateway: MemoryGateway
     trace_gateway: TraceGateway | None
     storage_gateway: StorageGateway
+    execution_gateway: ExecutionGateway | None = None
     run_suite_uc: RunSuiteUseCase
     dream_uc: DreamCycleUseCase
     static_dir: Path
@@ -40,23 +50,56 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         # Suppress standard logging to avoid stderr pollution in tests and ambient monitoring
         pass
 
+    def _is_allowed_origin(self) -> bool:
+        origin = self.headers.get("Origin")
+        if not origin:
+            return True
+        try:
+            parsed = urlparse(origin)
+            hostname = parsed.hostname or ""
+            if hostname in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+                return True
+            host_header = self.headers.get("Host", "")
+            if host_header and (host_header == parsed.netloc or host_header.split(":")[0] == hostname):
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _get_cors_origin(self) -> str | None:
+        origin = self.headers.get("Origin")
+        if not origin:
+            return None
+        if self._is_allowed_origin():
+            return origin
+        return None
+
     def _send_json(self, data: any, status: int = 200) -> None:
         payload = json.dumps(data, default=lambda o: getattr(o, "__dict__", str(o))).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        cors_origin = self._get_cors_origin()
+        if cors_origin:
+            self.send_header("Access-Control-Allow-Origin", cors_origin)
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            self.send_header("Vary", "Origin")
         self.end_headers()
         self.wfile.write(payload)
 
     def do_OPTIONS(self):
-        self.send_response(HTTPStatus.NO_CONTENT)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
+        cors_origin = self._get_cors_origin()
+        if cors_origin:
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.send_header("Access-Control-Allow-Origin", cors_origin)
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            self.send_header("Vary", "Origin")
+            self.end_headers()
+        else:
+            self.send_response(HTTPStatus.FORBIDDEN)
+            self.end_headers()
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -116,11 +159,26 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/bg/") and path.endswith("/logs"):
             # /api/bg/<id>/logs
             parts = path.split("/")
-            if len(parts) != 5 or not re.match(r"^bg-\d+$", parts[3]):
+            if len(parts) != 5 or not re.match(r"^bg-[a-zA-Z0-9_\-]+$", parts[3]):
                 return self._send_json({"error": "Invalid task ID"}, status=400)
             task_id = parts[3]
             logs = self.bg_runner.get_logs(task_id, lines=200)
             return self._send_json({"task_id": task_id, "logs": logs})
+
+        elif path.startswith("/api/bg/") and path.endswith("/stream"):
+            # /api/bg/<id>/stream
+            parts = path.split("/")
+            if len(parts) != 5 or not re.match(r"^bg-[a-zA-Z0-9_\-]+$", parts[3]):
+                return self._send_json({"error": "Invalid task ID"}, status=400)
+            task_id = parts[3]
+            self._stream_task_logs(task_id, query_params=parsed.query)
+            return
+
+        elif path == "/api/memory/graph":
+            memory = self.memory_gateway.load_memory()
+            scenarios = self._load_all_scenarios()
+            graph = build_memory_graph(memory, scenarios)
+            return self._send_json(asdict(graph))
 
         elif path == "/api/memory":
             memory = self.memory_gateway.load_memory()
@@ -176,10 +234,23 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             data = [ScenarioParser.to_dict(s) for s in scenarios]
             return self._send_json(data)
 
+        elif path == "/api/telemetry":
+            traces = self.trace_gateway.load_recent_traces(100) if self.trace_gateway else []
+            metrics = calculate_telemetry_metrics(traces)
+            sparkline = generate_unicode_sparkline(metrics.recent_latencies)
+            return self._send_json({
+                "metrics": asdict(metrics),
+                "sparkline": sparkline,
+            })
+
         # Fallback: Serve Static Files (React build)
         self._serve_static_file(parsed.path)
 
     def do_POST(self):
+        if not self._is_allowed_origin():
+            self.send_error(403, "Cross-Origin Forbidden")
+            return
+
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
@@ -203,7 +274,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/bg/") and path.endswith("/kill"):
             # /api/bg/<id>/kill
             parts = path.split("/")
-            if len(parts) != 5 or not re.match(r"^bg-\d+$", parts[3]):
+            if len(parts) != 5 or not re.match(r"^bg-[a-zA-Z0-9_\-]+$", parts[3]):
                 return self._send_json({"error": "Invalid task ID"}, status=400)
             task_id = parts[3]
             killed = self.bg_runner.kill_task(task_id)
@@ -232,7 +303,9 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                         failed_assertions=failed_msgs,
                         tags=s.tags,
                     )
-                    self.trace_gateway.append_trace_event(event)
+                    trace_fn = getattr(self.trace_gateway, "append_trace_event", getattr(self.trace_gateway, "record_trace", None))
+                    if trace_fn:
+                        trace_fn(event)
 
             data = {
                 "suite_name": suite_res.suite_name,
@@ -318,7 +391,11 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             if not target_scenario:
                 return self._send_json({"error": f"Scenario '{scenario_name}' not found"}, status=404)
 
-            scenario_res = self.run_suite_uc._run_scenario.execute(target_scenario)
+            scenario_uc = getattr(self.run_suite_uc, "_run_scenario_use_case", getattr(self.run_suite_uc, "_run_scenario", None))
+            if not scenario_uc:
+                return self._send_json({"error": "Scenario runner use case not configured."}, status=500)
+
+            scenario_res = scenario_uc.execute(target_scenario)
 
             if self.trace_gateway:
                 failed_msgs = [
@@ -338,7 +415,9 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                     failed_assertions=failed_msgs,
                     tags=target_scenario.tags,
                 )
-                self.trace_gateway.append_trace_event(event)
+                trace_fn = getattr(self.trace_gateway, "append_trace_event", getattr(self.trace_gateway, "record_trace", None))
+                if trace_fn:
+                    trace_fn(event)
 
             data = {
                 "scenario_name": scenario_res.scenario_name,
@@ -365,20 +444,204 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             }
             return self._send_json(data)
 
+        elif path == "/api/benchmarks/create":
+            name = str(payload.get("name", "")).strip()
+            safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", name).lower()
+            if not safe_name:
+                return self._send_json({"error": "Valid scenario name is required."}, status=400)
+
+            try:
+                scenario = ScenarioParser.from_dict(payload)
+                validation_errors = validate_scenario(scenario)
+                if validation_errors:
+                    return self._send_json({"error": "Scenario validation failed", "details": validation_errors}, status=400)
+            except Exception as e:
+                return self._send_json({"error": f"Invalid scenario format: {e}"}, status=400)
+
+            benchmarks_dir = Path("benchmarks")
+            benchmarks_dir.mkdir(parents=True, exist_ok=True)
+            target_file = benchmarks_dir / f"{safe_name}.json"
+            exists_fn = getattr(self.storage_gateway, "file_exists", getattr(self.storage_gateway, "exists", None))
+            already_exists = exists_fn(str(target_file)) if exists_fn else target_file.exists()
+            if already_exists and not payload.get("overwrite", False):
+                return self._send_json({
+                    "error": f"Scenario '{safe_name}.json' already exists. Pass 'overwrite': true to replace."
+                }, status=409)
+
+            json_payload = ScenarioParser.to_json(scenario)
+            self.storage_gateway.write_text(str(target_file), json_payload)
+
+            return self._send_json({
+                "success": True,
+                "path": str(target_file),
+                "scenario": ScenarioParser.to_dict(scenario),
+            }, status=201)
+
+        elif path == "/api/benchmarks/preflight":
+            command = str(payload.get("command", "")).strip()
+            if not command:
+                return self._send_json({"error": "Command is required for pre-flight test."}, status=400)
+
+            cwd = payload.get("cwd")
+
+            # REL-07: Safe timeout parsing and bounding
+            try:
+                timeout_sec = min(max(float(payload.get("timeout_sec", 10.0)), 0.5), 60.0)
+            except (ValueError, TypeError):
+                timeout_sec = 10.0
+
+            # SEC-08 & SEC-09: Block dangerous environment variable injection
+            BLOCKED_ENV_KEYS = {
+                "LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES",
+                "DYLD_LIBRARY_PATH", "PATH", "PYTHONPATH", "SHELL", "IFS"
+            }
+            raw_env = payload.get("env", {})
+            safe_env = (
+                {k: str(v) for k, v in raw_env.items() if k not in BLOCKED_ENV_KEYS}
+                if isinstance(raw_env, dict)
+                else {}
+            )
+
+            assertions_raw = payload.get("assertions", [])
+            assertions: list[Assertion] = []
+            for a_data in assertions_raw:
+                a_type_str = str(a_data.get("type", "EQUALS")).upper()
+                try:
+                    a_type = AssertionType(a_type_str)
+                except ValueError:
+                    a_type = AssertionType.EQUALS
+                assertions.append(
+                    Assertion(
+                        type=a_type,
+                        expected=a_data.get("expected"),
+                        target_field=str(a_data.get("target_field", "stdout")),
+                        description=str(a_data.get("description", "")),
+                    )
+                )
+
+            # BUG-07: Resolve execution gateway across production and test harnesses
+            exec_gw = getattr(self, "execution_gateway", None)
+            if not exec_gw:
+                scenario_uc = getattr(self.run_suite_uc, "_run_scenario_use_case", getattr(self.run_suite_uc, "_run_scenario", None))
+                if scenario_uc:
+                    exec_gw = getattr(scenario_uc, "_execution_gateway", None)
+
+            if not exec_gw:
+                return self._send_json({"error": "Execution gateway not configured."}, status=500)
+
+            try:
+                exit_code, stdout, stderr, duration_ms = exec_gw.execute_command(
+                    command=command,
+                    cwd=cwd,
+                    env=safe_env,
+                    timeout_sec=timeout_sec,
+                )
+            except Exception as e:
+                return self._send_json({"error": f"Pre-flight command failed to run: {e}"}, status=500)
+
+            output_data = {
+                "stdout": stdout,
+                "stderr": stderr,
+                "exit_code": exit_code,
+                "duration_ms": duration_ms,
+            }
+
+            results = []
+            all_passed = True
+            if assertions:
+                for a in assertions:
+                    ares = evaluate_assertion(a, output_data)
+                    if not ares.passed:
+                        all_passed = False
+                    results.append({
+                        "type": ares.assertion.type.value if hasattr(ares.assertion.type, "value") else str(ares.assertion.type),
+                        "target_field": ares.assertion.target_field,
+                        "expected": ares.assertion.expected,
+                        "actual_value": ares.actual_value,
+                        "passed": ares.passed,
+                        "error_message": ares.message if not ares.passed else None,
+                    })
+            else:
+                passed = (exit_code == 0)
+                all_passed = passed
+                results.append({
+                    "type": "EXIT_CODE_EQUALS",
+                    "target_field": "exit_code",
+                    "expected": 0,
+                    "actual_value": exit_code,
+                    "passed": passed,
+                    "error_message": None if passed else f"Expected exit code 0, got {exit_code}",
+                })
+
+            return self._send_json({
+                "command": command,
+                "exit_code": exit_code,
+                "stdout": stdout,
+                "stderr": stderr,
+                "duration_ms": duration_ms,
+                "all_passed": all_passed,
+                "assertion_results": results,
+            })
+
         return self._send_json({"error": "Route not found"}, status=404)
 
     def _load_all_scenarios(self) -> list[Scenario]:
         scenarios: list[Scenario] = []
         for check_dir in ["benchmarks", "examples"]:
-            if os.path.exists(check_dir):
+            try:
                 files = self.storage_gateway.list_files(check_dir, pattern="*.json")
-                for f_path in sorted(files):
-                    try:
-                        content = self.storage_gateway.read_text(f_path)
-                        scenarios.append(ScenarioParser.from_json(content))
-                    except Exception:
-                        continue
+            except Exception:
+                files = []
+            for f_path in sorted(files):
+                try:
+                    content = self.storage_gateway.read_text(f_path)
+                    scenarios.append(ScenarioParser.from_json(content))
+                except Exception:
+                    continue
         return scenarios
+
+    def _stream_task_logs(self, task_id: str, query_params: str = "") -> None:
+        status_info = self.bg_runner.get_status(task_id)
+        if status_info is None:
+            self.send_error(404, f"Task {task_id} not found")
+            return
+
+        offset = 0
+        last_event_id = self.headers.get("Last-Event-ID")
+        if last_event_id and last_event_id.isdigit():
+            offset = int(last_event_id)
+        elif query_params:
+            from urllib.parse import parse_qs
+            qs = parse_qs(query_params)
+            if "offset" in qs and qs["offset"][0].isdigit():
+                offset = int(qs["offset"][0])
+
+        cors_origin = self._get_cors_origin()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache, no-transform")
+        self.send_header("Connection", "keep-alive")
+        if cors_origin:
+            self.send_header("Access-Control-Allow-Origin", cors_origin)
+            self.send_header("Vary", "Origin")
+        self.end_headers()
+
+        try:
+            for _ in range(600):  # Stream up to ~60s
+                chunk, new_offset, is_running = self.bg_runner.read_log_chunk(task_id, start_offset=offset)
+                if chunk:
+                    offset = new_offset
+                    msg = json.dumps({"chunk": chunk, "offset": offset, "status": "RUNNING" if is_running else "STOPPED"})
+                    self.wfile.write(f"id: {offset}\ndata: {msg}\n\n".encode("utf-8"))
+                    self.wfile.flush()
+                elif not is_running:
+                    msg = json.dumps({"chunk": "", "offset": offset, "status": "COMPLETED"})
+                    self.wfile.write(f"id: {offset}\ndata: {msg}\nevent: close\ndata: end\n\n".encode("utf-8"))
+                    self.wfile.flush()
+                    break
+                time.sleep(0.1)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def _serve_static_file(self, req_path: str) -> None:
         if not self.static_dir.exists():
@@ -391,10 +654,18 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             return
 
         clean_path = req_path.lstrip("/")
-        target_file = self.static_dir / clean_path
-
-        if not clean_path or not target_file.exists() or target_file.is_dir():
+        if not clean_path:
             target_file = self.static_dir / "index.html"
+        else:
+            resolved_target = (self.static_dir / clean_path).resolve()
+            resolved_static_dir = self.static_dir.resolve()
+            if not resolved_target.is_relative_to(resolved_static_dir):
+                self.send_error(403, "Forbidden")
+                return
+            if not resolved_target.exists() or resolved_target.is_dir():
+                target_file = self.static_dir / "index.html"
+            else:
+                target_file = resolved_target
 
         try:
             content = target_file.read_bytes()
@@ -441,6 +712,7 @@ class BentoWebServer:
         run_suite_uc: RunSuiteUseCase,
         dream_uc: DreamCycleUseCase,
         trace_gateway: TraceGateway | None = None,
+        execution_gateway: ExecutionGateway | None = None,
         host: str = "127.0.0.1",
         port: int = 8765,
         static_dir: str | Path | None = None,
@@ -453,6 +725,8 @@ class BentoWebServer:
         self.run_suite_uc = run_suite_uc
         self.dream_uc = dream_uc
         self.trace_gateway = trace_gateway
+        scenario_runner = getattr(run_suite_uc, "_run_scenario_use_case", getattr(run_suite_uc, "_run_scenario", None))
+        self.execution_gateway = execution_gateway or getattr(scenario_runner, "_execution_gateway", None)
         self.static_dir = Path(static_dir) if static_dir else Path(os.getcwd()) / "web" / "dist"
         self._server: ThreadingHTTPServer | None = None
 
@@ -462,6 +736,7 @@ class BentoWebServer:
         handler_cls.memory_gateway = self.memory_gateway
         handler_cls.trace_gateway = self.trace_gateway
         handler_cls.storage_gateway = self.storage_gateway
+        handler_cls.execution_gateway = self.execution_gateway
         handler_cls.run_suite_uc = self.run_suite_uc
         handler_cls.dream_uc = self.dream_uc
         handler_cls.static_dir = self.static_dir

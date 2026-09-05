@@ -92,6 +92,15 @@ class ScenarioResult:
     def passed(self) -> bool:
         return self.status == StepStatus.PASSED
 
+    @property
+    def failed_assertions(self) -> list[AssertionResult]:
+        return [
+            ar
+            for sr in self.step_results
+            for ar in sr.assertion_results
+            if not ar.passed
+        ]
+
 
 @dataclass(frozen=True)
 class SuiteResult:
@@ -288,3 +297,106 @@ class OptimizerResult:
     best_candidate: OptimizerCandidate
     rankings: list[OptimizerRanking]
     total_duration_ms: float
+
+
+@dataclass(frozen=True)
+class ArchitectureViolation:
+    file_path: str
+    line_number: int
+    rule: str
+    message: str
+
+
+@dataclass(frozen=True)
+class ArchitectureReport:
+    target_dir: str
+    files_checked: int
+    violations: list[ArchitectureViolation]
+
+    @property
+    def passed(self) -> bool:
+        return len(self.violations) == 0
+
+
+@dataclass(frozen=True)
+class MemoryGraphNode:
+    id: str
+    label: str
+    node_type: str  # "category_hub", "golden_rule", "anti_pattern", "scenario"
+    category: str
+    weight: float
+    x: float
+    y: float
+    details: dict[str, Any] = field(default_factory=dict)
+    tags: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class MemoryGraphEdge:
+    source: str
+    target: str
+    relation: str  # "category_of", "has_anti_pattern", "verified_by", "tag_affinity"
+    weight: float = 1.0
+
+
+@dataclass(frozen=True)
+class MemoryGraph:
+    nodes: list[MemoryGraphNode]
+    edges: list[MemoryGraphEdge]
+    categories: list[str]
+    total_rules: int
+    total_anti_patterns: int
+
+
+@dataclass(frozen=True)
+class TelemetryMetrics:
+    total_runs: int
+    passed_runs: int
+    failed_runs: int
+    pass_rate: float
+    p50_latency_ms: float
+    p90_latency_ms: float
+    p99_latency_ms: float
+    avg_latency_ms: float
+    recent_latencies: list[float] = field(default_factory=list)
+    recent_pass_flags: list[bool] = field(default_factory=list)
+
+
+# --- Level 5: Bento Orchestra Models ---
+
+class TriadRole(str, Enum):
+    WASABI = "WASABI"     # Red Team: Adversarial Security & AST Purity Auditor (Read-Only)
+    MATCHA = "MATCHA"     # Green Team: UX & DX Innovation Explorer (Read-Only)
+    PATRON = "PATRON"     # Patron Gate: User Reviewer & Approval Evaluator
+    CHEF = "CHEF"         # Blue Team: Executive Implementation Craftsman
+
+
+@dataclass(frozen=True)
+class TriadStageResult:
+    role: TriadRole
+    stage_name: str
+    output_summary: str
+    findings_count: int
+    passed: bool
+    duration_ms: float
+    details: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class OrchestraSprintRound:
+    round_index: int
+    stage_results: list[TriadStageResult]
+    passed: bool
+    duration_ms: float
+
+
+@dataclass(frozen=True)
+class OrchestraSprintResult:
+    sprint_name: str
+    rounds: list[OrchestraSprintRound]
+    total_rounds: int
+    all_passed: bool
+    total_duration_ms: float
+
+
+
