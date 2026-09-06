@@ -2,7 +2,7 @@
 name: skill-mobile-ui-&-navigation-verification
 description: >-
   Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (13 executions observed)
-trigger_tags: ['mobile', 'triad_sprint', 'ui', 'brigade_sprint', 'benchmark', 'tailwind', 'blue_team', 'ux', 'chef']
+trigger_tags: ['tailwind', 'benchmark', 'triad_sprint', 'blue_team', 'brigade_sprint', 'ui', 'mobile', 'ux', 'chef']
 ---
 
 # 🛠️ skill-mobile-ui-&-navigation-verification

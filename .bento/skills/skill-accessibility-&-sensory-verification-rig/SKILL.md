@@ -1,13 +1,13 @@
 ---
 name: skill-accessibility-&-sensory-verification-rig
 description: >-
-  Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (10 executions observed)
-trigger_tags: ['a11y', 'sensory', 'brigade_sprint', 'benchmark', 'python311', 'wcag21aa', 'accessibility', 'blue_team', 'chef']
+  Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (11 executions observed)
+trigger_tags: ['wcag21aa', 'benchmark', 'accessibility', 'blue_team', 'chef', 'brigade_sprint', 'a11y', 'sensory', 'python311']
 ---
 
 # 🛠️ skill-accessibility-&-sensory-verification-rig
 
-> Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (10 executions observed)
+> Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (11 executions observed)
 
 ## 📋 Procedural Execution Steps
 

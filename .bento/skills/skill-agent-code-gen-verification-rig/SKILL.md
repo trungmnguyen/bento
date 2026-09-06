@@ -1,13 +1,13 @@
 ---
 name: skill-agent-code-gen-verification-rig
 description: >-
-  Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (12 executions observed)
-trigger_tags: ['triad_sprint', 'agent', 'brigade_sprint', 'benchmark', 'cyrilXBT-paradigm', 'blue_team', 'eval', 'chef']
+  Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (13 executions observed)
+trigger_tags: ['agent', 'benchmark', 'cyrilXBT-paradigm', 'blue_team', 'triad_sprint', 'brigade_sprint', 'eval', 'chef']
 ---
 
 # 🛠️ skill-agent-code-gen-verification-rig
 
-> Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (12 executions observed)
+> Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (13 executions observed)
 
 ## 📋 Procedural Execution Steps
 
