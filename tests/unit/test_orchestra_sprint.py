@@ -153,8 +153,8 @@ class TestOrchestraSprint(unittest.TestCase):
         # Verify traces were recorded (Wasabi audit + Yuzu A11y + Chef scenario + Round summary = 4 per round)
         self.assertEqual(len(self.trace.traces), 8)
         task_names = [t.task_name for t in self.trace.traces]
-        self.assertIn("Triad Audit: AST Purity & Architectural Invariants", task_names)
-        self.assertIn("Triad Audit: UI Accessibility & Visual Invariants", task_names)
+        self.assertIn("Culinary Brigade Audit: AST Purity & Architectural Invariants", task_names)
+        self.assertIn("Culinary Brigade Audit: UI Accessibility & Visual Invariants", task_names)
         self.assertIn("smoke_test", task_names)
         self.assertIn("orchestra_round_1", task_names)
         self.assertIn("orchestra_round_2", task_names)

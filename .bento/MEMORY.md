@@ -108,11 +108,11 @@
 - **Anti-Pattern:** Initial failing mode: Verify useA11yModal Focus Trap Hook: Target 'stdout' contains 'focusTrap': False
 - **Tags:** python311, harness-recovery, accessibility, a11y, sensory, dream-distilled, wcag21aa
 
-### `[MEM-EDD86A56]` Triad Sprint Butler, Memory & Dream Integration
+### `[MEM-EDD86A56]` Culinary Brigade Multi-Team Sprint Integration
 - **Category:** `orchestration` | **Discovered:** 2026-09-06
-- **Hard Rule:** Every triad sprint must: 1. Register in Bento Butler via 'bento bg run' so it tracks in Kitchen Chefs, 2. Distill findings into 'bento memory add' to populate Seasoned Recipes, 3. Pair deliverables with contracts to emit traces, and 4. Conclude with 'bento bg run "bento dream --harvest"' to synthesize skills in Night Dream.
-- **Anti-Pattern:** Running multi-agent sprints entirely inside ephemeral AI chat without registering tasks in Bento Butler, leaving Kitchen Chefs, Seasoned Recipes, and Night Dream unpopulated.
-- **Tags:** triad_sprint,orchestration,butler,memory,dream,skills
+- **Hard Rule:** Every multi-team culinary brigade sprint (Red 🌶️, Yellow 🍋, Green 🍵, Patron 🥢, Blue 🍳) must: 1. Register in Bento Butler via 'bento bg run' so it tracks live in Kitchen Chefs, 2. Distill findings into 'bento memory add' to populate Seasoned Recipes, 3. Pair deliverables with contracts in examples/ to emit structured traces, and 4. Conclude with 'bento bg run "bento dream --harvest"' to synthesize skills in Night Dream.
+- **Anti-Pattern:** Running multi-team brigade sprints entirely inside ephemeral AI chat without registering background tasks in Bento Butler, leaving Kitchen Chefs, Seasoned Recipes, and Night Dream unpopulated.
+- **Tags:** culinary_brigade, brigade_sprint, multi_team, orchestration, butler, memory, dream, skills
 
 ---
 

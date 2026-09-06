@@ -107,7 +107,7 @@ class OrchestraSprintUseCase:
             )
 
             # Audit-to-Trace Hook: Record Wasabi audit findings to feed the sensory dream engine
-            audit_task_name = "Triad Audit: AST Purity & Architectural Invariants"
+            audit_task_name = "Culinary Brigade Audit: AST Purity & Architectural Invariants"
             wasabi_trace = TraceEvent(
                 timestamp=datetime.datetime.now().isoformat(),
                 task_name=audit_task_name,
@@ -118,7 +118,7 @@ class OrchestraSprintUseCase:
                 exit_code=0 if wasabi_passed else 1,
                 passed=wasabi_passed,
                 failed_assertions=[] if wasabi_passed else all_wasabi_findings[:5],
-                tags=["wasabi", "red_team", "security", "ast_purity", "triad_sprint"],
+                tags=["wasabi", "red_team", "security", "ast_purity", "culinary_brigade"],
             )
             self._emit_trace(wasabi_trace, working_dir=effective_cwd)
 
@@ -163,7 +163,7 @@ class OrchestraSprintUseCase:
             )
 
             # Audit-to-Trace Hook: Record Yuzu A11y findings
-            yuzu_task_name = "Triad Audit: UI Accessibility & Visual Invariants"
+            yuzu_task_name = "Culinary Brigade Audit: UI Accessibility & Visual Invariants"
             yuzu_trace = TraceEvent(
                 timestamp=datetime.datetime.now().isoformat(),
                 task_name=yuzu_task_name,
@@ -174,7 +174,7 @@ class OrchestraSprintUseCase:
                 exit_code=0 if yuzu_passed else 1,
                 passed=yuzu_passed,
                 failed_assertions=[] if yuzu_passed else yuzu_violations[:5],
-                tags=["yuzu", "yellow_team", "a11y", "ui", "triad_sprint"],
+                tags=["yuzu", "yellow_team", "a11y", "ui", "culinary_brigade"],
             )
             self._emit_trace(yuzu_trace, working_dir=effective_cwd)
 
@@ -271,7 +271,7 @@ class OrchestraSprintUseCase:
                     exit_code=0 if chef_passed else 1,
                     passed=chef_passed,
                     failed_assertions=failed_assertions,
-                    tags=list(set(target_scenario.tags + ["chef", "blue_team", "contract", "triad_sprint"])),
+                    tags=list(set(target_scenario.tags + ["chef", "blue_team", "contract", "brigade_sprint"])),
                 )
                 self._emit_trace(chef_trace, working_dir=effective_cwd)
 
@@ -311,7 +311,7 @@ class OrchestraSprintUseCase:
                                 exit_code=0 if r.passed else 1,
                                 passed=r.passed,
                                 failed_assertions=failed_msgs,
-                                tags=["chef", "blue_team", "benchmark", "triad_sprint"],
+                                tags=["chef", "blue_team", "benchmark", "brigade_sprint"],
                             )
                             self._emit_trace(s_trace, working_dir=effective_cwd)
                     else:
@@ -347,7 +347,7 @@ class OrchestraSprintUseCase:
                 exit_code=0 if chef_passed else 1,
                 passed=chef_passed,
                 failed_assertions=[] if chef_passed else [chef_summary],
-                tags=["orchestra", "culinary_brigade", "triad_sprint"],
+                tags=["orchestra", "culinary_brigade", "brigade_sprint"],
             )
             self._emit_trace(round_trace, working_dir=effective_cwd)
 
