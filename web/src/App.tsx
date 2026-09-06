@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, FolderGit2, Sparkles, Swords } from 'lucide-react';
+import { RefreshCw, FolderGit2, Sparkles, Swords, Search } from 'lucide-react';
 import {
   BentoBoxIcon,
   OnigiriIcon,
@@ -12,6 +12,7 @@ import { MemoryView } from './components/MemoryView';
 import { TracesView } from './components/TracesView';
 import { BenchmarksView } from './components/BenchmarksView';
 import { ArenaView } from './components/ArenaView';
+import { CommandPalette } from './components/CommandPalette';
 import { ToastContainer } from './components/Toast';
 import {
   SystemStatus,
@@ -38,11 +39,18 @@ export default function App() {
     cwd: '',
   });
   const [isOffline, setIsOffline] = useState<boolean>(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState<boolean>(false);
   const [tasks, setTasks] = useState<BackgroundTask[]>([]);
   const [lessons, setLessons] = useState<MemoryLesson[]>([]);
   const [traces, setTraces] = useState<TraceEvent[]>([]);
   const [skills, setSkills] = useState<CrystallizedSkill[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
+
+  useEffect(() => {
+    const handleToggle = () => setIsPaletteOpen((prev) => !prev);
+    window.addEventListener('toggle-omni-palette', handleToggle);
+    return () => window.removeEventListener('toggle-omni-palette', handleToggle);
+  }, []);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -149,6 +157,17 @@ export default function App() {
                 <span className="text-bento-matcha font-semibold">{traces.length}</span> Tastes
               </span>
             </div>
+
+            {/* OmniPalette Trigger */}
+            <button
+              onClick={() => setIsPaletteOpen(true)}
+              className="hidden sm:flex items-center gap-2 bg-bento-surface border border-bento-border hover:border-amber-500/40 px-3 py-1.5 rounded-bento text-xs text-gray-300 hover:text-white transition min-h-[38px] shadow-sm"
+              title="Open OmniPalette (Cmd+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-amber-400" />
+              <span>OmniSearch</span>
+              <kbd className="font-mono text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-gray-300">⌘K</kbd>
+            </button>
 
             {/* Refresh Controls */}
             <div className="flex items-center gap-2">
@@ -311,6 +330,16 @@ export default function App() {
         <span>•</span>
         <span className="text-gray-400">Telemetry updated at {lastRefreshed.toLocaleTimeString()}</span>
       </footer>
+
+      {/* OmniPalette (Cmd+K Context Navigator) */}
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        onSelectTab={(tab) => setActiveTab(tab)}
+        lessons={lessons}
+        scenarios={scenarios}
+        tasks={tasks}
+      />
 
       {/* Global Toast Notification Container */}
       <ToastContainer />
