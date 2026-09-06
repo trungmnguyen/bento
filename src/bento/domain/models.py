@@ -427,3 +427,30 @@ class ArenaScorecard:
     margin: float  # Winning margin (e.g., pass rate difference)
     challenger_result: ScenarioResult | None = None
     defender_result: ScenarioResult | None = None
+
+
+# --- Level 7: Bento Doctor Diagnostics Models ---
+
+class DiagnosticSeverity(str, Enum):
+    OK = "OK"
+    WARN = "WARN"
+    FAIL = "FAIL"
+
+
+@dataclass(frozen=True)
+class DoctorCheckResult:
+    """Individual system or hygiene check result."""
+    name: str
+    passed: bool
+    message: str
+    severity: DiagnosticSeverity = DiagnosticSeverity.OK
+    remediation: str = ""
+
+
+@dataclass(frozen=True)
+class DoctorReport:
+    """Overall diagnostic report from Bento Doctor."""
+    checks: list[DoctorCheckResult]
+    total_checks: int
+    all_passed: bool
+    summary: str = ""

@@ -10,6 +10,9 @@ from bento.domain.models import (
     ArenaScorecard,
     AutoLoopResult,
     AutoLoopStatus,
+    DiagnosticSeverity,
+    DoctorCheckResult,
+    DoctorReport,
     DreamCycleResult,
     MemoryBank,
     OptimizerResult,
@@ -334,6 +337,40 @@ class ConsolePresenter(PresenterGateway):
 
         lines.append(f"✨ Final Sign-off: Logic is pure and decoupled from I/O. Git hygiene is enforced.")
         lines.append("=" * 65)
+        return "\n".join(lines)
+
+    def format_doctor_report(self, report: DoctorReport) -> str:
+        lines: list[str] = []
+        lines.append("")
+        status_badge = (
+            self._c("32;1", "ALL SYSTEMS HEALTHY")
+            if report.all_passed
+            else self._c("31;1", "ISSUES DETECTED")
+        )
+        lines.append(f"🩺 {self._c('1', 'BENTO SYSTEM & HYGIENE DOCTOR')} [{status_badge}]")
+        lines.append(f"📋 Diagnostics Checked: {report.total_checks} | Status: {report.summary}")
+        lines.append("═" * 65)
+
+        for check in report.checks:
+            sev_val = check.severity.value if hasattr(check.severity, "value") else str(check.severity)
+            if sev_val == "OK":
+                badge = self._c("32", "[✓ PASS]")
+            elif sev_val == "WARN":
+                badge = self._c("33", "[! WARN]")
+            else:
+                badge = self._c("31", "[✗ FAIL]")
+
+            lines.append(f"  {badge} {self._c('1', check.name)}")
+            lines.append(f"     Details: {check.message}")
+            if check.remediation:
+                lines.append(f"     {self._c('33', 'Fix:')} {check.remediation}")
+
+        lines.append("═" * 65)
+        if report.all_passed:
+            lines.append(f"✨ Bento environment is fully operational and compliant with Clean Architecture.")
+        else:
+            lines.append(f"⚠️ Resolve the flagged issues above before running autonomous loops or deployments.")
+        lines.append("─" * 65)
         return "\n".join(lines)
 
     def format_json(self, result: Any) -> str:

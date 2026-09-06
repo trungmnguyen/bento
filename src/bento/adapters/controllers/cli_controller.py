@@ -669,7 +669,7 @@ class CliController:
     def handle_completion(self, shell: str = "zsh") -> int:
         subcommands = [
             "run", "suite", "auto", "watch", "arena", "dream", "eval",
-            "optimize", "swarm", "memory", "bg", "ui", "monitor", "check", "completion",
+            "optimize", "swarm", "memory", "bg", "ui", "monitor", "check", "orchestra", "doctor", "completion",
         ]
         if shell == "zsh":
             script = """#compdef bento
@@ -680,7 +680,7 @@ _bento() {
         'suite:Execute a directory of benchmark contracts'
         'auto:Run closed-loop agentic self-healing'
         'watch:Watch files and auto-evaluate contract on change'
-        'arena:Run adversarial Red-Team sparring'
+        'arena:Run adversarial Red-Team sparring or head-to-head match'
         'dream:Execute overnight trace harvesting & memory synthesis'
         'eval:Direct assertion evaluation against output'
         'optimize:Hill-climbing prompt optimization'
@@ -690,6 +690,8 @@ _bento() {
         'ui:Launch interactive Web UI dashboard'
         'monitor:Launch real-time telemetry TUI monitor'
         'check:Verify Clean Architecture AST domain purity'
+        'orchestra:Run continuous Triad Sprint review loop'
+        'doctor:Run automated environment, toolchain, and architecture diagnostics'
         'completion:Generate shell autocompletion script'
     )
     _describe -t commands 'bento command' commands
@@ -717,5 +719,69 @@ complete -F _bento_completions bento
             return 1
         wizard = InteractiveContractWizard(execution_gateway=exec_gw, storage_gateway=self._storage)
         return wizard.run_interactive(output_dir=output_dir, dry_run=dry_run)
+
+    def handle_doctor(
+        self,
+        working_dir: str | None = None,
+        json_output: bool = False,
+    ) -> tuple[int, str]:
+        import shutil
+        import socket
+        import sys
+        from bento.use_cases.doctor_diagnostics import DoctorDiagnosticsUseCase
+
+        py_ver = sys.version_info[:3]
+        py_str = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
+        node_path = shutil.which("node")
+        node_version = None
+        if node_path:
+            try:
+                import subprocess
+                res = subprocess.run(["node", "-v"], capture_output=True, text=True, timeout=2.0)
+                node_version = res.stdout.strip()
+            except Exception:
+                node_version = "detected"
+
+        port_8765_available = True
+        daemon_running = False
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.5)
+            err = s.connect_ex(("127.0.0.1", 8765))
+            s.close()
+            if err == 0:
+                port_8765_available = False
+                import urllib.request
+                try:
+                    req = urllib.request.urlopen("http://127.0.0.1:8765/api/status", timeout=1.0)
+                    if req.status == 200:
+                        daemon_running = True
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        system_info = {
+            "python_version": py_ver,
+            "python_version_str": py_str,
+            "node_version": node_version,
+            "port_8765_available": port_8765_available,
+            "daemon_running": daemon_running,
+        }
+
+        use_case = DoctorDiagnosticsUseCase(
+            storage_gateway=self._storage,
+            memory_gateway=self._memory,
+        )
+        report = use_case.execute(system_info=system_info, working_dir=working_dir)
+
+        if json_output:
+            output = self._presenter.format_json(report)
+        else:
+            output = self._presenter.format_doctor_report(report)
+
+        exit_code = 0 if report.all_passed else 1
+        return exit_code, output
 
 

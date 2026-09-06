@@ -11,6 +11,7 @@ import { DaemonView } from './components/DaemonView';
 import { MemoryView } from './components/MemoryView';
 import { TracesView } from './components/TracesView';
 import { BenchmarksView } from './components/BenchmarksView';
+import { ToastContainer } from './components/Toast';
 import {
   SystemStatus,
   BackgroundTask,
@@ -295,6 +296,9 @@ export default function App() {
         <span>•</span>
         <span className="text-gray-400">Telemetry updated at {lastRefreshed.toLocaleTimeString()}</span>
       </footer>
+
+      {/* Global Toast Notification Container */}
+      <ToastContainer />
     </div>
   );
 }

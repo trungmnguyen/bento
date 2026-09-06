@@ -16,6 +16,7 @@ import {
 import { ChopsticksIcon, WasabiBadgeIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { Scenario, SuiteResult, PreflightResult } from '../types';
 import { playZenBell, playClack } from '../utils/audio';
+import { showToast } from './Toast';
 
 interface BenchmarksViewProps {
   scenarios: Scenario[];
@@ -139,17 +140,23 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ error: 'Failed to parse response' }));
       if (res.ok) {
         setPreflightResult(data);
         if (data.all_passed) {
           playZenBell();
+          showToast('success', 'Pre-flight Tasting Passed', 'All assertions verified cleanly.');
+        } else {
+          showToast('warning', 'Assertion Mismatch', 'One or more assertions failed.');
         }
       } else {
-        setPreflightError(data.error || 'Preflight execution failed.');
+        const msg = data.error || `Preflight failed (HTTP ${res.status})`;
+        setPreflightError(msg);
+        showToast('error', 'Pre-flight Failed', msg);
       }
     } catch (err) {
       setPreflightError('Preflight execution failed.');
+      showToast('error', 'Network Error', 'Could not reach Bento preflight endpoint.');
     } finally {
       setPreflightTesting(false);
     }
@@ -229,19 +236,23 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ error: 'Failed to parse response' }));
       if (res.ok) {
         playZenBell();
+        showToast('success', 'Scenario Created', `Saved '${craftName}' into benchmarks/.`);
         setShowCraftModal(false);
         setCraftName('');
         setCraftDesc('');
         setCraftSteps([]);
         onRefresh();
       } else {
-        setCraftSubmitError(data.error || 'Failed to save tasting flight.');
+        const msg = data.error || `Failed to save scenario (HTTP ${res.status})`;
+        setCraftSubmitError(msg);
+        showToast('error', 'Creation Failed', msg);
       }
     } catch {
       setCraftSubmitError('Failed to save tasting flight.');
+      showToast('error', 'Network Error', 'Could not reach Bento scenario creation endpoint.');
     } finally {
       setCraftSubmitting(false);
     }

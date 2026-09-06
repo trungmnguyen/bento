@@ -229,6 +229,11 @@ def main(args: list[str] | None = None) -> int:
     orchestra_parser.add_argument("--cwd", default=None, help="Working directory")
     orchestra_parser.add_argument("--json", action="store_true", help="Output raw JSON")
 
+    # bento doctor (Automated System & Hygiene Diagnostics)
+    doctor_parser = subparsers.add_parser("doctor", help="Run automated environment, toolchain, and architecture diagnostics")
+    doctor_parser.add_argument("--cwd", default=None, help="Working directory")
+    doctor_parser.add_argument("--json", action="store_true", help="Output raw JSON diagnostic report")
+
     parsed = parser.parse_args(args)
 
     if not parsed.command:
@@ -463,6 +468,14 @@ def main(args: list[str] | None = None) -> int:
             )
         new_parser.print_help()
         return 0
+
+    elif parsed.command == "doctor":
+        exit_code, output = controller.handle_doctor(
+            working_dir=parsed.cwd,
+            json_output=parsed.json,
+        )
+        print(output)
+        return exit_code
 
     return 0
 
