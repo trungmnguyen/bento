@@ -1,13 +1,13 @@
 ---
 name: skill-mobile-ui-&-navigation-verification
 description: >-
-  Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (15 executions observed)
-trigger_tags: ['ui', 'benchmark', 'triad_sprint', 'chef', 'blue_team', 'tailwind', 'mobile', 'ux']
+  Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (14 executions observed)
+trigger_tags: ['blue_team', 'benchmark', 'ux', 'tailwind', 'mobile', 'chef', 'triad_sprint', 'ui']
 ---
 
 # 🛠️ skill-mobile-ui-&-navigation-verification
 
-> Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (15 executions observed)
+> Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (14 executions observed)
 
 ## 📋 Procedural Execution Steps
 

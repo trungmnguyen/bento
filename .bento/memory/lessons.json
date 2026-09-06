@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated_at": "2026-09-05",
+  "updated_at": "2026-09-06",
   "lessons": [
     {
       "id": "MEM-50790948",
@@ -221,6 +221,77 @@
         "red_team"
       ],
       "source_scenario": "Triad Audit: AST Purity & Architectural Invariants"
+    },
+    {
+      "id": "MEM-662BC078",
+      "title": "Python 3.11 F-String Backslash Compatibility",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Never use backslashes inside f-string expression blocks ({...}) to preserve compatibility with Python 3.10 and 3.11.",
+      "anti_pattern": "f'{self._c(\"1;32\", \"Text with \\' quote\")}' causes SyntaxError in Python <3.12.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "python311,clean-code,syntax"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-8BD0FA67",
+      "title": "Web Server LAN Network Binding Invariant",
+      "category": "networking",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "To allow multi-device or mobile access over local Wi-Fi, the web daemon must bind to 0.0.0.0 via --network. Defaulting to 127.0.0.1 strictly rejects external network IP requests.",
+      "anti_pattern": "Attempting to access http://<LAN_IP>:8765 when server is bound strictly to 127.0.0.1 resulting in Connection Refused.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "web,lan,networking,daemon"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-6AEE8EB5",
+      "title": "Sensory Feedback & WCAG 2.1 AA Invariant",
+      "category": "accessibility",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "All modal dialogs must enforce focus trapping (Tab/Shift+Tab) and focus restoration on unmount. Audio chimes must provide visual captions via SoundCaptionHUD for deaf and hard-of-hearing users.",
+      "anti_pattern": "Playing audio sound effects without accompanying visual subtitles or captions in HUD, or allowing keyboard focus to bleed behind open modal dialogs.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "a11y,wcag21aa,sensory,ui"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-2D4E78EE",
+      "title": "The Butler Background Runner Invariant",
+      "category": "orchestration",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "All operations, sprints, suites, or benchmarks expected to take >10 seconds must be dispatched via 'bento bg run \"<cmd>\" --tag \"<tag>\"' so they appear in Kitchen Chefs (DaemonView) and preserve interactive responsiveness.",
+      "anti_pattern": "Running long test suites or agent loops directly in interactive shell or agent context without registering them in Bento Butler background runner.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "butler,daemon,bg_runner,orchestration"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-DREAM-79F2B2DC",
+      "title": "Autonomous Recovery Guard: Accessibility & Sensory Verification Rig",
+      "category": "auto-dream-distilled",
+      "context": "Task 'Accessibility & Sensory Verification Rig' failed at iteration 1 due to: [Verify useA11yModal Focus Trap Hook: Target 'stdout' contains 'focusTrap': False], but recovered cleanly at iteration 1.",
+      "rule": "Always satisfy contract requirements: Verify useA11yModal Focus Trap Hook: Target 'stdout' contains 'focusTrap': False",
+      "anti_pattern": "Initial failing mode: Verify useA11yModal Focus Trap Hook: Target 'stdout' contains 'focusTrap': False",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "python311",
+        "harness-recovery",
+        "accessibility",
+        "a11y",
+        "sensory",
+        "dream-distilled",
+        "wcag21aa"
+      ],
+      "source_scenario": "Accessibility & Sensory Verification Rig"
     }
   ]
 }

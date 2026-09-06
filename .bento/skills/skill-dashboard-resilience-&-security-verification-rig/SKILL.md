@@ -1,13 +1,13 @@
 ---
 name: skill-dashboard-resilience-&-security-verification-rig
 description: >-
-  Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (16 executions observed)
-trigger_tags: ['dashboard', 'benchmark', 'blue_team', 'web', 'chef', 'resilience', 'security', 'triad_sprint']
+  Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (14 executions observed)
+trigger_tags: ['resilience', 'blue_team', 'security', 'dashboard', 'benchmark', 'triad_sprint', 'chef', 'web']
 ---
 
 # 🛠️ skill-dashboard-resilience-&-security-verification-rig
 
-> Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (16 executions observed)
+> Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (14 executions observed)
 
 ## 📋 Procedural Execution Steps
 

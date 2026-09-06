@@ -1,0 +1,67 @@
+{
+  "name": "Accessibility & Sensory Verification Rig",
+  "description": "Deterministic contract verifying WCAG 2.1 AA modal focus trap, sound caption HUD, and Python AST syntax safety",
+  "tags": [
+    "accessibility",
+    "sensory",
+    "a11y",
+    "wcag21aa",
+    "python311"
+  ],
+  "steps": [
+    {
+      "name": "Verify useA11yModal Focus Trap Hook",
+      "command": "grep -F \"aria-modal\" web/src/hooks/useA11yModal.ts",
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "useA11yModal hook file is present"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "aria-modal",
+          "description": "Focus trap functionality and aria-modal are implemented"
+        }
+      ]
+    },
+    {
+      "name": "Verify SoundCaptionHUD Accessible Subtitles",
+      "command": "grep -F \"aria-live\" web/src/components/SoundCaptionHUD.tsx",
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "SoundCaptionHUD component is present"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "aria-live=\"polite\"",
+          "description": "Accessible aria-live region is configured for sound captions"
+        }
+      ]
+    },
+    {
+      "name": "Verify Python AST Compatibility & Syntax Safety",
+      "command": "python3 -c \"import ast, os; [ast.parse(open(os.path.join(r, f)).read()) for r, _, fs in os.walk('src') for f in fs if f.endswith('.py')]; print('AST OK')\"",
+      "assertions": [
+        {
+          "type": "EXIT_CODE_EQUALS",
+          "target_field": "exit_code",
+          "expected": 0,
+          "description": "All Python source files pass strict AST syntax parsing"
+        },
+        {
+          "type": "CONTAINS",
+          "target_field": "stdout",
+          "expected": "AST OK",
+          "description": "AST parsing confirms zero syntax or f-string errors"
+        }
+      ]
+    }
+  ]
+}

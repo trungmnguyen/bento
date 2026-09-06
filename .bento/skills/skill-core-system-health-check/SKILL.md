@@ -1,13 +1,13 @@
 ---
 name: skill-core-system-health-check
 description: >-
-  Autonomous skill macro synthesized from recurring task 'Core System Health Check' (16 executions observed)
-trigger_tags: ['benchmark', 'sanity', 'contract', 'core', 'chef', 'blue_team', 'triad_sprint']
+  Autonomous skill macro synthesized from recurring task 'Core System Health Check' (15 executions observed)
+trigger_tags: ['core', 'contract', 'blue_team', 'sanity', 'benchmark', 'triad_sprint', 'chef']
 ---
 
 # 🛠️ skill-core-system-health-check
 
-> Autonomous skill macro synthesized from recurring task 'Core System Health Check' (16 executions observed)
+> Autonomous skill macro synthesized from recurring task 'Core System Health Check' (15 executions observed)
 
 ## 📋 Procedural Execution Steps
 
