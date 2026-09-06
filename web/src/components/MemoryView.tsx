@@ -25,6 +25,7 @@ import { OnigiriIcon, WasabiBadgeIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { MemoryLesson, MemoryGraph, MemoryGraphNode, MemoryGraphEdge } from '../types';
 import { playClack, playZenBell } from '../utils/audio';
 import { useA11yModal } from '../hooks/useA11yModal';
+import { CopyButton } from './CopyButton';
 
 interface MemoryViewProps {
   lessons: MemoryLesson[];
@@ -48,6 +49,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
   const [isPanning, setIsPanning] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [graphQuery, setGraphQuery] = useState('');
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
 
   // Export Sheet State
   const [showExportModal, setShowExportModal] = useState(false);
@@ -92,7 +94,11 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
   // Extract unique tags
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
-    lessons.forEach((l) => l.tags.forEach((t) => tagSet.add(t)));
+    lessons.forEach((l) => {
+      if (Array.isArray(l?.tags)) {
+        l.tags.forEach((t) => tagSet.add(t));
+      }
+    });
     return Array.from(tagSet).sort();
   }, [lessons]);
 
@@ -101,10 +107,10 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
     return lessons.filter((lesson) => {
       const matchesSearch =
         searchTerm === '' ||
-        lesson.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lesson.rule.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lesson.id.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesTag = selectedTag === null || lesson.tags.includes(selectedTag);
+        (lesson.title && lesson.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (lesson.rule && lesson.rule.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (lesson.id && lesson.id.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesTag = selectedTag === null || (Array.isArray(lesson?.tags) && lesson.tags.includes(selectedTag));
       return matchesSearch && matchesTag;
     });
   }, [lessons, searchTerm, selectedTag]);
@@ -178,22 +184,35 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
     }
   };
 
-  // Pan & Zoom physics handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only pan if clicking canvas background or svg element itself
+  // Pan & Zoom physics handlers (Pointer Events for touch/mouse unified dragging)
+  const handlePointerDown = (e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
     if (target.tagName === 'svg' || target.id === 'canvas-bg' || target.classList.contains('canvas-area')) {
       setIsPanning(true);
       setStartPos({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      try {
+        (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+      } catch {
+        // ignore
+      }
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     if (!isPanning) return;
     setPan({ x: e.clientX - startPos.x, y: e.clientY - startPos.y });
   };
 
-  const handleMouseUp = () => setIsPanning(false);
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (isPanning) {
+      setIsPanning(false);
+      try {
+        (e.currentTarget as Element).releasePointerCapture?.(e.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -368,11 +387,26 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
               <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
               <input
                 type="text"
+                id="memory-search-input"
                 placeholder="Search recipes, rules..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-bento-lacquer border border-bento-border rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-salmon font-mono transition"
+                aria-label="Search recipes, rules, and IDs"
+                className="w-full bg-bento-lacquer border border-bento-border rounded-xl pl-9 pr-8 py-2 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-salmon font-mono transition"
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClack();
+                    setSearchTerm('');
+                  }}
+                  aria-label="Clear recipe search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -455,11 +489,11 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* SVG Visualizer */}
             <div
-              className="lg:col-span-2 bg-[#0c0d12] border border-bento-border rounded-bento overflow-hidden relative shadow-2xl h-[520px] select-none"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
+              className="lg:col-span-2 bg-[#0c0d12] border border-bento-border rounded-bento overflow-hidden relative shadow-2xl h-[520px] select-none touch-none"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
               onWheel={handleWheel}
             >
               {/* In-Graph Search & Navigation Controls */}
@@ -471,8 +505,22 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                     value={graphQuery}
                     onChange={(e) => setGraphQuery(e.target.value)}
                     placeholder="Search node / axiom..."
-                    className="bg-bento-surface/90 backdrop-blur-md border border-bento-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono w-48 shadow-lg"
+                    aria-label="Search constellation nodes and axioms"
+                    className="bg-bento-surface/90 backdrop-blur-md border border-bento-border rounded-xl pl-8 pr-7 py-1.5 text-xs text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono w-48 shadow-lg"
                   />
+                  {graphQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClack();
+                        setGraphQuery('');
+                      }}
+                      aria-label="Clear node search"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -482,6 +530,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                   onClick={() => setZoom((z) => Math.min(3.0, Number((z + 0.2).toFixed(2))))}
                   className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-bento-lacquer transition"
                   title="Zoom In (+)"
+                  aria-label="Zoom in constellation"
                 >
                   <ZoomIn className="w-4 h-4" />
                 </button>
@@ -492,6 +541,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                   onClick={() => setZoom((z) => Math.max(0.4, Number((z - 0.2).toFixed(2))))}
                   className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-bento-lacquer transition"
                   title="Zoom Out (-)"
+                  aria-label="Zoom out constellation"
                 >
                   <ZoomOut className="w-4 h-4" />
                 </button>
@@ -500,6 +550,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                   onClick={resetTransform}
                   className="p-1.5 text-gray-400 hover:text-bento-tamago rounded-lg hover:bg-bento-lacquer transition flex items-center gap-1 text-[11px] font-mono"
                   title="Reset View (100%)"
+                  aria-label="Reset zoom and pan"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Reset</span>
@@ -615,6 +666,8 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                             aria-label={`Category Hub: ${node.label}`}
                             className="cursor-pointer transition-transform duration-200 focus:outline-none"
                             opacity={nodeOpacity}
+                            onFocus={() => setFocusedNodeId(node.id)}
+                            onBlur={() => setFocusedNodeId((prev) => (prev === node.id ? null : prev))}
                             onClick={() => {
                               playClack();
                               setSelectedNode(node);
@@ -627,6 +680,17 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                               }
                             }}
                           >
+                            {focusedNodeId === node.id && (
+                              <circle
+                                cx={node.x}
+                                cy={node.y}
+                                r={isSelected ? 38 : 32}
+                                fill="none"
+                                stroke="#ff6b6b"
+                                strokeWidth={2}
+                                strokeDasharray="4 2"
+                              />
+                            )}
                             <circle
                               cx={node.x}
                               cy={node.y}
@@ -660,6 +724,8 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                             aria-label={`Golden Rule: ${node.label} (${node.id})`}
                             className="cursor-pointer focus:outline-none"
                             opacity={nodeOpacity}
+                            onFocus={() => setFocusedNodeId(node.id)}
+                            onBlur={() => setFocusedNodeId((prev) => (prev === node.id ? null : prev))}
                             onClick={() => {
                               playClack();
                               setSelectedNode(node);
@@ -672,6 +738,17 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                               }
                             }}
                           >
+                            {focusedNodeId === node.id && (
+                              <circle
+                                cx={node.x}
+                                cy={node.y}
+                                r={isSelected ? 28 : 23}
+                                fill="none"
+                                stroke="#ff6b6b"
+                                strokeWidth={2}
+                                strokeDasharray="4 2"
+                              />
+                            )}
                             {/* Anti-Pattern Warning Halo */}
                             {hasAntiPattern && (
                               <circle
@@ -729,6 +806,8 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                             aria-label={`Anti-Pattern: ${node.label}`}
                             className="cursor-pointer focus:outline-none"
                             opacity={nodeOpacity}
+                            onFocus={() => setFocusedNodeId(node.id)}
+                            onBlur={() => setFocusedNodeId((prev) => (prev === node.id ? null : prev))}
                             onClick={() => {
                               playClack();
                               setSelectedNode(node);
@@ -741,6 +820,17 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                               }
                             }}
                           >
+                            {focusedNodeId === node.id && (
+                              <circle
+                                cx={node.x}
+                                cy={node.y}
+                                r={isSelected ? 24 : 20}
+                                fill="none"
+                                stroke="#ff6b6b"
+                                strokeWidth={2}
+                                strokeDasharray="4 2"
+                              />
+                            )}
                             <circle
                               cx={node.x}
                               cy={node.y}
@@ -773,6 +863,8 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                           aria-label={`Scenario Test: ${node.label}`}
                           className="cursor-pointer focus:outline-none"
                           opacity={nodeOpacity}
+                          onFocus={() => setFocusedNodeId(node.id)}
+                          onBlur={() => setFocusedNodeId((prev) => (prev === node.id ? null : prev))}
                           onClick={() => {
                             playClack();
                             setSelectedNode(node);
@@ -785,6 +877,19 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                             }
                           }}
                         >
+                          {focusedNodeId === node.id && (
+                            <rect
+                              x={node.x - 28}
+                              y={node.y - 16}
+                              width="56"
+                              height="32"
+                              rx="8"
+                              fill="none"
+                              stroke="#ff6b6b"
+                              strokeWidth={2}
+                              strokeDasharray="4 2"
+                            />
+                          )}
                           <rect
                             x={node.x - 24}
                             y={node.y - 12}
@@ -840,6 +945,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                     </div>
                     <button
                       onClick={() => setSelectedNode(null)}
+                      aria-label="Close node details inspector"
                       className="text-gray-400 hover:text-white p-1"
                     >
                       <X className="w-4 h-4" />
@@ -979,9 +1085,16 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                       <OnigiriIcon className="w-3.5 h-3.5" />
                       {lesson.id}
                     </span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1 font-mono">
-                      <Calendar className="w-3 h-3 text-bento-tamago" /> {lesson.discovery_date || 'Enforced'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <CopyButton
+                        text={`${lesson.title}\n\nRule: ${lesson.rule}${lesson.anti_pattern ? `\nAnti-Pattern: ${lesson.anti_pattern}` : ''}`}
+                        tooltip="Copy recipe"
+                        iconOnly
+                      />
+                      <span className="text-xs text-gray-400 flex items-center gap-1 font-mono">
+                        <Calendar className="w-3 h-3 text-bento-tamago" /> {lesson.discovery_date || 'Enforced'}
+                      </span>
+                    </div>
                   </div>
 
                   <h3 className="text-sm font-bold text-bento-rice mb-2 flex items-center gap-1.5">
@@ -1016,7 +1129,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                 {/* Tags & Source footer */}
                 <div className="pt-3 border-t border-bento-border/70 flex flex-wrap justify-between items-center gap-2">
                   <div className="flex flex-wrap gap-1.5">
-                    {lesson.tags.map((t) => (
+                    {Array.isArray(lesson?.tags) && lesson.tags.map((t) => (
                       <span key={t} className="text-[11px] font-mono text-gray-300 bg-bento-lacquer px-2.5 py-0.5 rounded-lg border border-bento-border">
                         #{t}
                       </span>
@@ -1079,7 +1192,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
 
             <form onSubmit={handleAddRecipe} className="p-6 space-y-4">
               {formError && (
-                <div className="bg-rose-950/40 border border-bento-salmon/40 rounded-xl p-3 text-xs text-rose-200 flex items-center gap-2">
+                <div role="alert" aria-live="assertive" className="bg-rose-950/40 border border-bento-salmon/40 rounded-xl p-3 text-xs text-rose-200 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{formError}</span>
                 </div>

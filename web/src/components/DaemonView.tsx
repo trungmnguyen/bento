@@ -13,12 +13,14 @@ import {
   RotateCcw,
   Filter,
   X,
+  AlertCircle,
 } from 'lucide-react';
 import { ChefTamagoIcon, SoyFishIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { BackgroundTask } from '../types';
 import { playClack, playTaskFinished, playTasteFail, playTastePass } from '../utils/audio';
 import { showToast } from './Toast';
 import { useA11yModal } from '../hooks/useA11yModal';
+import { CopyButton } from './CopyButton';
 
 interface DaemonViewProps {
   tasks: BackgroundTask[];
@@ -372,8 +374,17 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
             )}
           </button>
         </form>
-        {actionError && <p className="text-bento-salmon text-xs mt-2 font-medium">{actionError}</p>}
-        {pruneMessage && <p className="text-emerald-400 text-xs mt-2 font-medium">{pruneMessage}</p>}
+        {actionError && (
+          <div role="alert" aria-live="assertive" className="text-bento-salmon text-xs mt-2 font-medium flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+        )}
+        {pruneMessage && (
+          <div role="status" aria-live="polite" className="text-emerald-400 text-xs mt-2 font-medium">
+            {pruneMessage}
+          </div>
+        )}
       </div>
 
       {/* Task Process Table */}
@@ -393,8 +404,21 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                 onChange={(e) => setTableSearch(e.target.value)}
                 placeholder="Filter orders..."
                 aria-label="Filter kitchen orders"
-                className="bg-bento-lacquer border border-bento-border rounded-lg pl-8 pr-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-bento-tamago/60 font-mono w-36 sm:w-48"
+                className="bg-bento-lacquer border border-bento-border rounded-lg pl-8 pr-7 py-1 text-xs text-gray-200 focus:outline-none focus:border-bento-tamago/60 font-mono w-36 sm:w-48"
               />
+              {tableSearch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClack();
+                    setTableSearch('');
+                  }}
+                  aria-label="Clear order filter"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -423,10 +447,46 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
         </div>
 
         {tasks.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
+          <div className="p-10 text-center text-gray-400">
             <ChefTamagoIcon className="w-12 h-12 mx-auto mb-3 opacity-60 animate-bento-bounce" />
             <p className="text-sm font-medium text-gray-300">Kitchen stove is clear! No background tasks cooking.</p>
-            <p className="text-xs text-gray-500 mt-1 font-mono">Launch a task with: <code>bento bg run "..."</code></p>
+            <p className="text-xs text-gray-500 mt-1 font-mono">Quick cook from pantry:</p>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-3.5">
+              {[
+                { label: 'Suite Check', cmd: 'bento suite examples/', tag: 'suite-check' },
+                { label: 'Run Triad Sprint', cmd: 'bento orchestra --rounds 1', tag: 'triad-sprint' },
+                { label: 'AST Hygiene Audit', cmd: 'bento check', tag: 'ast-audit' },
+              ].map((pantry) => (
+                <button
+                  key={pantry.tag}
+                  type="button"
+                  onClick={() => {
+                    playClack();
+                    setNewCmd(pantry.cmd);
+                    setNewTag(pantry.tag);
+                  }}
+                  className="px-2.5 py-1.5 bg-bento-lacquer hover:bg-bento-border border border-bento-border rounded-xl text-xs font-mono text-bento-tamago hover:text-white transition flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3 h-3 text-bento-tamago" />
+                  <span>{pantry.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : filteredTasks.length === 0 ? (
+          <div className="p-10 text-center text-gray-400">
+            <Filter className="w-8 h-8 mx-auto mb-2 opacity-50 text-gray-400" />
+            <p className="text-sm font-medium text-gray-300">No orders matching &ldquo;{tableSearch}&rdquo;</p>
+            <button
+              type="button"
+              onClick={() => {
+                playClack();
+                setTableSearch('');
+              }}
+              className="mt-3 px-3 py-1.5 bg-bento-lacquer hover:bg-bento-border border border-bento-border rounded-xl text-xs text-gray-300 hover:text-white font-mono transition"
+            >
+              Clear filter
+            </button>
           </div>
         ) : (
           <div
@@ -453,7 +513,6 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                     playClack();
                     activeTaskIdRef.current = task.task_id;
                     setSelectedTask(task);
-                    fetchLogs(task.task_id);
                   };
 
                   return (
@@ -462,15 +521,18 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                       className="hover:bg-bento-elevated/70 transition"
                     >
                       <td className="px-6 py-4 font-mono font-medium text-bento-tamago">
-                        <button
-                          type="button"
-                          onClick={handleSelect}
-                          aria-label={`View logs for task ${task.task_id} tagged ${task.tag}`}
-                          className="text-left font-mono font-medium text-bento-tamago hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon rounded px-1 -ml-1 transition"
-                        >
-                          {task.task_id}
-                          <span className="block text-xs text-gray-400 font-sans mt-0.5 font-normal">#{task.tag}</span>
-                        </button>
+                        <div className="flex items-center">
+                          <button
+                            type="button"
+                            onClick={handleSelect}
+                            aria-label={`View logs for task ${task.task_id} tagged ${task.tag}`}
+                            className="text-left font-mono font-medium text-bento-tamago hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon rounded px-1 -ml-1 transition"
+                          >
+                            {task.task_id}
+                            <span className="block text-xs text-gray-400 font-sans mt-0.5 font-normal">#{task.tag}</span>
+                          </button>
+                          <CopyButton text={task.task_id} tooltip="Copy Task ID" iconOnly className="ml-1.5" />
+                        </div>
                       </td>
                       <td className="px-6 py-4 font-mono text-gray-400 text-xs">{task.pid || '—'}</td>
                       <td className="px-6 py-4">
@@ -501,7 +563,10 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                           )}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs text-gray-200 max-w-xs truncate">
+                      <td
+                        className="px-6 py-4 font-mono text-xs text-gray-200 max-w-xs truncate"
+                        title={task.command}
+                      >
                         {task.command}
                       </td>
                       <td className="px-6 py-4 text-xs text-gray-400 font-mono">
@@ -572,13 +637,14 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
             className="w-full max-w-3xl bg-bento-surface border-l border-bento-border h-full flex flex-col p-6 shadow-2xl"
           >
             {/* Header */}
-            <div className="flex justify-between items-start pb-4 border-b border-bento-border">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-bento-border">
               <div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 id="log-viewer-title" className="text-base font-bold text-gray-100 flex items-center gap-2">
                     <SoyFishIcon className="w-6 h-6 text-bento-salmon" />
                     Task Output Logs: <span className="font-mono text-bento-tamago">{selectedTask.task_id}</span>
                   </h3>
+                  <CopyButton text={selectedTask.task_id} tooltip="Copy Task ID" iconOnly className="ml-1" />
                   {isStreaming ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-bento-tamago/15 text-bento-tamago border border-bento-tamago/30 shadow-sm">
                       <span className="w-1.5 h-1.5 rounded-full bg-bento-tamago animate-ping" />
@@ -590,7 +656,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                 </div>
                 <p className="text-xs text-gray-400 font-mono mt-1">{selectedTask.command}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
                 <button
                   onClick={handleDownloadLog}
                   className="px-2.5 py-1 bg-bento-elevated hover:bg-bento-border text-gray-300 hover:text-white rounded-xl text-xs border border-bento-border transition flex items-center gap-1"
@@ -648,8 +714,21 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                     onChange={(e) => setLogFilterQuery(e.target.value)}
                     placeholder="Filter logs (regex / text)..."
                     aria-label="Filter logs by regex or text"
-                    className="w-full bg-bento-lacquer border border-bento-border rounded-lg pl-8 pr-3 py-1 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-amber-400 font-mono"
+                    className="w-full bg-bento-lacquer border border-bento-border rounded-lg pl-8 pr-7 py-1 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-amber-400 font-mono"
                   />
+                  {logFilterQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClack();
+                        setLogFilterQuery('');
+                      }}
+                      aria-label="Clear log filter"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
 

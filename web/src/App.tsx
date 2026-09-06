@@ -32,7 +32,9 @@ import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { QuickRunnerModal } from './components/QuickRunnerModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
 import { SoundCaptionHUD } from './components/SoundCaptionHUD';
+import { CompartmentBreadcrumbs } from './components/CompartmentBreadcrumbs';
 import { runA11yDoctor } from './utils/a11yDoctor';
+import { copyHarnessReport } from './utils/harnessReport';
 import {
   SystemStatus,
   BackgroundTask,
@@ -45,9 +47,11 @@ import {
 } from './types';
 import { getAudioSettings, playClack, playZenBell } from './utils/audio';
 import { AnnounceProvider, useAnnounce } from './hooks/useAnnounce';
+import { DensityProvider, useDensity } from './hooks/useDensity';
 
 function BentoDashboard() {
   const announce = useAnnounce();
+  const { toggleDensity } = useDensity();
   const [activeTab, setActiveTab] = useState<'daemons' | 'memory' | 'traces' | 'benchmarks' | 'arena'>('daemons');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
@@ -74,7 +78,11 @@ function BentoDashboard() {
       const saved = localStorage.getItem('bento_notifications');
       if (!saved) return [];
       const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(
+        (n): n is BentoNotification =>
+          Boolean(n && typeof n === 'object' && typeof n.id === 'string' && typeof n.title === 'string')
+      );
     } catch {
       return [];
     }
@@ -178,6 +186,43 @@ function BentoDashboard() {
         e.preventDefault();
         playClack();
         setIsShortcutsModalOpen(true);
+      } else if (e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        toggleDensity();
+      } else if (e.key === '/') {
+        e.preventDefault();
+        playClack();
+        const searchInputMap: Record<string, string> = {
+          daemons: 'daemon-table-search',
+          memory: 'memory-search-input',
+          traces: 'trace-search-query',
+          benchmarks: 'benchmark-filter-input',
+        };
+        const inputId = searchInputMap[activeTab];
+        if (inputId) {
+          const el = document.getElementById(inputId) as HTMLInputElement | null;
+          el?.focus();
+          el?.select();
+        }
+      } else if (e.key === 'E' && e.shiftKey) {
+        e.preventDefault();
+        playClack();
+        copyHarnessReport({
+          status,
+          tasks,
+          lessons,
+          traces,
+          scenarios,
+          telemetry,
+        }).then((ok: boolean) => {
+          if (ok) {
+            showToast({
+              title: 'Executive Snapshot Copied! 📋',
+              message: 'Full harness health & telemetry snapshot copied to clipboard.',
+              type: 'success',
+            });
+          }
+        });
       }
     };
 
@@ -190,6 +235,13 @@ function BentoDashboard() {
     isQuickRunnerOpen,
     isNotificationDrawerOpen,
     scenarios,
+    activeTab,
+    toggleDensity,
+    status,
+    tasks,
+    lessons,
+    traces,
+    telemetry,
   ]);
 
   const isFetchingRef = React.useRef(false);
@@ -316,6 +368,18 @@ function BentoDashboard() {
       setActiveTab(prevTab);
       playClack();
       document.getElementById(`tab-${prevTab}`)?.focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      const firstTab = tabKeys[0];
+      setActiveTab(firstTab);
+      playClack();
+      document.getElementById(`tab-${firstTab}`)?.focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      const lastTab = tabKeys[tabKeys.length - 1];
+      setActiveTab(lastTab);
+      playClack();
+      document.getElementById(`tab-${lastTab}`)?.focus();
     }
   };
 
@@ -436,25 +500,29 @@ function BentoDashboard() {
             )}
 
             {/* Kitchen Vitals Telemetry Badge */}
-            {vitals && (
-              <div
-                className="hidden xl:flex items-center gap-2.5 bg-bento-surface border border-bento-border px-2.5 py-1.5 rounded-bento text-xs font-mono shadow-inner"
-                title={`Daemon RSS: ${vitals.rss_mb}MB · System Load: ${vitals.load_avg.join(', ')} · Active Daemons: ${vitals.active_daemons}`}
-              >
-                <div className="flex items-center gap-1 text-[11px] text-gray-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-gray-400">RSS:</span>
-                  <span className="text-white font-bold">{vitals.rss_mb}MB</span>
+            {vitals && (() => {
+              const loadList = Array.isArray(vitals.load_avg) ? vitals.load_avg : [0.0, 0.0, 0.0];
+              const primaryLoad = typeof loadList[0] === 'number' ? loadList[0] : 0.0;
+              return (
+                <div
+                  className="hidden xl:flex items-center gap-2.5 bg-bento-surface border border-bento-border px-2.5 py-1.5 rounded-bento text-xs font-mono shadow-inner"
+                  title={`Daemon RSS: ${vitals.rss_mb ?? 0}MB · System Load: ${loadList.join(', ')} · Active Daemons: ${vitals.active_daemons ?? 0}`}
+                >
+                  <div className="flex items-center gap-1 text-[11px] text-gray-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-gray-400">RSS:</span>
+                    <span className="text-white font-bold">{vitals.rss_mb ?? 0}MB</span>
+                  </div>
+                  <span className="text-bento-border">|</span>
+                  <div className="flex items-center gap-1 text-[11px] text-gray-300">
+                    <span className="text-gray-400">Load:</span>
+                    <span className={`font-bold ${primaryLoad > 2.0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      {primaryLoad.toFixed(1)}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-bento-border">|</span>
-                <div className="flex items-center gap-1 text-[11px] text-gray-300">
-                  <span className="text-gray-400">Load:</span>
-                  <span className={`font-bold ${vitals.load_avg[0] > 2.0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                    {vitals.load_avg[0]?.toFixed(1) || '0.0'}
-                  </span>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* OmniPalette Trigger */}
             <button
@@ -565,8 +633,8 @@ function BentoDashboard() {
         </div>
 
         {/* Bento Compartment Navigation (Segmented Tabs with Roving Tabindex) */}
-        <nav aria-label="Bento Compartments Navigation" className="border-t border-bento-border/60 bg-[#16131c]/70">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <nav aria-label="Bento Compartments Navigation" className="border-t border-bento-border/60 bg-[#16131c]/70 relative">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:bottom-0 after:w-8 after:bg-gradient-to-l after:from-[#16131c] after:to-transparent sm:after:hidden">
             <div
               role="tablist"
               aria-label="Bento Compartments"
@@ -771,10 +839,10 @@ function BentoDashboard() {
                 console.table(a11yResult.checks);
               }}
               aria-label="Run Bento Subsystem and Accessibility Doctor Diagnostics"
-              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition text-[11px]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[32px] rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition text-[11px] touch-manipulation"
               title="Click to verify subsystem & A11y diagnostics"
             >
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
               <span>Doctor ➔ Healthy ✓</span>
             </button>
           </div>
@@ -782,20 +850,21 @@ function BentoDashboard() {
       </header>
 
       {/* Main Compartment Canvas */}
-      <main id="main-content" tabIndex={-1} className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 flex-1 pb-safe focus:outline-none">
-        <div id="panel-daemons" role="tabpanel" aria-labelledby="tab-daemons" hidden={activeTab !== 'daemons'}>
+      <main id="main-content" tabIndex={-1} className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 flex-1 pb-safe focus:outline-none">
+        <CompartmentBreadcrumbs activeTab={activeTab} />
+        <div id="panel-daemons" role="tabpanel" tabIndex={0} aria-labelledby="tab-daemons" hidden={activeTab !== 'daemons'}>
           {activeTab === 'daemons' && <DaemonView tasks={tasks} onRefresh={fetchAllData} />}
         </div>
-        <div id="panel-memory" role="tabpanel" aria-labelledby="tab-memory" hidden={activeTab !== 'memory'}>
+        <div id="panel-memory" role="tabpanel" tabIndex={0} aria-labelledby="tab-memory" hidden={activeTab !== 'memory'}>
           {activeTab === 'memory' && <MemoryView lessons={lessons} onRefresh={fetchAllData} />}
         </div>
-        <div id="panel-traces" role="tabpanel" aria-labelledby="tab-traces" hidden={activeTab !== 'traces'}>
+        <div id="panel-traces" role="tabpanel" tabIndex={0} aria-labelledby="tab-traces" hidden={activeTab !== 'traces'}>
           {activeTab === 'traces' && <TracesView traces={traces} skills={skills} onRefresh={fetchAllData} />}
         </div>
-        <div id="panel-benchmarks" role="tabpanel" aria-labelledby="tab-benchmarks" hidden={activeTab !== 'benchmarks'}>
+        <div id="panel-benchmarks" role="tabpanel" tabIndex={0} aria-labelledby="tab-benchmarks" hidden={activeTab !== 'benchmarks'}>
           {activeTab === 'benchmarks' && <BenchmarksView scenarios={scenarios} onRefresh={fetchAllData} />}
         </div>
-        <div id="panel-arena" role="tabpanel" aria-labelledby="tab-arena" hidden={activeTab !== 'arena'}>
+        <div id="panel-arena" role="tabpanel" tabIndex={0} aria-labelledby="tab-arena" hidden={activeTab !== 'arena'}>
           {activeTab === 'arena' && <ArenaView scenarios={scenarios} />}
         </div>
       </main>
@@ -878,7 +947,9 @@ function BentoDashboard() {
 export default function App() {
   return (
     <AnnounceProvider>
-      <BentoDashboard />
+      <DensityProvider>
+        <BentoDashboard />
+      </DensityProvider>
     </AnnounceProvider>
   );
 }

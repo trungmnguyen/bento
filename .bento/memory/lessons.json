@@ -338,6 +338,32 @@
         "security"
       ],
       "source_scenario": ""
+    },
+    {
+      "id": "MEM-47F67042",
+      "title": "Bento Density Engine & Compact Terminal Mode",
+      "category": "accessibility",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Support both Spacious (Juubako) and Compact (Nigiri) layout modes to accommodate split-terminal monitoring without layout breakage.",
+      "anti_pattern": "Fixed high-padding tables and cards causing vertical scroll explosions on small viewports.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "accessibility"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-A313DFAE",
+      "title": "Defensive Frontend Telemetry & Storage Hydration",
+      "category": "security",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Always guard optional telemetry arrays and validate item-level schema when hydrating from localStorage.",
+      "anti_pattern": "Directly calling .join() on load_avg or assuming localStorage JSON is non-null.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "security"
+      ],
+      "source_scenario": ""
     }
   ]
 }

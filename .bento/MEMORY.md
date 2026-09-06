@@ -1,6 +1,6 @@
 # 🧠 Bento Persistent Memory Bank
 
-> Auto-distilled architectural rules and edge-case guards (21 rules stored).
+> Auto-distilled architectural rules and edge-case guards (23 rules stored).
 
 ### `[MEM-50790948]` Clean Architecture Port Rule
 - **Category:** `architecture` | **Discovered:** 2026-09-01
@@ -126,15 +126,27 @@
 - **Anti-Pattern:** Unbounded log line arrays and aria-live='polite' on rapid stdout streams causing main-thread lockups.
 - **Tags:** security
 
+### `[MEM-47F67042]` Bento Density Engine & Compact Terminal Mode
+- **Category:** `accessibility` | **Discovered:** 2026-09-06
+- **Hard Rule:** Support both Spacious (Juubako) and Compact (Nigiri) layout modes to accommodate split-terminal monitoring without layout breakage.
+- **Anti-Pattern:** Fixed high-padding tables and cards causing vertical scroll explosions on small viewports.
+- **Tags:** accessibility
+
+### `[MEM-A313DFAE]` Defensive Frontend Telemetry & Storage Hydration
+- **Category:** `security` | **Discovered:** 2026-09-06
+- **Hard Rule:** Always guard optional telemetry arrays and validate item-level schema when hydrating from localStorage.
+- **Anti-Pattern:** Directly calling .join() on load_avg or assuming localStorage JSON is non-null.
+- **Tags:** security
+
 ---
 
-## 🛠️ Bento Crystallized Procedural Skills (9 skills stored)
+## 🛠️ Bento Crystallized Procedural Skills (11 skills stored)
 
 > Reusable macros synthesized from recurring successful executions.
 
 ### `[skill-quant-calc-signal-normalizer-contract]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (13 executions observed)
-- **Tags:** demo, chef, auto-loop, brigade_sprint, blue_team, quant, benchmark, triad_sprint
+- **Tags:** brigade_sprint, quant, auto-loop, chef, demo, benchmark, blue_team, triad_sprint
 - **Steps:**
   1. Step 1: Check pre-conditions for Quant Calc Signal Normalizer Contract
   1. Step 2: Execute validated deterministic routine for Quant Calc Signal Normalizer Contract
@@ -142,7 +154,7 @@
 
 ### `[skill-mobile-ui-&-navigation-verification]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (13 executions observed)
-- **Tags:** ui, tailwind, chef, mobile, brigade_sprint, blue_team, ux, benchmark, triad_sprint
+- **Tags:** brigade_sprint, tailwind, chef, mobile, benchmark, blue_team, ui, ux, triad_sprint
 - **Steps:**
   1. Step 1: Check pre-conditions for Mobile UI & Navigation Verification
   1. Step 2: Execute validated deterministic routine for Mobile UI & Navigation Verification
@@ -150,15 +162,15 @@
 
 ### `[skill-dashboard-resilience-&-security-verification-rig]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (13 executions observed)
-- **Tags:** dashboard, chef, resilience, brigade_sprint, web, blue_team, security, benchmark, triad_sprint
+- **Tags:** brigade_sprint, dashboard, resilience, web, security, chef, benchmark, blue_team, triad_sprint
 - **Steps:**
   1. Step 1: Check pre-conditions for Dashboard Resilience & Security Verification Rig
   1. Step 2: Execute validated deterministic routine for Dashboard Resilience & Security Verification Rig
   1. Step 3: Verify output assertions
 
 ### `[skill-core-system-health-check]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Core System Health Check' (15 executions observed)
-- **Tags:** core, triad_sprint, chef, contract, brigade_sprint, blue_team, benchmark, sanity
+- **Description:** Autonomous skill macro synthesized from recurring task 'Core System Health Check' (14 executions observed)
+- **Tags:** brigade_sprint, contract, sanity, core, chef, benchmark, blue_team, triad_sprint
 - **Steps:**
   1. Step 1: Check pre-conditions for Core System Health Check
   1. Step 2: Execute validated deterministic routine for Core System Health Check
@@ -166,39 +178,55 @@
 
 ### `[skill-agent-code-gen-verification-rig]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (12 executions observed)
-- **Tags:** chef, agent, cyrilXBT-paradigm, brigade_sprint, blue_team, eval, benchmark, triad_sprint
+- **Tags:** brigade_sprint, agent, cyrilXBT-paradigm, eval, chef, benchmark, blue_team, triad_sprint
 - **Steps:**
   1. Step 1: Check pre-conditions for Agent Code-Gen Verification Rig
   1. Step 2: Execute validated deterministic routine for Agent Code-Gen Verification Rig
   1. Step 3: Verify output assertions
 
 ### `[skill-accessibility-&-sensory-verification-rig]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (6 executions observed)
-- **Tags:** chef, brigade_sprint, python311, sensory, blue_team, accessibility, benchmark, wcag21aa, a11y
+- **Description:** Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (8 executions observed)
+- **Tags:** brigade_sprint, wcag21aa, a11y, python311, accessibility, chef, benchmark, blue_team, sensory
 - **Steps:**
   1. Step 1: Check pre-conditions for Accessibility & Sensory Verification Rig
   1. Step 2: Execute validated deterministic routine for Accessibility & Sensory Verification Rig
   1. Step 3: Verify output assertions
 
 ### `[skill-orchestra_round_1]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (10 executions observed)
-- **Tags:** culinary_brigade, brigade_sprint, orchestra, triad_sprint
+- **Description:** Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (9 executions observed)
+- **Tags:** brigade_sprint, culinary_brigade, orchestra, triad_sprint
 - **Steps:**
   1. Step 1: Check pre-conditions for orchestra_round_1
   1. Step 2: Execute validated deterministic routine for orchestra_round_1
   1. Step 3: Verify output assertions
 
+### `[skill-culinary-brigade-audit:-ui-accessibility-&-visual-invariants]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (2 executions observed)
+- **Tags:** culinary_brigade, a11y, yuzu, ui, yellow_team
+- **Steps:**
+  1. Step 1: Check pre-conditions for Culinary Brigade Audit: UI Accessibility & Visual Invariants
+  1. Step 2: Execute validated deterministic routine for Culinary Brigade Audit: UI Accessibility & Visual Invariants
+  1. Step 3: Verify output assertions
+
+### `[skill-culinary-brigade-audit:-ast-purity-&-architectural-invariants]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (2 executions observed)
+- **Tags:** wasabi, culinary_brigade, red_team, security, ast_purity
+- **Steps:**
+  1. Step 1: Check pre-conditions for Culinary Brigade Audit: AST Purity & Architectural Invariants
+  1. Step 2: Execute validated deterministic routine for Culinary Brigade Audit: AST Purity & Architectural Invariants
+  1. Step 3: Verify output assertions
+
 ### `[skill-triad-audit:-ui-accessibility-&-visual-invariants]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (6 executions observed)
-- **Tags:** ui, yellow_team, yuzu, a11y, triad_sprint
+- **Tags:** a11y, yuzu, ui, yellow_team, triad_sprint
 - **Steps:**
   1. Step 1: Check pre-conditions for Triad Audit: UI Accessibility & Visual Invariants
   1. Step 2: Execute validated deterministic routine for Triad Audit: UI Accessibility & Visual Invariants
   1. Step 3: Verify output assertions
 
 ### `[skill-triad-audit:-ast-purity-&-architectural-invariants]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (9 executions observed)
-- **Tags:** wasabi, ast_purity, security, red_team, triad_sprint
+- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (7 executions observed)
+- **Tags:** wasabi, red_team, security, ast_purity, triad_sprint
 - **Steps:**
   1. Step 1: Check pre-conditions for Triad Audit: AST Purity & Architectural Invariants
   1. Step 2: Execute validated deterministic routine for Triad Audit: AST Purity & Architectural Invariants

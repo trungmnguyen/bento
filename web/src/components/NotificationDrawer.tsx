@@ -48,15 +48,18 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  const filtered = notifications.filter((n) => {
-    if (filter === 'ALL') return true;
-    if (filter === 'DAEMON') return n.category === 'DAEMON';
-    if (filter === 'ARENA') return n.category === 'ARENA';
-    if (filter === 'SYSTEM') return n.category === 'SYSTEM' || n.category === 'DREAM' || n.category === 'BATTERY';
-    return true;
-  });
+  const filtered = (notifications || [])
+    .filter((n): n is BentoNotification => Boolean(n && typeof n === 'object' && typeof n.id === 'string'))
+    .filter((n) => {
+      if (filter === 'ALL') return true;
+      if (filter === 'DAEMON') return n.category === 'DAEMON';
+      if (filter === 'ARENA') return n.category === 'ARENA';
+      if (filter === 'SYSTEM') return n.category === 'SYSTEM' || n.category === 'DREAM' || n.category === 'BATTERY';
+      return true;
+    });
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = (notifications || [])
+    .filter((n) => Boolean(n && typeof n === 'object' && !n.read)).length;
 
   const getCategoryIcon = (category: string, severity: string) => {
     if (severity === 'ERROR') return <AlertTriangle className="w-4 h-4 text-bento-salmon" />;
@@ -176,6 +179,8 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             {(['ALL', 'DAEMON', 'ARENA', 'SYSTEM'] as CategoryFilter[]).map((tab) => (
               <button
                 key={tab}
+                type="button"
+                aria-pressed={filter === tab}
                 onClick={() => {
                   playClack();
                   setFilter(tab);

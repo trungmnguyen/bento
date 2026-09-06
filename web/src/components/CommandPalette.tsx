@@ -18,6 +18,7 @@ import {
 import { MemoryLesson, Scenario, BackgroundTask } from '../types';
 import { playClack, playTastePass, playTasteFail, playZenBell } from '../utils/audio';
 import { showToast } from './Toast';
+import { useA11yModal } from '../hooks/useA11yModal';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ interface CommandPaletteProps {
   onOpenShortcuts?: () => void;
   onOpenAudioSettings?: () => void;
   onRefreshAll?: () => void;
+  onGenerateSnapshot?: () => void;
 }
 
 interface PaletteItem {
@@ -53,10 +55,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenShortcuts,
   onOpenAudioSettings,
   onRefreshAll,
+  onGenerateSnapshot,
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const modalContainerRef = useRef<HTMLDivElement>(null);
+
+  const { modalProps } = useA11yModal({
+    isOpen,
+    onClose,
+    containerRef: modalContainerRef,
+    initialFocusRef: inputRef,
+    restoreFocus: true,
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -229,6 +241,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         if (onOpenShortcuts) onOpenShortcuts();
       },
     },
+    {
+      id: 'act-snapshot',
+      category: 'direct-action',
+      title: '> Copy Executive Harness Health Snapshot',
+      subtitle: 'Generate and copy a markdown summary of Vitals, Tasks & Rules',
+      badge: 'Report',
+      icon: <Sparkles className="w-4 h-4 text-emerald-300" />,
+      onSelect: () => {
+        if (onGenerateSnapshot) onGenerateSnapshot();
+      },
+    },
   ];
 
   // Standard Navigation & Content Items
@@ -307,7 +330,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       id: `task-${t.task_id}`,
       category: 'task' as const,
       title: `Task ${t.task_id} (${t.tag})`,
-      subtitle: t.command,
+      subtitle: t.command || '',
       badge: t.status,
       icon: <Play className="w-4 h-4 text-purple-400" />,
       onSelect: () => onSelectTab('daemons'),
@@ -320,7 +343,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       if (!cleanQuery) return directActions;
       const q = cleanQuery.toLowerCase();
       return directActions.filter(
-        (a) => a.title.toLowerCase().includes(q) || a.subtitle.toLowerCase().includes(q)
+        (a) =>
+          (a.title || '').toLowerCase().includes(q) ||
+          (a.subtitle || '').toLowerCase().includes(q)
       );
     }
 
@@ -330,9 +355,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     const q = query.toLowerCase();
     return all.filter(
       (item) =>
-        item.title.toLowerCase().includes(q) ||
-        item.subtitle.toLowerCase().includes(q) ||
-        item.badge.toLowerCase().includes(q)
+        (item.title || '').toLowerCase().includes(q) ||
+        (item.subtitle || '').toLowerCase().includes(q) ||
+        (item.badge || '').toLowerCase().includes(q)
     );
   }, [isDirectActionMode, cleanQuery, query, directActions, standardItems]);
 
@@ -366,6 +391,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       }}
     >
       <div
+        ref={modalContainerRef}
+        {...modalProps}
         role="dialog"
         aria-modal="true"
         aria-label="OmniCommand Palette"

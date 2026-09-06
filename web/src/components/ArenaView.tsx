@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Swords, Trophy, Clock, Target, Play, ShieldAlert, Sparkles, History, RotateCcw, CheckCircle2, XCircle } from 'lucide-react';
 import { Scenario } from '../types';
-import { playZenBell, playClack } from '../utils/audio';
+import { playZenBell, playClack, playTastePass } from '../utils/audio';
 import { showToast } from './Toast';
 
 interface ArenaScorecardResponse {
@@ -55,7 +55,9 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
       const saved = localStorage.getItem('bento_arena_history');
       if (!saved) return [];
       const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed)
+        ? parsed.filter((b): b is BoutHistoryItem => Boolean(b && typeof b === 'object' && typeof b.id === 'string'))
+        : [];
     } catch {
       return [];
     }
@@ -165,10 +167,12 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
         </div>
 
         {/* Metric Selector */}
-        <div className="flex items-center gap-2 bg-[#131117] border border-bento-border p-1 rounded-xl">
+        <div className="flex items-center gap-2 bg-[#131117] border border-bento-border p-1 rounded-xl" role="group" aria-label="Evaluation Metric">
           {(['pass_rate', 'duration', 'assertions'] as const).map((m) => (
             <button
               key={m}
+              type="button"
+              aria-pressed={metric === m}
               onClick={() => {
                 setMetric(m);
                 playClack();
@@ -255,6 +259,46 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
         </button>
       </div>
 
+      {/* Empty State Showcase Simulator (Matcha Proposal 3) */}
+      {!scorecard && bouts.length === 0 && (
+        <div className="bg-bento-surface border border-bento-border rounded-2xl p-8 text-center space-y-4 shadow-xl">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+            <Swords className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-200">The Dojo Mat is Ready</h3>
+            <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto">
+              Select two scenario contracts above to duel head-to-head on latency and assertions, or simulate a showcase sparring bout right now:
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              playTastePass();
+              setScorecard({
+                challenger_name: 'Fast Signal Optimizer',
+                defender_name: 'Baseline Quant Calc',
+                winner: 'challenger',
+                margin: 42.5,
+                metric_used: 'duration',
+                challenger_duration_ms: 14.2,
+                defender_duration_ms: 56.7,
+                challenger_passed: 5,
+                challenger_failed: 0,
+                challenger_total_steps: 5,
+                defender_passed: 4,
+                defender_failed: 1,
+                defender_total_steps: 5,
+              });
+            }}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-bento-glow transition inline-flex items-center gap-2"
+          >
+            <span>🥊</span>
+            <span>Simulate Showcase Spar (Demo Telemetry)</span>
+          </button>
+        </div>
+      )}
+
       {/* Scorecard Results */}
       {scorecard && (
         <div className="bg-bento-surface border border-bento-border rounded-2xl p-6 shadow-2xl space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300">
@@ -279,7 +323,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
                     : '🤝 Match Ended in a Draw'}
                 </h3>
                 <p className="text-xs opacity-80">
-                  Evaluated on <span className="font-bold font-mono">{scorecard.metric_used.toUpperCase()}</span> · Winning Margin: {scorecard.margin.toFixed(2)}
+                  Evaluated on <span className="font-bold font-mono">{scorecard.metric_used.toUpperCase()}</span> · Winning Margin: {typeof scorecard.margin === 'number' ? scorecard.margin.toFixed(2) : '0.00'}
                 </p>
               </div>
             </div>
@@ -336,13 +380,15 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
 
             {/* Sub-label speed comparison */}
             <div className="flex justify-between items-center text-[10px] text-gray-400 font-mono mt-2 pt-2 border-t border-white/5">
-              <span>Duration: {scorecard.challenger_duration_ms.toFixed(1)}ms</span>
+              <span>Duration: {typeof scorecard.challenger_duration_ms === 'number' ? scorecard.challenger_duration_ms.toFixed(1) : '0.0'}ms</span>
               <span className="text-amber-400 font-semibold">
-                {scorecard.challenger_duration_ms < scorecard.defender_duration_ms
-                  ? `⚡ Challenger ${(scorecard.defender_duration_ms - scorecard.challenger_duration_ms).toFixed(1)}ms faster`
-                  : `🛡️ Defender ${(scorecard.challenger_duration_ms - scorecard.defender_duration_ms).toFixed(1)}ms faster`}
+                {typeof scorecard.challenger_duration_ms === 'number' && typeof scorecard.defender_duration_ms === 'number'
+                  ? scorecard.challenger_duration_ms < scorecard.defender_duration_ms
+                    ? `⚡ Challenger ${(scorecard.defender_duration_ms - scorecard.challenger_duration_ms).toFixed(1)}ms faster`
+                    : `🛡️ Defender ${(scorecard.challenger_duration_ms - scorecard.defender_duration_ms).toFixed(1)}ms faster`
+                  : 'Speed Comparison'}
               </span>
-              <span>Duration: {scorecard.defender_duration_ms.toFixed(1)}ms</span>
+              <span>Duration: {typeof scorecard.defender_duration_ms === 'number' ? scorecard.defender_duration_ms.toFixed(1) : '0.0'}ms</span>
             </div>
           </div>
 
@@ -377,7 +423,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
                 <div className="flex justify-between text-gray-400">
                   <span>Duration:</span>
                   <span className="font-mono text-white">
-                    {scorecard.challenger_duration_ms.toFixed(1)}ms
+                    {typeof scorecard.challenger_duration_ms === 'number' ? scorecard.challenger_duration_ms.toFixed(1) : '0.0'}ms
                   </span>
                 </div>
               </div>
@@ -412,7 +458,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
                 <div className="flex justify-between text-gray-400">
                   <span>Duration:</span>
                   <span className="font-mono text-white">
-                    {scorecard.defender_duration_ms.toFixed(1)}ms
+                    {typeof scorecard.defender_duration_ms === 'number' ? scorecard.defender_duration_ms.toFixed(1) : '0.0'}ms
                   </span>
                 </div>
               </div>

@@ -148,4 +148,26 @@ button:focus-visible {
   }
 }
 
+/* Bento Density Engine: Compact (🍣 Nigiri) layout mode */
+.bento-compact td {
+  padding-top: 0.4rem !important;
+  padding-bottom: 0.4rem !important;
+  font-size: 0.75rem !important;
+}
+
+.bento-compact th {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+  font-size: 0.7rem !important;
+}
+
+.bento-compact .bento-card-compact {
+  padding: 0.75rem !important;
+}
+
+.touch-none {
+  touch-action: none;
+}
+
+
 

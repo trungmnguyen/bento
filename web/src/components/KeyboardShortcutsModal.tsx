@@ -101,13 +101,21 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ 
                 <span className="text-gray-300">Instant Taste Flight</span>
                 <kbd className="px-2 py-0.5 rounded bg-white/10 border border-white/10 font-mono text-bento-matcha font-bold">t</kbd>
               </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span className="text-gray-300">Toggle Density Mode</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/10 border border-white/10 font-mono text-bento-tamago font-bold">d</kbd>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span className="text-gray-300">Focus Search</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/10 border border-white/10 font-mono text-gray-300 font-bold">/</kbd>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span className="text-gray-300">Executive Snapshot</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/10 border border-white/10 font-mono text-amber-300 font-bold">⇧E</kbd>
+              </div>
               <div className="flex justify-between items-center py-1">
                 <span className="text-gray-300">Manual Refresh</span>
                 <kbd className="px-2 py-0.5 rounded bg-white/10 border border-white/10 font-mono text-gray-300 font-bold">r</kbd>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-gray-300">Focus View Search</span>
-                <kbd className="px-2 py-0.5 rounded bg-white/10 border border-white/10 font-mono text-gray-300 font-bold">/</kbd>
               </div>
               <div className="flex justify-between items-center py-1 col-span-2 border-t border-white/5">
                 <span className="text-gray-300">Shortcuts Cheatsheet</span>

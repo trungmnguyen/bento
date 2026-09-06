@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { MatchaCupIcon, SoyFishIcon, WasabiBadgeIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { TraceEvent, CrystallizedSkill, TelemetryMetrics } from '../types';
-import { playZenBell, playClack, playTastePass } from '../utils/audio';
+import { playZenBell, playClack, playTastePass, playShisoSnap } from '../utils/audio';
 import { showToast } from './Toast';
 import { useA11yModal } from '../hooks/useA11yModal';
 
@@ -26,6 +26,7 @@ interface TracesViewProps {
 }
 
 type RangeOption = '20' | '50' | 'ALL';
+type LatencyBucket = 'lt50' | '50to150' | '150to500' | 'gt500' | null;
 
 interface HoveredPoint {
   index: number;
@@ -52,7 +53,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
   // Faceted Filtering & Histogram State
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PASSED' | 'FAILED'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [latencyBucket, setLatencyBucket] = useState<string | null>(null);
+  const [latencyBucket, setLatencyBucket] = useState<LatencyBucket>(null);
   const [selectedTrace, setSelectedTrace] = useState<TraceEvent | null>(null);
   const [detailTab, setDetailTab] = useState<'prompt' | 'output' | 'assertions' | 'raw'>('prompt');
 
@@ -63,24 +64,28 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
     containerRef: drawerRef,
   });
 
-  const fetchTelemetry = async () => {
+  const fetchTelemetry = async (signal?: AbortSignal) => {
     setLoadingTelemetry(true);
     try {
-      const res = await fetch('/api/telemetry');
+      const res = await fetch('/api/telemetry', signal ? { signal } : undefined);
       if (res.ok) {
         const data = await res.json();
         setTelemetry(data.metrics);
         setSparklineStr(data.sparkline || '');
       }
-    } catch {
-      // ignore
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        // ignore non-abort errors
+      }
     } finally {
       setLoadingTelemetry(false);
     }
   };
 
   useEffect(() => {
-    fetchTelemetry();
+    const controller = new AbortController();
+    fetchTelemetry(controller.signal);
+    return () => controller.abort();
   }, [traces]);
 
   const handleTriggerDream = async () => {
@@ -145,7 +150,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
   // Interactive Latency Distribution Histogram Bins
   const histogramBins = useMemo(() => {
     const lats = telemetry?.recent_latencies || [];
-    const bins = [
+    const bins: Array<{ id: NonNullable<LatencyBucket>; label: string; count: number; color: string; desc: string }> = [
       { id: 'lt50', label: '< 50ms', count: 0, color: '#40c057', desc: 'Optimal' },
       { id: '50to150', label: '50-150ms', count: 0, color: '#38d9a9', desc: 'Fast' },
       { id: '150to500', label: '150-500ms', count: 0, color: '#ffd43b', desc: 'Nominal' },
@@ -178,7 +183,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
   }, [traces, statusFilter, searchQuery]);
 
   // 1-Click Export Markdown Report
-  const handleExportReport = () => {
+  const handleExportReport = async () => {
     if (!telemetry) return;
     playClack();
 
@@ -201,15 +206,19 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
       '*Packed Fresh by Bento Harness Engineering with Zero External Dependencies*',
     ].join('\n');
 
-    navigator.clipboard.writeText(md);
-    setIsCopied(true);
-    playTastePass();
-    showToast({
-      title: 'Telemetry Report Exported',
-      message: 'Markdown report copied to clipboard. Ready for PR or Slack!',
-      type: 'success',
-    });
-    setTimeout(() => setIsCopied(false), 2500);
+    try {
+      await navigator.clipboard.writeText(md);
+      setIsCopied(true);
+      playShisoSnap();
+      showToast({
+        title: 'Telemetry Report Exported',
+        message: 'Markdown report copied to clipboard. Ready for PR or Slack!',
+        type: 'success',
+      });
+      setTimeout(() => setIsCopied(false), 2500);
+    } catch {
+      showToast({ title: 'Clipboard Failed', message: 'Could not access clipboard.', type: 'error' });
+    }
   };
 
   return (
@@ -247,35 +256,35 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
             <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3">
               <div className="text-[11px] text-gray-400 font-semibold uppercase">Pass Rate</div>
               <div className="text-lg font-bold text-bento-matcha font-mono mt-0.5">
-                {telemetry.pass_rate.toFixed(1)}%
+                {(telemetry.pass_rate ?? 0).toFixed(1)}%
               </div>
             </div>
 
             <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3">
               <div className="text-[11px] text-gray-400 font-semibold uppercase">P50 (Median)</div>
               <div className="text-lg font-bold text-amber-300 font-mono mt-0.5">
-                {telemetry.p50_latency_ms.toFixed(1)}ms
+                {(telemetry.p50_latency_ms ?? 0).toFixed(1)}ms
               </div>
             </div>
 
             <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3">
               <div className="text-[11px] text-gray-400 font-semibold uppercase">P90 (Tail)</div>
               <div className="text-lg font-bold text-orange-300 font-mono mt-0.5">
-                {telemetry.p90_latency_ms.toFixed(1)}ms
+                {(telemetry.p90_latency_ms ?? 0).toFixed(1)}ms
               </div>
             </div>
 
             <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3">
               <div className="text-[11px] text-gray-400 font-semibold uppercase">P99 (Anomaly)</div>
               <div className="text-lg font-bold text-rose-300 font-mono mt-0.5">
-                {telemetry.p99_latency_ms.toFixed(1)}ms
+                {(telemetry.p99_latency_ms ?? 0).toFixed(1)}ms
               </div>
             </div>
 
             <div className="bg-bento-lacquer border border-bento-border/80 rounded-xl p-3 col-span-2 sm:col-span-1">
               <div className="text-[11px] text-gray-400 font-semibold uppercase">Average</div>
               <div className="text-lg font-bold text-cyan-300 font-mono mt-0.5">
-                {telemetry.avg_latency_ms.toFixed(1)}ms
+                {(telemetry.avg_latency_ms ?? 0).toFixed(1)}ms
               </div>
             </div>
           </div>
@@ -312,7 +321,34 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
               </div>
 
               {/* SVG Chart with Scrubber */}
-              <div className="relative h-28 w-full">
+              <div
+                role="region"
+                tabIndex={0}
+                aria-label="Interactive latency radar chart. Use Left and Right arrow keys to scrub data points."
+                onKeyDown={(e) => {
+                  if (!radarChartData || radarChartData.points.length === 0) return;
+                  if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    setHoveredPoint((prev) => {
+                      const nextIdx = Math.min((prev?.index ?? -1) + 1, radarChartData.points.length - 1);
+                      const pt = radarChartData.points[nextIdx];
+                      const traceIdx = traces.length - 1 - (radarChartData.points.length - 1 - nextIdx);
+                      const matchedTrace = traceIdx >= 0 && traceIdx < traces.length ? traces[traceIdx] : undefined;
+                      return { index: nextIdx, val: pt.val, x: pt.x, y: pt.y, trace: matchedTrace };
+                    });
+                  } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    setHoveredPoint((prev) => {
+                      const prevIdx = Math.max((prev?.index ?? 1) - 1, 0);
+                      const pt = radarChartData.points[prevIdx];
+                      const traceIdx = traces.length - 1 - (radarChartData.points.length - 1 - prevIdx);
+                      const matchedTrace = traceIdx >= 0 && traceIdx < traces.length ? traces[traceIdx] : undefined;
+                      return { index: prevIdx, val: pt.val, x: pt.x, y: pt.y, trace: matchedTrace };
+                    });
+                  }
+                }}
+                className="relative h-28 w-full focus:outline-none focus-visible:ring-1 focus-visible:ring-bento-matcha rounded-lg"
+              >
                 <svg
                   viewBox={`0 0 ${radarChartData.width} ${radarChartData.height}`}
                   className="w-full h-full overflow-visible cursor-crosshair"
@@ -557,18 +593,37 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
         {/* Faceted Filter & Search Bar */}
         <div className="p-4 border-b border-bento-border/70 bg-bento-lacquer/40 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              placeholder="Search traces (task, prompt, failed assertions)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-bento-surface border border-bento-border rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-bento-salmon/50 font-mono w-64 transition"
-            />
+            <div className="relative">
+              <input
+                id="trace-search-query"
+                type="text"
+                placeholder="Search traces (task, prompt, failed assertions)..."
+                aria-label="Search execution traces"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-bento-surface border border-bento-border rounded-lg pl-3 pr-7 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-bento-salmon/50 font-mono w-64 sm:w-72 transition"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClack();
+                    setSearchQuery('');
+                  }}
+                  aria-label="Clear trace search"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
             {/* Status Pills */}
-            <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-bento-border/60 text-xs">
+            <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-bento-border/60 text-xs" role="group" aria-label="Trace Status Filter">
               {(['ALL', 'PASSED', 'FAILED'] as const).map((st) => (
                 <button
                   key={st}
+                  type="button"
+                  aria-pressed={statusFilter === st}
                   onClick={() => {
                     playClack();
                     setStatusFilter(st);
@@ -758,10 +813,16 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
             </div>
 
             {/* Tab Selector */}
-            <div className="px-5 py-2.5 border-b border-bento-border bg-[#16131c] flex items-center gap-1.5">
+            <div role="tablist" aria-label="Trace detail sections" className="px-5 py-2.5 border-b border-bento-border bg-[#16131c] flex items-center gap-1.5">
               {(['prompt', 'output', 'assertions', 'raw'] as const).map((tab) => (
                 <button
                   key={tab}
+                  type="button"
+                  role="tab"
+                  id={`trace-tab-${tab}`}
+                  aria-controls={`trace-panel-${tab}`}
+                  aria-selected={detailTab === tab}
+                  tabIndex={detailTab === tab ? 0 : -1}
                   onClick={() => {
                     playClack();
                     setDetailTab(tab);

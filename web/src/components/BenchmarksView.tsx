@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Terminal,
   Layers,
+  BookOpen,
 } from 'lucide-react';
 import { ChopsticksIcon, WasabiBadgeIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { Scenario, SuiteResult, PreflightResult } from '../types';
@@ -392,8 +393,17 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
       )}
 
       {/* Scenarios List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {scenarios.map((scenario) => (
+      {scenarios.length === 0 ? (
+        <div className="p-10 text-center bg-bento-surface border border-bento-border rounded-2xl space-y-3">
+          <BookOpen className="w-10 h-10 text-zinc-500 mx-auto" />
+          <h3 className="text-sm font-bold text-gray-200">No Benchmark Flights Loaded</h3>
+          <p className="text-xs text-gray-400 max-w-sm mx-auto">
+            Create a custom tasting contract using the "+ Craft New Flight" button above, or place contract JSON specifications in <code className="text-bento-tamago font-mono">examples/</code>.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {scenarios.map((scenario) => (
           <div key={scenario.name} className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card flex flex-col justify-between hover:border-amber-400/40 transition">
             <div>
               <div className="flex justify-between items-start mb-2 gap-2">
@@ -457,7 +467,8 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Tasting Studio Modal: Craft New Tasting Flight */}
       {showCraftModal && (
@@ -485,7 +496,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
 
             <div className="p-6 space-y-5">
               {craftSubmitError && (
-                <div className="bg-rose-950/40 border border-bento-salmon/40 rounded-xl p-3 text-xs text-rose-200 flex items-center gap-2">
+                <div role="alert" aria-live="assertive" className="bg-rose-950/40 border border-bento-salmon/40 rounded-xl p-3 text-xs text-rose-200 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{craftSubmitError}</span>
                 </div>
@@ -494,10 +505,11 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
               {/* Scenario Metadata */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                  <label htmlFor="craft-flight-name" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                     Flight Name *
                   </label>
                   <input
+                    id="craft-flight-name"
                     type="text"
                     placeholder="e.g. ast_purity_guard"
                     value={craftName}
@@ -507,10 +519,11 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                  <label htmlFor="craft-flight-tags" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                     Tags (comma-separated)
                   </label>
                   <input
+                    id="craft-flight-tags"
                     type="text"
                     placeholder="e.g. security, ast, gate"
                     value={craftTags}
@@ -521,10 +534,11 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label htmlFor="craft-flight-desc" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                   Flight Description
                 </label>
                 <input
+                  id="craft-flight-desc"
                   type="text"
                   placeholder="Verifies AST domain purity across all internal packages"
                   value={craftDesc}
@@ -580,8 +594,9 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-gray-400 mb-1">Step Name</label>
+                    <label htmlFor="craft-step-name" className="block text-[11px] font-semibold text-gray-400 mb-1">Step Name</label>
                     <input
+                      id="craft-step-name"
                       type="text"
                       placeholder="e.g. ast_check_cli"
                       value={currentStepName}
@@ -590,8 +605,9 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-gray-400 mb-1">Timeout (sec)</label>
+                    <label htmlFor="craft-step-timeout" className="block text-[11px] font-semibold text-gray-400 mb-1">Timeout (sec)</label>
                     <input
+                      id="craft-step-timeout"
                       type="number"
                       value={currentTimeout}
                       onChange={(e) => setCurrentTimeout(Number(e.target.value))}
@@ -601,8 +617,9 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-gray-400 mb-1">Shell Command *</label>
+                  <label htmlFor="craft-step-cmd" className="block text-[11px] font-semibold text-gray-400 mb-1">Shell Command *</label>
                   <input
+                    id="craft-step-cmd"
                     type="text"
                     placeholder="e.g. PYTHONPATH=src python3.12 -m bento.frameworks.cli check"
                     value={currentCommand}

@@ -2,7 +2,7 @@
 name: skill-triad-audit:-ui-accessibility-&-visual-invariants
 description: >-
   Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (6 executions observed)
-trigger_tags: ['ui', 'yellow_team', 'yuzu', 'a11y', 'triad_sprint']
+trigger_tags: ['a11y', 'yuzu', 'ui', 'yellow_team', 'triad_sprint']
 ---
 
 # 🛠️ skill-triad-audit:-ui-accessibility-&-visual-invariants

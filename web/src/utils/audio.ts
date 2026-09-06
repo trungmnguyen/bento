@@ -306,3 +306,46 @@ export function playTasteFail(): void {
 export function playTaskFinished(): void {
   playZenBell();
 }
+
+/**
+ * Plays a snappy, tactile magnetic click / shiso snap for clipboard copying.
+ */
+export function playShisoSnap(): void {
+  const settings = getAudioSettings();
+  if (!settings.enabled || settings.volume <= 0) return;
+
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const vol = settings.volume;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1200, now);
+    osc.frequency.exponentialRampToValueAtTime(380, now + 0.02);
+
+    gain.gain.setValueAtTime(0.22 * vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.03);
+
+    dispatchAudioCue({
+      name: 'Shiso Snap',
+      icon: '📋',
+      category: 'NAVIGATION',
+      description: 'Tactile Clipboard Copy Confirmation',
+      musicalNote: 'Snappy Downward Glide 1200 Hz → 380 Hz',
+    });
+  } catch {
+    // Gracefully ignore audio errors
+  }
+}
+

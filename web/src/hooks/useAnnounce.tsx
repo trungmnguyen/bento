@@ -30,6 +30,12 @@ export const AnnounceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, 6000);
   }, []);
 
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   return (
     <AnnounceContext.Provider value={{ announce }}>
       {children}
