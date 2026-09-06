@@ -784,4 +784,44 @@ complete -F _bento_completions bento
         exit_code = 0 if report.all_passed else 1
         return exit_code, output
 
+    def handle_export(
+        self,
+        output_file: str | None = None,
+        working_dir: str | None = None,
+    ) -> tuple[int, str]:
+        import shutil
+        import sys
+        from bento.use_cases.export_report import ExportReportUseCase
+
+        py_ver = sys.version_info[:3]
+        py_str = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        node_path = shutil.which("node")
+        node_version = "detected" if node_path else None
+
+        system_info = {
+            "python_version": py_ver,
+            "python_version_str": py_str,
+            "node_version": node_version,
+            "port_8765_available": True,
+        }
+
+        use_case = ExportReportUseCase(
+            storage_gateway=self._storage,
+            memory_gateway=self._memory,
+            trace_gateway=self._trace,
+        )
+        report_md = use_case.execute(
+            output_file=output_file,
+            system_info=system_info,
+            working_dir=working_dir,
+        )
+
+        if output_file:
+            msg = f"✨ Report exported successfully to {output_file}"
+        else:
+            msg = report_md
+
+        return 0, msg
+
+
 

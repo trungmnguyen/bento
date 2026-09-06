@@ -234,6 +234,11 @@ def main(args: list[str] | None = None) -> int:
     doctor_parser.add_argument("--cwd", default=None, help="Working directory")
     doctor_parser.add_argument("--json", action="store_true", help="Output raw JSON diagnostic report")
 
+    # bento export (Shareable Markdown Report Generation)
+    export_parser = subparsers.add_parser("export", help="Generate shareable Markdown sprint and system report")
+    export_parser.add_argument("--output", "-o", default=None, help="Output file path (prints to stdout if omitted)")
+    export_parser.add_argument("--cwd", default=None, help="Working directory")
+
     parsed = parser.parse_args(args)
 
     if not parsed.command:
@@ -473,6 +478,14 @@ def main(args: list[str] | None = None) -> int:
         exit_code, output = controller.handle_doctor(
             working_dir=parsed.cwd,
             json_output=parsed.json,
+        )
+        print(output)
+        return exit_code
+
+    elif parsed.command == "export":
+        exit_code, output = controller.handle_export(
+            output_file=parsed.output,
+            working_dir=parsed.cwd,
         )
         print(output)
         return exit_code

@@ -529,7 +529,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                 try:
                     a_type = AssertionType(a_type_str)
                 except ValueError:
-                    a_type = AssertionType.EQUALS
+                    return self._send_json({"error": f"Invalid assertion type '{a_type_str}'."}, status=400)
                 assertions.append(
                     Assertion(
                         type=a_type,
@@ -603,6 +603,50 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                 "assertion_results": results,
             })
 
+        elif path == "/api/arena/match":
+            challenger = payload.get("challenger")
+            defender = payload.get("defender")
+            metric = payload.get("metric", "pass_rate")
+            if not challenger or not defender:
+                return self._send_json({"error": "Both 'challenger' and 'defender' paths are required."}, status=400)
+
+            from bento.domain.models import ArenaMatchup
+            from bento.use_cases.arena_match import RunArenaMatchUseCase
+
+            scenario_uc = getattr(self.run_suite_uc, "_run_scenario_use_case", getattr(self.run_suite_uc, "_run_scenario", None))
+            if not scenario_uc:
+                from bento.use_cases.run_scenario import RunScenarioUseCase
+                exec_gw = getattr(self, "execution_gateway", None)
+                if not exec_gw:
+                    from bento.frameworks.subprocess_executor import SubprocessExecutionGateway
+                    exec_gw = SubprocessExecutionGateway()
+                scenario_uc = RunScenarioUseCase(execution_gateway=exec_gw)
+
+            arena_uc = RunArenaMatchUseCase(
+                storage_gateway=self.storage_gateway,
+                run_scenario_use_case=scenario_uc,
+                trace_gateway=self.trace_gateway,
+            )
+            try:
+                scorecard = arena_uc.execute(ArenaMatchup(challenger=challenger, defender=defender, metric=metric))
+                return self._send_json({
+                    "challenger_name": scorecard.challenger_name,
+                    "defender_name": scorecard.defender_name,
+                    "challenger_passed": scorecard.challenger_passed,
+                    "challenger_failed": scorecard.challenger_failed,
+                    "challenger_total_steps": scorecard.challenger_total_steps,
+                    "challenger_duration_ms": scorecard.challenger_duration_ms,
+                    "defender_passed": scorecard.defender_passed,
+                    "defender_failed": scorecard.defender_failed,
+                    "defender_total_steps": scorecard.defender_total_steps,
+                    "defender_duration_ms": scorecard.defender_duration_ms,
+                    "winner": scorecard.winner,
+                    "metric_used": scorecard.metric_used,
+                    "margin": scorecard.margin,
+                })
+            except Exception as e:
+                return self._send_json({"error": f"Arena matchup failed: {e}"}, status=400)
+
         return self._send_json({"error": "Route not found"}, status=404)
 
     def _load_all_scenarios(self) -> list[Scenario]:
@@ -614,7 +658,12 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                 files = []
             for f_path in sorted(files):
                 try:
+                    # SEC-13: Skip oversized files (> 2MB) to prevent memory exhaustion DoS
+                    if hasattr(os.path, "getsize") and os.path.exists(f_path) and os.path.getsize(f_path) > 2 * 1024 * 1024:
+                        continue
                     content = self.storage_gateway.read_text(f_path)
+                    if len(content) > 2 * 1024 * 1024:
+                        continue
                     scenarios.append(ScenarioParser.from_json(content))
                 except Exception:
                     continue

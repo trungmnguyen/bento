@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, FolderGit2, Sparkles } from 'lucide-react';
+import { RefreshCw, FolderGit2, Sparkles, Swords } from 'lucide-react';
 import {
   BentoBoxIcon,
   OnigiriIcon,
@@ -11,6 +11,7 @@ import { DaemonView } from './components/DaemonView';
 import { MemoryView } from './components/MemoryView';
 import { TracesView } from './components/TracesView';
 import { BenchmarksView } from './components/BenchmarksView';
+import { ArenaView } from './components/ArenaView';
 import { ToastContainer } from './components/Toast';
 import {
   SystemStatus,
@@ -22,7 +23,7 @@ import {
 } from './types';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'daemons' | 'memory' | 'traces' | 'benchmarks'>('daemons');
+  const [activeTab, setActiveTab] = useState<'daemons' | 'memory' | 'traces' | 'benchmarks' | 'arena'>('daemons');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
@@ -277,6 +278,19 @@ export default function App() {
                   {scenarios.length}
                 </span>
               </button>
+
+              {/* Arena Sparring Button */}
+              <button
+                onClick={() => setActiveTab('arena')}
+                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
+                  activeTab === 'arena'
+                    ? 'bg-red-500/15 text-red-300 border-red-500/40 shadow-sm ring-1 ring-red-500/20'
+                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
+                }`}
+              >
+                <Swords className="w-4 h-4 shrink-0 text-red-400" />
+                <span>Arena Sparring</span>
+              </button>
             </div>
           </div>
         </nav>
@@ -288,6 +302,7 @@ export default function App() {
         {activeTab === 'memory' && <MemoryView lessons={lessons} onRefresh={fetchAllData} />}
         {activeTab === 'traces' && <TracesView traces={traces} skills={skills} onRefresh={fetchAllData} />}
         {activeTab === 'benchmarks' && <BenchmarksView scenarios={scenarios} onRefresh={fetchAllData} />}
+        {activeTab === 'arena' && <ArenaView scenarios={scenarios} />}
       </main>
 
       {/* Joyful Bento Box Footer */}

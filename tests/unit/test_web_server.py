@@ -66,7 +66,7 @@ class MockRunSuiteUseCase:
             def __init__(self):
                 self._execution_gateway = MockExecutionGateway()
 
-            def execute(self, scenario):
+            def execute(self, scenario, working_dir_override=None):
                 from bento.domain.models import ScenarioResult, StepStatus
                 return ScenarioResult(
                     scenario_name=getattr(scenario, "name", "mock_scenario"),
@@ -501,6 +501,24 @@ class TestBentoWebServer(unittest.TestCase):
         })
         self.assertEqual(status, 400)
         self.assertIn("workspace boundary", body)
+
+    def test_api_arena_match(self):
+        # Test POST /api/arena/match
+        scen1 = {"name": "c1", "steps": [{"name": "s1", "command": "echo 1"}]}
+        scen2 = {"name": "c2", "steps": [{"name": "s1", "command": "echo 2"}]}
+        self.storage_gw.files["benchmarks/c1.json"] = json.dumps(scen1)
+        self.storage_gw.files["benchmarks/c2.json"] = json.dumps(scen2)
+
+        status, body = self._post("/api/arena/match", {
+            "challenger": "benchmarks/c1.json",
+            "defender": "benchmarks/c2.json",
+            "metric": "pass_rate",
+        })
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertIn("winner", data)
+        self.assertIn("challenger_name", data)
+        self.assertIn("defender_name", data)
 
 
 if __name__ == "__main__":
