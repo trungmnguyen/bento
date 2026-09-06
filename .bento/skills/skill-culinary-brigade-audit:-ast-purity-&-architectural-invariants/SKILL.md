@@ -1,13 +1,13 @@
 ---
 name: skill-culinary-brigade-audit:-ast-purity-&-architectural-invariants
 description: >-
-  Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (2 executions observed)
-trigger_tags: ['ast_purity', 'wasabi', 'security', 'culinary_brigade', 'red_team']
+  Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (3 executions observed)
+trigger_tags: ['wasabi', 'ast_purity', 'red_team', 'security', 'culinary_brigade']
 ---
 
 # 🛠️ skill-culinary-brigade-audit:-ast-purity-&-architectural-invariants
 
-> Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (2 executions observed)
+> Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (3 executions observed)
 
 ## 📋 Procedural Execution Steps
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   XCircle,
   RefreshCw,
@@ -82,6 +82,14 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
   const [craftSubmitError, setCraftSubmitError] = useState<string | null>(null);
   const [craftSubmitting, setCraftSubmitting] = useState(false);
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const handleRunSingle = async (scenarioName: string) => {
     playClack();
     setRunningSingle(scenarioName);
@@ -92,6 +100,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         body: JSON.stringify({ name: scenarioName }),
       });
       const data = await res.json();
+      if (!isMountedRef.current) return;
       if (res.ok) {
         setSingleResults((prev) => ({ ...prev, [scenarioName]: data }));
         if (data.passed) {
@@ -102,9 +111,13 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         setRunError(data.error || `Failed to run ${scenarioName}`);
       }
     } catch (err) {
-      setRunError(`Failed to run ${scenarioName}`);
+      if (isMountedRef.current) {
+        setRunError(`Failed to run ${scenarioName}`);
+      }
     } finally {
-      setRunningSingle(null);
+      if (isMountedRef.current) {
+        setRunningSingle(null);
+      }
     }
   };
 
@@ -116,6 +129,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
     try {
       const res = await fetch('/api/benchmarks/run', { method: 'POST' });
       const data = await res.json();
+      if (!isMountedRef.current) return;
       if (res.ok) {
         setSuiteResult(data);
         if (data.all_passed) {
@@ -130,10 +144,14 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         showToast('error', 'Execution Error', msg);
       }
     } catch (err) {
-      setRunError('Failed to execute benchmark suite.');
-      showToast('error', 'Network Error', 'Could not communicate with tasting server.');
+      if (isMountedRef.current) {
+        setRunError('Failed to execute benchmark suite.');
+        showToast('error', 'Network Error', 'Could not communicate with tasting server.');
+      }
     } finally {
-      setRunning(false);
+      if (isMountedRef.current) {
+        setRunning(false);
+      }
     }
   };
 

@@ -2,7 +2,7 @@
 name: skill-core-system-health-check
 description: >-
   Autonomous skill macro synthesized from recurring task 'Core System Health Check' (14 executions observed)
-trigger_tags: ['triad_sprint', 'benchmark', 'chef', 'brigade_sprint', 'sanity', 'contract', 'blue_team', 'core']
+trigger_tags: ['contract', 'sanity', 'core', 'triad_sprint', 'brigade_sprint', 'benchmark', 'blue_team', 'chef']
 ---
 
 # 🛠️ skill-core-system-health-check

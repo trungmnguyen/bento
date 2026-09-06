@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Square,
   RefreshCw,
@@ -21,6 +21,8 @@ import { playClack, playTaskFinished, playTasteFail, playTastePass } from '../ut
 import { showToast } from './Toast';
 import { useA11yModal } from '../hooks/useA11yModal';
 import { CopyButton } from './CopyButton';
+import { SimmerWaveform } from './telemetry/SimmerWaveform';
+import { LiveDurationTicker } from './telemetry/LiveDurationTicker';
 
 interface DaemonViewProps {
   tasks: BackgroundTask[];
@@ -34,6 +36,8 @@ const MAX_LOG_BUFFER_CHARS = 500_000; // 500 KB rolling buffer guard
 export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const [selectedTask, setSelectedTask] = useState<BackgroundTask | null>(null);
   const [logContent, setLogContent] = useState<string>('');
+  const logContentRef = useRef<string>('');
+  const isMountedRef = useRef<boolean>(true);
   const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
@@ -55,6 +59,13 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const activeTaskIdRef = useRef<string | null>(null);
   const logDrawerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const { modalProps: logModalProps } = useA11yModal({
     isOpen: !!selectedTask,
     onClose: () => setSelectedTask(null),
@@ -67,15 +78,17 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     try {
       const res = await fetch(`/api/bg/${encodeURIComponent(taskId)}/logs`);
       const data = await res.json();
-      if (activeTaskIdRef.current === taskId) {
-        setLogContent(data.logs || 'No logs captured yet.');
+      if (activeTaskIdRef.current === taskId && isMountedRef.current) {
+        const text = data.logs || 'No logs captured yet.';
+        logContentRef.current = text;
+        setLogContent(text);
       }
     } catch (err) {
-      if (activeTaskIdRef.current === taskId) {
+      if (activeTaskIdRef.current === taskId && isMountedRef.current) {
         setLogContent('Failed to fetch logs.');
       }
     } finally {
-      if (activeTaskIdRef.current === taskId) {
+      if (activeTaskIdRef.current === taskId && isMountedRef.current) {
         setLoadingLogs(false);
       }
     }
@@ -88,6 +101,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     }
 
     activeTaskIdRef.current = selectedTask.task_id;
+    logContentRef.current = '';
     setLogContent('');
     setLoadingLogs(true);
     setIsStreaming(true);
@@ -100,10 +114,9 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
         if (data.chunk) {
           setLogContent((prev) => {
             const next = prev + data.chunk;
-            if (next.length > MAX_LOG_BUFFER_CHARS) {
-              return next.slice(next.length - MAX_LOG_BUFFER_CHARS);
-            }
-            return next;
+            const bounded = next.length > MAX_LOG_BUFFER_CHARS ? next.slice(next.length - MAX_LOG_BUFFER_CHARS) : next;
+            logContentRef.current = bounded;
+            return bounded;
           });
         }
         if (data.status === 'COMPLETED' || data.status === 'STOPPED') {
@@ -128,7 +141,10 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     eventSource.onerror = () => {
       setIsStreaming(false);
       eventSource.close();
-      fetchLogs(selectedTask.task_id);
+      // WASABI-ASYNC-01: Only fetch fallback if buffer is empty
+      if (!logContentRef.current) {
+        fetchLogs(selectedTask.task_id);
+      }
     };
 
     return () => {
@@ -257,9 +273,11 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     playClack();
     const blob = new Blob([logContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
+    const safeId = selectedTask.task_id.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const safeTag = (selectedTask.tag || 'task').replace(/[^a-zA-Z0-9_\-]/g, '_');
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedTask.task_id}-${selectedTask.tag}.log`;
+    a.download = `${safeId}-${safeTag}.log`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -335,9 +353,9 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     <div className="space-y-6">
       {/* Kitchen Order Launch Panel */}
       <div className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-bento-tamago mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-bento-tamago mb-3 flex items-center gap-2">
           <ChefTamagoIcon className="w-5 h-5" /> Cook New Butler Task (Background Runner)
-        </h3>
+        </h2>
         <form onSubmit={handleLaunch} className="flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3">
           <input
             type="text"
@@ -390,10 +408,11 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
       {/* Task Process Table */}
       <div className="bg-bento-surface border border-bento-border rounded-bento overflow-hidden shadow-bento-card">
         <div className="px-6 py-4 border-b border-bento-border flex flex-wrap justify-between items-center bg-bento-elevated gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-base font-bold text-gray-100 flex items-center gap-2">
               <BentoBoxIcon className="w-5 h-5" /> Kitchen Orders & Daemons ({tasks.length})
             </h2>
+            <SimmerWaveform activeCount={tasks.filter((t) => t.status === 'RUNNING').length} />
             {/* Table Search */}
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -570,7 +589,11 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                         {task.command}
                       </td>
                       <td className="px-6 py-4 text-xs text-gray-400 font-mono">
-                        {task.duration_sec.toFixed(1)}s
+                        {isRunning ? (
+                          <LiveDurationTicker startTime={task.start_time} />
+                        ) : (
+                          `${task.duration_sec.toFixed(1)}s`
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
                         {isRunning ? (
@@ -640,10 +663,10 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-bento-border">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 id="log-viewer-title" className="text-base font-bold text-gray-100 flex items-center gap-2">
+                  <h2 id="log-viewer-title" className="text-base font-bold text-gray-100 flex items-center gap-2">
                     <SoyFishIcon className="w-6 h-6 text-bento-salmon" />
                     Task Output Logs: <span className="font-mono text-bento-tamago">{selectedTask.task_id}</span>
-                  </h3>
+                  </h2>
                   <CopyButton text={selectedTask.task_id} tooltip="Copy Task ID" iconOnly className="ml-1" />
                   {isStreaming ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-bento-tamago/15 text-bento-tamago border border-bento-tamago/30 shadow-sm">

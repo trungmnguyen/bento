@@ -140,14 +140,18 @@ export const QuickRunnerModal: React.FC<QuickRunnerModalProps> = ({
     }
   };
 
-  const handleCopy = (text: string, idx: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(idx);
-    playClack();
-    if (copyTimerRef.current) {
-      clearTimeout(copyTimerRef.current);
+  const handleCopy = async (text: string, idx: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(idx);
+      playClack();
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = setTimeout(() => setCopiedIndex(null), 2000);
+    } catch {
+      // ignore clipboard denial
     }
-    copyTimerRef.current = setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   const activeScenario = scenarios.find((s) => s.name === selectedName);

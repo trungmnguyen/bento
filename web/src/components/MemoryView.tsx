@@ -285,7 +285,9 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
   const handleDownloadExport = () => {
     const filename =
       exportFormat === 'json' ? 'bento_rules.json' : exportFormat === 'claude_md' ? 'CLAUDE.md' : 'AGENTS.md';
-    const blob = new Blob([exportContent], { type: exportFormat === 'json' ? 'application/json' : 'text/markdown' });
+    const mimeType =
+      exportFormat === 'json' ? 'application/json; charset=utf-8' : 'text/markdown; charset=utf-8';
+    const blob = new Blob([exportContent], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -293,7 +295,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+    setTimeout(() => URL.revokeObjectURL(url), 150);
     playZenBell();
   };
 
@@ -314,19 +316,19 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
   return (
     <div className="space-y-6">
       {/* Header & View Controls */}
-      <div className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-        <div>
-          <h2 className="text-base font-bold text-gray-100 flex items-center gap-2">
-            <OnigiriIcon className="w-6 h-6 animate-bento-bounce" />
-            Chef's Recipe Book · Seasoned Memory Bank ({lessons.length} Active Rules)
+      <div className="bg-bento-surface border border-bento-border rounded-bento p-4 sm:p-5 shadow-bento-card flex flex-col md:flex-row gap-4 justify-between items-start md:items-center max-w-full overflow-hidden">
+        <div className="min-w-0 max-w-full">
+          <h2 className="text-base font-bold text-gray-100 flex items-center gap-2 flex-wrap">
+            <OnigiriIcon className="w-6 h-6 animate-bento-bounce shrink-0" />
+            <span className="break-words">Chef's Recipe Book · Seasoned Memory Bank ({lessons.length} Active Rules)</span>
           </h2>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-400 mt-1 break-words">
             Carefully seasoned architectural axioms and negative guards protecting autonomous runs.
           </p>
         </div>
 
         {/* Action, View Switcher & Search Bar */}
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full md:w-auto max-w-full">
           {/* View Mode Toggle */}
           <div className="flex bg-bento-lacquer p-1 rounded-xl border border-bento-border shadow-inner">
             <button
@@ -383,7 +385,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
           </button>
 
           {viewMode === 'cards' && (
-            <div className="relative flex-1 md:w-64">
+            <div className="relative flex-1 md:w-64 min-w-[200px]">
               <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
               <input
                 type="text"
@@ -418,7 +420,11 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
             <WasabiBadgeIcon className="w-4 h-4 shrink-0" />
             <span>{successMsg}</span>
           </div>
-          <button onClick={() => setSuccessMsg(null)} className="text-gray-400 hover:text-white">
+          <button
+            onClick={() => setSuccessMsg(null)}
+            aria-label="Dismiss success message"
+            className="text-gray-400 hover:text-white p-1"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -428,35 +434,35 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
       {viewMode === 'graph' && (
         <div className="space-y-4">
           {/* Graph Legend & Filter Chips */}
-          <div className="bg-bento-surface border border-bento-border rounded-bento p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex flex-wrap items-center gap-4">
-              <span className="text-gray-400 font-semibold flex items-center gap-1">
-                <Share2 className="w-3.5 h-3.5 text-bento-matcha" /> Constellation Legend:
+          <div className="bg-bento-surface border border-bento-border rounded-bento p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs max-w-full overflow-hidden">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 max-w-full">
+              <span className="text-gray-400 font-semibold flex items-center gap-1 whitespace-nowrap shrink-0">
+                <Share2 className="w-3.5 h-3.5 text-bento-matcha shrink-0" /> Constellation Legend:
               </span>
-              <span className="flex items-center gap-1.5 font-mono text-gray-300">
-                <span className="w-3 h-3 rounded-full bg-amber-500 shadow-tamago-glow inline-block" />
+              <span className="flex items-center gap-1.5 font-mono text-gray-300 whitespace-nowrap shrink-0">
+                <span className="w-3 h-3 rounded-full bg-amber-500 shadow-tamago-glow shrink-0 inline-block" />
                 Category Hub
               </span>
-              <span className="flex items-center gap-1.5 font-mono text-gray-300">
-                <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] inline-block" />
+              <span className="flex items-center gap-1.5 font-mono text-gray-300 whitespace-nowrap shrink-0">
+                <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] shrink-0 inline-block" />
                 Golden Axiom
               </span>
-              <span className="flex items-center gap-1.5 font-mono text-gray-300">
-                <span className="w-3 h-3 rounded-full bg-rose-500 shadow-bento-glow inline-block" />
+              <span className="flex items-center gap-1.5 font-mono text-gray-300 whitespace-nowrap shrink-0">
+                <span className="w-3 h-3 rounded-full bg-rose-500 shadow-bento-glow shrink-0 inline-block" />
                 Anti-Pattern Satellite
               </span>
-              <span className="flex items-center gap-1.5 font-mono text-gray-300">
-                <span className="w-3 h-3 rounded bg-cyan-500 inline-block" />
+              <span className="flex items-center gap-1.5 font-mono text-gray-300 whitespace-nowrap shrink-0">
+                <span className="w-3 h-3 rounded bg-cyan-500 shrink-0 inline-block" />
                 Tasting Flight Scenario
               </span>
             </div>
 
             {graphData && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 max-w-full">
                 <button
                   onClick={() => setSelectedCategory(null)}
                   aria-pressed={selectedCategory === null}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap shrink-0 ${
                     selectedCategory === null
                       ? 'bg-bento-salmon text-white shadow-bento-glow'
                       : 'bg-bento-lacquer text-gray-400 hover:text-white'
@@ -472,7 +478,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                       setSelectedCategory(selectedCategory === cat ? null : cat);
                     }}
                     aria-pressed={selectedCategory === cat}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-mono transition ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono transition whitespace-nowrap shrink-0 ${
                       selectedCategory === cat
                         ? 'bg-bento-matcha text-gray-900 font-bold'
                         : 'bg-bento-lacquer text-gray-400 hover:text-bento-matcha'
@@ -489,7 +495,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* SVG Visualizer */}
             <div
-              className="lg:col-span-2 bg-[#0c0d12] border border-bento-border rounded-bento overflow-hidden relative shadow-2xl h-[520px] select-none touch-none"
+              className="lg:col-span-2 bg-[#0c0d12] border border-bento-border rounded-bento overflow-hidden relative shadow-2xl h-[520px] select-none touch-pan-y lg:touch-none max-w-full"
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -1043,7 +1049,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                   setSelectedTag(null);
                 }}
                 aria-pressed={selectedTag === null}
-                className={`text-xs px-3.5 py-1 rounded-full transition font-bold ${
+                className={`text-xs px-3.5 py-1 rounded-full transition font-bold whitespace-nowrap shrink-0 ${
                   selectedTag === null
                     ? 'bg-bento-salmon text-white shadow-bento-glow'
                     : 'bg-bento-surface border border-bento-border text-gray-400 hover:text-white'
@@ -1060,7 +1066,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                     setSelectedTag(selectedTag === tag ? null : tag);
                   }}
                   aria-pressed={selectedTag === tag}
-                  className={`text-xs px-3.5 py-1 rounded-full transition font-medium ${
+                  className={`text-xs px-3.5 py-1 rounded-full transition font-medium whitespace-nowrap shrink-0 ${
                     selectedTag === tag
                       ? 'bg-bento-salmon text-white shadow-bento-glow font-bold'
                       : 'bg-bento-surface border border-bento-border text-gray-400 hover:text-bento-salmon'

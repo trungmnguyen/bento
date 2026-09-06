@@ -159,3 +159,11 @@ export interface BentoNotification {
   read: boolean;
   actionTab?: string;
 }
+
+export interface SystemVitals {
+  rss_mb: number;
+  load_avg: number[];
+  active_daemons: number;
+  os?: string;
+  python_version?: string;
+}

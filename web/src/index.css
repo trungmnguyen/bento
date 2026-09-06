@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Viewport Horizontal Containment (Prevents Lateral Card Blowout on Mobile) */
+html,
+body,
+#root {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
 /* Custom Bento Lacquer Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

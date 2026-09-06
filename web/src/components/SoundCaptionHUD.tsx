@@ -10,11 +10,19 @@ export const SoundCaptionHUD: React.FC = () => {
     setCaptionsEnabled(getAudioSettings().visualSubtitles ?? true);
 
     const handleAudioCue = (e: Event) => {
-      const customEvent = e as CustomEvent<AudioCueDetail>;
-      if (customEvent.detail) {
-        setActiveCue(customEvent.detail);
-        setVisible(true);
-      }
+      const customEvent = e as CustomEvent<any>;
+      const detail = customEvent?.detail;
+      if (!detail || typeof detail !== 'object' || typeof detail.name !== 'string') return;
+      setActiveCue({
+        id: String(detail.id || `cue-${Date.now()}`),
+        name: String(detail.name),
+        icon: typeof detail.icon === 'string' ? detail.icon : '🥢',
+        category: detail.category || 'SYSTEM',
+        description: typeof detail.description === 'string' ? detail.description : '',
+        musicalNote: typeof detail.musicalNote === 'string' ? detail.musicalNote : undefined,
+        timestamp: Number(detail.timestamp) || Date.now(),
+      });
+      setVisible(true);
     };
 
     const handleAudioSettingsChange = (e: Event) => {
@@ -48,7 +56,7 @@ export const SoundCaptionHUD: React.FC = () => {
       aria-label="Soundpack Subtitles"
       aria-live="polite"
       aria-atomic="true"
-      className="fixed bottom-12 left-4 z-40 pointer-events-none transition-all duration-300 ease-out"
+      className="fixed bottom-16 md:bottom-12 left-4 z-40 pointer-events-none transition-all duration-300 ease-out max-w-[calc(100vw-2rem)]"
     >
       <div className="pointer-events-auto bg-[#181422]/95 border border-emerald-500/40 shadow-lg rounded-xl px-3.5 py-2 flex items-center gap-2.5 backdrop-blur-md text-xs font-mono max-w-sm">
         <span className="text-base shrink-0 animate-bounce" aria-hidden="true">{activeCue.icon}</span>

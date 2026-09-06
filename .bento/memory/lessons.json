@@ -377,6 +377,19 @@
         "ui"
       ],
       "source_scenario": ""
+    },
+    {
+      "id": "MEM-D3D5AC6E",
+      "title": "Constellation Category Containment & Mobile Viewport Shield",
+      "category": "ui",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "All dynamic category and tag pill containers must declare flex-wrap with whitespace-nowrap shrink-0 on pills, and root documents must enforce overflow-x: hidden to prevent lateral viewport panning and card boundary clipping on mobile.",
+      "anti_pattern": "Unwrapped flex rows for dynamic items causing card expansion beyond 100vw, or omitting whitespace-nowrap causing mid-hyphen multi-line word breaks.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "ui"
+      ],
+      "source_scenario": ""
     }
   ]
 }

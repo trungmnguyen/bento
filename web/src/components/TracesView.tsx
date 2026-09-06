@@ -49,6 +49,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
   const [rangeFilter, setRangeFilter] = useState<RangeOption>('20');
   const [hoveredPoint, setHoveredPoint] = useState<HoveredPoint | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Faceted Filtering & Histogram State
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PASSED' | 'FAILED'>('ALL');
@@ -85,7 +86,10 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
   useEffect(() => {
     const controller = new AbortController();
     fetchTelemetry(controller.signal);
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
   }, [traces]);
 
   const handleTriggerDream = async () => {
@@ -215,7 +219,8 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
         message: 'Markdown report copied to clipboard. Ready for PR or Slack!',
         type: 'success',
       });
-      setTimeout(() => setIsCopied(false), 2500);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setIsCopied(false), 2500);
     } catch {
       showToast({ title: 'Clipboard Failed', message: 'Could not access clipboard.', type: 'error' });
     }
@@ -229,9 +234,9 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
           <div className="flex flex-wrap justify-between items-center mb-4 pb-3 border-b border-bento-border gap-3">
             <div className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-bento-matcha" />
-              <h3 className="text-sm font-bold text-gray-100">
+              <h2 className="text-sm font-bold text-gray-100">
                 Sensory Telemetry Radar · Quality & Latency Percentiles
-              </h3>
+              </h2>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 font-mono text-xs text-gray-400">
@@ -576,9 +581,9 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
       {/* Sensory Tasting Notes Event Timeline */}
       <div className="bg-bento-surface border border-bento-border rounded-bento overflow-hidden shadow-bento-card">
         <div className="px-6 py-4 border-b border-bento-border flex justify-between items-center bg-bento-elevated">
-          <h3 className="text-base font-bold text-gray-100 flex items-center gap-2">
+          <h2 className="text-base font-bold text-gray-100 flex items-center gap-2">
             <BentoBoxIcon className="w-5 h-5" /> Tasting Notes Timeline · Sensory Execution Traces ({traces.length})
-          </h3>
+          </h2>
           <button
             onClick={() => {
               playClack();
@@ -587,6 +592,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
             }}
             className="p-1.5 hover:bg-bento-border rounded-xl text-gray-400 hover:text-white transition"
             title="Refresh Traces"
+            aria-label="Refresh traces"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -649,6 +655,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
                     playClack();
                     setLatencyBucket(null);
                   }}
+                  aria-label="Remove latency bin filter"
                   className="hover:text-white ml-0.5"
                 >
                   ×
@@ -789,10 +796,14 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
 
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     playTastePass();
-                    navigator.clipboard.writeText(JSON.stringify(selectedTrace, null, 2));
-                    showToast({ title: 'Trace Copied', message: 'Trace JSON copied to clipboard', type: 'success' });
+                    try {
+                      await navigator.clipboard.writeText(JSON.stringify(selectedTrace, null, 2));
+                      showToast({ title: 'Trace Copied', message: 'Trace JSON copied to clipboard', type: 'success' });
+                    } catch {
+                      showToast({ title: 'Copy Failed', message: 'Clipboard access denied', type: 'error' });
+                    }
                   }}
                   title="Copy Trace JSON"
                   aria-label="Copy Trace JSON"
@@ -815,7 +826,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
             </div>
 
             {/* Tab Selector */}
-            <div role="tablist" aria-label="Trace detail sections" className="px-5 py-2.5 border-b border-bento-border bg-[#16131c] flex items-center gap-1.5">
+            <div role="tablist" aria-label="Trace detail sections" className="px-5 py-2.5 border-b border-bento-border bg-[#16131c] flex items-center gap-1.5 overflow-x-auto scrollbar-none">
               {(['prompt', 'output', 'assertions', 'raw'] as const).map((tab) => (
                 <button
                   key={tab}
@@ -829,7 +840,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
                     playClack();
                     setDetailTab(tab);
                   }}
-                  className={`px-3 py-1 rounded-md text-xs font-mono font-medium transition ${
+                  className={`px-3 py-1 rounded-md text-xs font-mono font-medium transition whitespace-nowrap shrink-0 ${
                     detailTab === tab
                       ? 'bg-bento-salmon/20 text-bento-salmon border border-bento-salmon/30 font-bold'
                       : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
@@ -844,7 +855,13 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
             </div>
 
             {/* Drawer Content */}
-            <div className="flex-1 overflow-y-auto p-5">
+            <div
+              id={`trace-panel-${detailTab}`}
+              role="tabpanel"
+              aria-labelledby={`trace-tab-${detailTab}`}
+              tabIndex={0}
+              className="flex-1 overflow-y-auto p-5 focus:outline-none"
+            >
               {detailTab === 'prompt' && (
                 <div>
                   <h4 className="text-xs font-mono text-zinc-400 mb-2 font-semibold">Prompt Dispatched to Agent:</h4>

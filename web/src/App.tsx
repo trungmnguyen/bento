@@ -33,6 +33,8 @@ import { QuickRunnerModal } from './components/QuickRunnerModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
 import { SoundCaptionHUD } from './components/SoundCaptionHUD';
 import { CompartmentBreadcrumbs } from './components/CompartmentBreadcrumbs';
+import { MobileBottomDock } from './components/MobileBottomDock';
+import { ExportStudioModal } from './components/ExportStudioModal';
 import { runA11yDoctor } from './utils/a11yDoctor';
 import { copyHarnessReport } from './utils/harnessReport';
 import {
@@ -73,6 +75,7 @@ function BentoDashboard() {
   const [isQuickRunnerOpen, setIsQuickRunnerOpen] = useState<boolean>(false);
   const [quickRunnerScenario, setQuickRunnerScenario] = useState<string | null>(null);
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState<boolean>(false);
+  const [isExportStudioOpen, setIsExportStudioOpen] = useState<boolean>(false);
   const [notifications, setNotifications] = useState<BentoNotification[]>(() => {
     try {
       const saved = localStorage.getItem('bento_notifications');
@@ -144,7 +147,9 @@ function BentoDashboard() {
         isAudioModalOpen ||
         isShortcutsModalOpen ||
         isQuickRunnerOpen ||
-        isNotificationDrawerOpen
+        isNotificationDrawerOpen ||
+        isExportStudioOpen ||
+        Boolean(document.querySelector('[role="dialog"]'))
       ) {
         return;
       }
@@ -207,22 +212,7 @@ function BentoDashboard() {
       } else if (e.key === 'E' && e.shiftKey) {
         e.preventDefault();
         playClack();
-        copyHarnessReport({
-          status,
-          tasks,
-          lessons,
-          traces,
-          scenarios,
-          telemetry,
-        }).then((ok: boolean) => {
-          if (ok) {
-            showToast({
-              title: 'Executive Snapshot Copied! 📋',
-              message: 'Full harness health & telemetry snapshot copied to clipboard.',
-              type: 'success',
-            });
-          }
-        });
+        setIsExportStudioOpen(true);
       }
     };
 
@@ -234,6 +224,7 @@ function BentoDashboard() {
     isShortcutsModalOpen,
     isQuickRunnerOpen,
     isNotificationDrawerOpen,
+    isExportStudioOpen,
     scenarios,
     activeTab,
     toggleDensity,
@@ -817,7 +808,22 @@ function BentoDashboard() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                playClack();
+                setIsExportStudioOpen(true);
+              }}
+              aria-label="Open Export Studio (Shift+E)"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[32px] rounded-lg bg-bento-salmon/10 hover:bg-bento-salmon/20 text-bento-salmon border border-bento-salmon/30 transition text-[11px] font-mono touch-manipulation"
+              title="Export telemetry and reports (Shift+E)"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Export Studio</span>
+              <kbd className="hidden md:inline bg-black/30 px-1 py-0.2 rounded text-[9px] text-rose-300">⇧E</kbd>
+            </button>
+
             <button
               onClick={() => {
                 playZenBell();
@@ -850,7 +856,7 @@ function BentoDashboard() {
       </header>
 
       {/* Main Compartment Canvas */}
-      <main id="main-content" tabIndex={-1} className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 flex-1 pb-safe focus:outline-none">
+      <main id="main-content" tabIndex={-1} className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 flex-1 pb-24 md:pb-6 focus:outline-none min-w-0 overflow-x-hidden">
         <CompartmentBreadcrumbs activeTab={activeTab} />
         <div id="panel-daemons" role="tabpanel" tabIndex={0} aria-labelledby="tab-daemons" hidden={activeTab !== 'daemons'}>
           {activeTab === 'daemons' && <DaemonView tasks={tasks} onRefresh={fetchAllData} />}
@@ -933,6 +939,27 @@ function BentoDashboard() {
             setActiveTab(tab as any);
           }
         }}
+      />
+
+      {/* Mobile Bottom Thumb Navigation Dock */}
+      <MobileBottomDock
+        activeTab={activeTab}
+        onSelectTab={(tab) => setActiveTab(tab)}
+        onOpenPalette={() => setIsPaletteOpen(true)}
+        runningTasksCount={runningTasksCount}
+      />
+
+      {/* Export Studio Modal */}
+      <ExportStudioModal
+        isOpen={isExportStudioOpen}
+        onClose={() => setIsExportStudioOpen(false)}
+        status={status}
+        tasks={tasks}
+        lessons={lessons}
+        traces={traces}
+        telemetry={telemetry}
+        vitals={vitals}
+        runningTasksCount={runningTasksCount}
       />
 
       {/* Sensory Soundpack Closed-Caption HUD */}

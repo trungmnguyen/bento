@@ -56,7 +56,17 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
       if (!saved) return [];
       const parsed = JSON.parse(saved);
       return Array.isArray(parsed)
-        ? parsed.filter((b): b is BoutHistoryItem => Boolean(b && typeof b === 'object' && typeof b.id === 'string'))
+        ? parsed.filter(
+            (b): b is BoutHistoryItem =>
+              Boolean(
+                b &&
+                  typeof b === 'object' &&
+                  typeof b.id === 'string' &&
+                  typeof b.challenger === 'string' &&
+                  typeof b.defender === 'string' &&
+                  typeof b.winner === 'string'
+              )
+          )
         : [];
     } catch {
       return [];
