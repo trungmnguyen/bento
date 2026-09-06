@@ -42,10 +42,12 @@ class DreamCycleUseCase:
             harvested_lessons = analyze_traces_for_lessons(recent_traces, existing_lesson_ids=existing_ids)
             crystallized_skills = detect_recurring_skill_patterns(recent_traces)
 
-            # Persist newly harvested lessons into memory bank
-            if harvested_lessons:
+            # Persist newly harvested lessons and crystallized skills into memory bank
+            if harvested_lessons or crystallized_skills:
                 for lesson in harvested_lessons:
                     memory_bank = memory_bank.add_lesson(lesson)
+                for skill in crystallized_skills:
+                    memory_bank = memory_bank.add_skill(skill)
                 self._memory_gateway.save_memory(memory_bank, working_dir=working_dir)
 
         # 3. Collect all scenarios (including auto-generated regression tests)

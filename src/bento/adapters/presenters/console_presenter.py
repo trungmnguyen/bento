@@ -144,6 +144,17 @@ class ConsolePresenter(PresenterGateway):
                     lines.append(f"    Anti-Pattern: {self._c('31', l.anti_pattern)}")
                 lines.append("")
         lines.append("─" * 60)
+
+        skills = getattr(memory, "skills", [])
+        if skills:
+            lines.append("")
+            lines.append(f"🛠️  {self._c('1', 'Crystallized Procedural Skills')} ({len(skills)} skills stored in .bento/skills/)")
+            lines.append("─" * 60)
+            for s in skills:
+                lines.append(f"  [{self._c('33', s.name)}]")
+                lines.append(f"    {s.description}")
+            lines.append("─" * 60)
+
         return "\n".join(lines)
 
     def format_dream_cycle_result(self, result: DreamCycleResult) -> str:
@@ -308,15 +319,16 @@ class ConsolePresenter(PresenterGateway):
         lines: list[str] = []
         lines.append("")
         status_badge = self._c("32;1", "[ALL PASSED]") if result.all_passed else self._c("31;1", "[FINDINGS DETECTED]")
-        lines.append(f"🍱 {self._c('1', 'BENTO ORCHESTRA: CONTINUOUS TRIAD SPRINT')} {status_badge}")
+        lines.append(f"🍱 {self._c('1', 'BENTO ORCHESTRA: CONTINUOUS CULINARY BRIGADE SPRINT')} {status_badge}")
         lines.append(f"⏱️  Total Duration: {result.total_duration_ms:.1f}ms | Rounds: {result.total_rounds}")
         lines.append("=" * 65)
 
         role_icons = {
-            "WASABI": "🌶️ Wasabi (Red Team)",
-            "MATCHA": "🍵 Matcha (Green Team)",
-            "PATRON": "🥢 Patron Gate (User Review)",
-            "CHEF": "🍳 Executive Chef (Blue Team)",
+            "WASABI": "🌶️ Red Team Auditor (Spicy Wasabi)",
+            "YUZU": "🍋 Yellow Team Auditor (Yuzu Sensory)",
+            "MATCHA": "🍵 Green Team Innovator (Matcha Master)",
+            "PATRON": "🥢 Patron Gate Reviewer (Bento Patron)",
+            "CHEF": "🍳 Blue Team Craftsman (Executive Chef)",
         }
 
         for r in result.rounds:
@@ -333,6 +345,18 @@ class ConsolePresenter(PresenterGateway):
                         lines.append(f"     • {d}")
                     if len(stage.details) > 3:
                         lines.append(f"     • ... and {len(stage.details) - 3} more")
+            lines.append("─" * 65)
+
+        if result.dream_result:
+            dr = result.dream_result
+            lines.append(
+                f"🌙 {self._c('1;35', 'Dream Cycle Consolidated')}: {dr.consolidated_lessons_count} rules enforced "
+                f"({self._c('32', f'+{dr.new_lessons_discovered} newly harvested')}) | "
+                f"{len(dr.crystallized_skills)} skills crystallized in .bento/skills/"
+            )
+            if dr.harvested_lessons:
+                for l in dr.harvested_lessons:
+                    lines.append(f"   • [{self._c('36', l.id)}] {l.title}")
             lines.append("─" * 65)
 
         lines.append(f"✨ Final Sign-off: Logic is pure and decoupled from I/O. Git hygiene is enforced.")

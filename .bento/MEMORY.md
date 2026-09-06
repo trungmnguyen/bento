@@ -1,6 +1,6 @@
 # 🧠 Bento Persistent Memory Bank
 
-> Auto-distilled architectural rules and edge-case guards (10 rules stored).
+> Auto-distilled architectural rules and edge-case guards (13 rules stored).
 
 ### `[MEM-50790948]` Clean Architecture Port Rule
 - **Category:** `architecture` | **Discovered:** 2026-09-01
@@ -59,3 +59,91 @@
 - **Hard Rule:** All scenario and suite execution controllers must emit structured TraceEvents to TraceGateway to feed the sensory dream harbor.
 - **Anti-Pattern:** Running scenarios without emitting execution traces, starving the dream cycle of sensory data.
 - **Tags:** architecture
+
+### `[MEM-DREAM-B8C5A121]` Autonomous Recovery Guard: Mobile UI & Navigation Verification
+- **Category:** `auto-dream-distilled` | **Discovered:** 2026-09-05
+- **Hard Rule:** Always satisfy contract requirements: Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False
+- **Anti-Pattern:** Initial failing mode: Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False
+- **Tags:** harness-recovery, ux, mobile, dream-distilled, tailwind, ui
+
+### `[MEM-DREAM-66DB31D0]` Autonomous Recovery Guard: Dashboard Resilience & Security Verification Rig
+- **Category:** `auto-dream-distilled` | **Discovered:** 2026-09-05
+- **Hard Rule:** Always satisfy contract requirements: Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False
+- **Anti-Pattern:** Initial failing mode: Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False
+- **Tags:** harness-recovery, dashboard, security, dream-distilled, resilience, web
+
+### `[MEM-DREAM-F4440514]` Autonomous Recovery Guard: Triad Audit: AST Purity & Architectural Invariants
+- **Category:** `auto-dream-distilled` | **Discovered:** 2026-09-05
+- **Hard Rule:** Always satisfy contract requirements: CORS DNS Rebinding allowed on /api/memory/export
+- **Anti-Pattern:** Initial failing mode: CORS DNS Rebinding allowed on /api/memory/export
+- **Tags:** ast_purity, triad_sprint, wasabi, dream-distilled, harness-recovery, security, red_team
+
+---
+
+## 🛠️ Bento Crystallized Procedural Skills (8 skills stored)
+
+> Reusable macros synthesized from recurring successful executions.
+
+### `[skill-orchestra_round_1]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (8 executions observed)
+- **Tags:** culinary_brigade, triad_sprint, orchestra
+- **Steps:**
+  1. Step 1: Check pre-conditions for orchestra_round_1
+  1. Step 2: Execute validated deterministic routine for orchestra_round_1
+  1. Step 3: Verify output assertions
+
+### `[skill-core-system-health-check]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Core System Health Check' (16 executions observed)
+- **Tags:** benchmark, sanity, contract, core, chef, blue_team, triad_sprint
+- **Steps:**
+  1. Step 1: Check pre-conditions for Core System Health Check
+  1. Step 2: Execute validated deterministic routine for Core System Health Check
+  1. Step 3: Verify output assertions
+
+### `[skill-triad-audit:-ui-accessibility-&-visual-invariants]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (5 executions observed)
+- **Tags:** ui, a11y, yellow_team, yuzu, triad_sprint
+- **Steps:**
+  1. Step 1: Check pre-conditions for Triad Audit: UI Accessibility & Visual Invariants
+  1. Step 2: Execute validated deterministic routine for Triad Audit: UI Accessibility & Visual Invariants
+  1. Step 3: Verify output assertions
+
+### `[skill-triad-audit:-ast-purity-&-architectural-invariants]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (9 executions observed)
+- **Tags:** wasabi, ast_purity, red_team, security, triad_sprint
+- **Steps:**
+  1. Step 1: Check pre-conditions for Triad Audit: AST Purity & Architectural Invariants
+  1. Step 2: Execute validated deterministic routine for Triad Audit: AST Purity & Architectural Invariants
+  1. Step 3: Verify output assertions
+
+### `[skill-quant-calc-signal-normalizer-contract]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (15 executions observed)
+- **Tags:** benchmark, demo, auto-loop, chef, blue_team, triad_sprint, quant
+- **Steps:**
+  1. Step 1: Check pre-conditions for Quant Calc Signal Normalizer Contract
+  1. Step 2: Execute validated deterministic routine for Quant Calc Signal Normalizer Contract
+  1. Step 3: Verify output assertions
+
+### `[skill-mobile-ui-&-navigation-verification]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (15 executions observed)
+- **Tags:** ui, benchmark, triad_sprint, chef, blue_team, tailwind, mobile, ux
+- **Steps:**
+  1. Step 1: Check pre-conditions for Mobile UI & Navigation Verification
+  1. Step 2: Execute validated deterministic routine for Mobile UI & Navigation Verification
+  1. Step 3: Verify output assertions
+
+### `[skill-dashboard-resilience-&-security-verification-rig]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (16 executions observed)
+- **Tags:** dashboard, benchmark, blue_team, web, chef, resilience, security, triad_sprint
+- **Steps:**
+  1. Step 1: Check pre-conditions for Dashboard Resilience & Security Verification Rig
+  1. Step 2: Execute validated deterministic routine for Dashboard Resilience & Security Verification Rig
+  1. Step 3: Verify output assertions
+
+### `[skill-agent-code-gen-verification-rig]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (15 executions observed)
+- **Tags:** benchmark, cyrilXBT-paradigm, agent, chef, eval, blue_team, triad_sprint
+- **Steps:**
+  1. Step 1: Check pre-conditions for Agent Code-Gen Verification Rig
+  1. Step 2: Execute validated deterministic routine for Agent Code-Gen Verification Rig
+  1. Step 3: Verify output assertions

@@ -2,12 +2,15 @@
 from __future__ import annotations
 import json
 import os
+import threading
 from pathlib import Path
 from bento.domain.models import TraceEvent
 from bento.domain.ports import TraceGateway
 
 
 class FileSystemTraceGateway(TraceGateway):
+    _trace_lock = threading.Lock()
+
     def __init__(self, base_dir: str | None = None):
         self._default_base_dir = base_dir
 
@@ -35,8 +38,10 @@ class FileSystemTraceGateway(TraceGateway):
             "tags": event.tags,
         }
 
-        with open(trace_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(event_dict) + "\n")
+        line = json.dumps(event_dict) + "\n"
+        with self._trace_lock:
+            with open(trace_file, "a", encoding="utf-8") as f:
+                f.write(line)
 
     def load_recent_traces(self, max_traces: int = 100, working_dir: str | None = None) -> list[TraceEvent]:
         traces_dir = self._get_traces_dir(working_dir)
@@ -48,7 +53,9 @@ class FileSystemTraceGateway(TraceGateway):
 
         for t_file in trace_files:
             try:
-                for line in t_file.read_text(encoding="utf-8").splitlines():
+                # Read lines from newest to oldest
+                lines = t_file.read_text(encoding="utf-8").splitlines()
+                for line in reversed(lines):
                     line = line.strip()
                     if not line:
                         continue

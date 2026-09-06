@@ -5,7 +5,7 @@ import os
 import shutil
 import time
 from pathlib import Path
-from bento.domain.models import MemoryBank, MemoryLesson, Scenario
+from bento.domain.models import CrystallizedSkill, MemoryBank, MemoryLesson, Scenario
 from bento.domain.ports import MemoryGateway
 
 
@@ -22,51 +22,72 @@ class FileSystemMemoryGateway(MemoryGateway):
     def load_memory(self, working_dir: str | None = None) -> MemoryBank:
         bento_dir = self._get_bento_dir(working_dir)
         json_file = bento_dir / "memory" / "lessons.json"
+        skills_file = bento_dir / "memory" / "skills.json"
 
-        if not json_file.exists():
-            return MemoryBank(lessons=[])
+        lessons = []
+        version = "1.0"
+        updated_at = ""
 
-        try:
-            data = json.loads(json_file.read_text(encoding="utf-8"))
-            lessons = []
-            for item in data.get("lessons", []):
-                lessons.append(
-                    MemoryLesson(
-                        id=item["id"],
-                        title=item["title"],
-                        category=item.get("category", "general"),
-                        context=item.get("context", ""),
-                        rule=item["rule"],
-                        anti_pattern=item.get("anti_pattern", ""),
-                        discovery_date=item.get("discovery_date", ""),
-                        tags=item.get("tags", []),
-                        source_scenario=item.get("source_scenario", ""),
+        if json_file.exists():
+            try:
+                data = json.loads(json_file.read_text(encoding="utf-8"))
+                for item in data.get("lessons", []):
+                    lessons.append(
+                        MemoryLesson(
+                            id=item["id"],
+                            title=item["title"],
+                            category=item.get("category", "general"),
+                            context=item.get("context", ""),
+                            rule=item["rule"],
+                            anti_pattern=item.get("anti_pattern", ""),
+                            discovery_date=item.get("discovery_date", ""),
+                            tags=item.get("tags", []),
+                            source_scenario=item.get("source_scenario", ""),
+                        )
                     )
-                )
-            return MemoryBank(
-                lessons=lessons,
-                version=data.get("version", "1.0"),
-                updated_at=data.get("updated_at", ""),
-            )
-        except Exception as e:
-            if json_file.exists() and json_file.stat().st_size > 0:
-                backup_file = bento_dir / "memory" / f"lessons.json.corrupted.{int(time.time())}.bak"
-                try:
-                    shutil.copy2(json_file, backup_file)
-                except Exception:
-                    pass
-                raise ValueError(
-                    f"Institutional memory file '{json_file}' is corrupted: {e}. "
-                    f"A backup was preserved at '{backup_file}'. Refusing to overwrite memory bank."
-                )
-            return MemoryBank(lessons=[])
+                version = data.get("version", "1.0")
+                updated_at = data.get("updated_at", "")
+            except Exception as e:
+                if json_file.exists() and json_file.stat().st_size > 0:
+                    backup_file = bento_dir / "memory" / f"lessons.json.corrupted.{int(time.time())}.bak"
+                    try:
+                        shutil.copy2(json_file, backup_file)
+                    except Exception:
+                        pass
+                    raise ValueError(
+                        f"Institutional memory file '{json_file}' is corrupted: {e}. "
+                        f"A backup was preserved at '{backup_file}'. Refusing to overwrite memory bank."
+                    )
+
+        skills = []
+        if skills_file.exists():
+            try:
+                s_data = json.loads(skills_file.read_text(encoding="utf-8"))
+                for s in s_data.get("skills", []):
+                    skills.append(
+                        CrystallizedSkill(
+                            name=s["name"],
+                            description=s.get("description", ""),
+                            trigger_tags=s.get("trigger_tags", []),
+                            steps=s.get("steps", []),
+                        )
+                    )
+            except Exception:
+                pass
+
+        return MemoryBank(
+            lessons=lessons,
+            version=version,
+            updated_at=updated_at,
+            skills=skills,
+        )
 
     def save_memory(self, memory: MemoryBank, working_dir: str | None = None) -> None:
         bento_dir = self._get_bento_dir(working_dir)
         memory_dir = bento_dir / "memory"
         memory_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. Save JSON
+        # 1. Save Lessons JSON
         json_file = memory_dir / "lessons.json"
         raw_lessons = [l.__dict__ for l in memory.lessons]
         payload = {
@@ -76,7 +97,53 @@ class FileSystemMemoryGateway(MemoryGateway):
         }
         self._atomic_write_text(json_file, json.dumps(payload, indent=2))
 
-        # 2. Save Human-Readable Markdown (MEMORY.md)
+        # 2. Save Skills JSON
+        skills_file = memory_dir / "skills.json"
+        raw_skills = [
+            {
+                "name": s.name,
+                "description": s.description,
+                "trigger_tags": s.trigger_tags,
+                "steps": s.steps,
+            }
+            for s in getattr(memory, "skills", [])
+        ]
+        skills_payload = {
+            "version": memory.version,
+            "count": len(raw_skills),
+            "skills": raw_skills,
+        }
+        self._atomic_write_text(skills_file, json.dumps(skills_payload, indent=2))
+
+        # 3. Save individual skill files into .bento/skills/<skill-name>/SKILL.md
+        skills = getattr(memory, "skills", [])
+        if skills:
+            skills_dir = bento_dir / "skills"
+            skills_dir.mkdir(parents=True, exist_ok=True)
+            for skill in skills:
+                skill_folder = skills_dir / skill.name
+                skill_folder.mkdir(parents=True, exist_ok=True)
+                skill_md_file = skill_folder / "SKILL.md"
+                skill_content = [
+                    "---",
+                    f"name: {skill.name}",
+                    f"description: >-\n  {skill.description}",
+                    f"trigger_tags: [{', '.join(repr(t) for t in skill.trigger_tags)}]",
+                    "---",
+                    "",
+                    f"# 🛠️ {skill.name}",
+                    "",
+                    f"> {skill.description}",
+                    "",
+                    "## 📋 Procedural Execution Steps",
+                    "",
+                ]
+                for step in skill.steps:
+                    skill_content.append(f"- {step}")
+                skill_content.append("")
+                self._atomic_write_text(skill_md_file, "\n".join(skill_content))
+
+        # 4. Save Human-Readable Markdown (MEMORY.md)
         md_file = bento_dir / "MEMORY.md"
         lines = [
             "# 🧠 Bento Persistent Memory Bank",
@@ -93,6 +160,24 @@ class FileSystemMemoryGateway(MemoryGateway):
             if l.tags:
                 lines.append(f"- **Tags:** {', '.join(l.tags)}")
             lines.append("")
+
+        if skills:
+            lines.append("---")
+            lines.append("")
+            lines.append(f"## 🛠️ Bento Crystallized Procedural Skills ({len(skills)} skills stored)")
+            lines.append("")
+            lines.append("> Reusable macros synthesized from recurring successful executions.")
+            lines.append("")
+            for s in skills:
+                lines.append(f"### `[{s.name}]`")
+                lines.append(f"- **Description:** {s.description}")
+                if s.trigger_tags:
+                    lines.append(f"- **Tags:** {', '.join(s.trigger_tags)}")
+                if s.steps:
+                    lines.append("- **Steps:**")
+                    for step in s.steps:
+                        lines.append(f"  1. {step}")
+                lines.append("")
 
         self._atomic_write_text(md_file, "\n".join(lines))
 

@@ -166,6 +166,61 @@
         "architecture"
       ],
       "source_scenario": ""
+    },
+    {
+      "id": "MEM-DREAM-B8C5A121",
+      "title": "Autonomous Recovery Guard: Mobile UI & Navigation Verification",
+      "category": "auto-dream-distilled",
+      "context": "Task 'Mobile UI & Navigation Verification' failed at iteration 1 due to: [Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False], but recovered cleanly at iteration 1.",
+      "rule": "Always satisfy contract requirements: Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False",
+      "anti_pattern": "Initial failing mode: Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False",
+      "discovery_date": "2026-09-05",
+      "tags": [
+        "harness-recovery",
+        "ux",
+        "mobile",
+        "dream-distilled",
+        "tailwind",
+        "ui"
+      ],
+      "source_scenario": "Mobile UI & Navigation Verification"
+    },
+    {
+      "id": "MEM-DREAM-66DB31D0",
+      "title": "Autonomous Recovery Guard: Dashboard Resilience & Security Verification Rig",
+      "category": "auto-dream-distilled",
+      "context": "Task 'Dashboard Resilience & Security Verification Rig' failed at iteration 1 due to: [Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False], but recovered cleanly at iteration 1.",
+      "rule": "Always satisfy contract requirements: Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False",
+      "anti_pattern": "Initial failing mode: Verify Production Vite & TypeScript Bundle Build: Expected exit code 0, got 2; Verify Production Vite & TypeScript Bundle Build: Target 'stdout' contains 'built in': False",
+      "discovery_date": "2026-09-05",
+      "tags": [
+        "harness-recovery",
+        "dashboard",
+        "security",
+        "dream-distilled",
+        "resilience",
+        "web"
+      ],
+      "source_scenario": "Dashboard Resilience & Security Verification Rig"
+    },
+    {
+      "id": "MEM-DREAM-F4440514",
+      "title": "Autonomous Recovery Guard: Triad Audit: AST Purity & Architectural Invariants",
+      "category": "auto-dream-distilled",
+      "context": "Task 'Triad Audit: AST Purity & Architectural Invariants' failed at iteration 1 due to: [CORS DNS Rebinding allowed on /api/memory/export], but recovered cleanly at iteration 2.",
+      "rule": "Always satisfy contract requirements: CORS DNS Rebinding allowed on /api/memory/export",
+      "anti_pattern": "Initial failing mode: CORS DNS Rebinding allowed on /api/memory/export",
+      "discovery_date": "2026-09-05",
+      "tags": [
+        "ast_purity",
+        "triad_sprint",
+        "wasabi",
+        "dream-distilled",
+        "harness-recovery",
+        "security",
+        "red_team"
+      ],
+      "source_scenario": "Triad Audit: AST Purity & Architectural Invariants"
     }
   ]
 }
