@@ -10,13 +10,31 @@ export interface ToastItem {
   message?: string;
 }
 
-export function showToast(type: ToastType, title: string, message?: string) {
+export function showToast(
+  typeOrOptions: ToastType | { type?: ToastType; title: string; message?: string },
+  title?: string,
+  message?: string
+) {
+  let type: ToastType = 'info';
+  let finalTitle = '';
+  let finalMessage: string | undefined = undefined;
+
+  if (typeof typeOrOptions === 'object' && typeOrOptions !== null) {
+    type = typeOrOptions.type || 'info';
+    finalTitle = typeOrOptions.title;
+    finalMessage = typeOrOptions.message;
+  } else {
+    type = typeOrOptions;
+    finalTitle = title || '';
+    finalMessage = message;
+  }
+
   const event = new CustomEvent('bento-toast', {
     detail: {
       id: Math.random().toString(36).substring(2, 9),
       type,
-      title,
-      message,
+      title: finalTitle,
+      message: finalMessage,
     },
   });
   window.dispatchEvent(event);
@@ -28,11 +46,22 @@ export const ToastContainer: React.FC = () => {
   useEffect(() => {
     const handleToast = (e: Event) => {
       const customEvent = e as CustomEvent<ToastItem>;
-      const newToast = customEvent.detail;
-      setToasts((prev) => [...prev, newToast]);
+      const newToast = customEvent?.detail;
+      // Defensive payload validation (WASABI-DOM-02)
+      if (!newToast || typeof newToast !== 'object' || typeof newToast.title !== 'string') {
+        return;
+      }
+      const safeToast: ToastItem = {
+        id: String(newToast.id || Math.random().toString(36).substring(2, 9)),
+        type: (['success', 'error', 'warning', 'info'].includes(newToast.type) ? newToast.type : 'info') as ToastType,
+        title: String(newToast.title || ''),
+        message: newToast.message ? String(newToast.message) : undefined,
+      };
+
+      setToasts((prev) => [...prev, safeToast]);
 
       setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== newToast.id));
+        setToasts((prev) => prev.filter((t) => t.id !== safeToast.id));
       }, 4000);
     };
 
@@ -47,7 +76,11 @@ export const ToastContainer: React.FC = () => {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-3">
+    <div
+      role="region"
+      aria-label="System notifications"
+      className="fixed top-4 right-4 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-3"
+    >
       {toasts.map((toast) => {
         const isSuccess = toast.type === 'success';
         const isError = toast.type === 'error';
@@ -56,6 +89,8 @@ export const ToastContainer: React.FC = () => {
         return (
           <div
             key={toast.id}
+            role={isError ? 'alert' : 'status'}
+            aria-live={isError ? 'assertive' : 'polite'}
             className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-xl border shadow-xl backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-top-2 ${
               isSuccess
                 ? 'bg-[#152418]/95 border-emerald-500/40 text-emerald-200'
@@ -84,7 +119,8 @@ export const ToastContainer: React.FC = () => {
 
             <button
               onClick={() => removeToast(toast.id)}
-              className="shrink-0 text-gray-400 hover:text-white transition p-0.5"
+              aria-label={`Dismiss notification: ${toast.title}`}
+              className="shrink-0 text-gray-400 hover:text-white transition p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg hover:bg-white/5"
             >
               <X className="w-4 h-4" />
             </button>
