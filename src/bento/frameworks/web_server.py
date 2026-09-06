@@ -263,7 +263,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         content_len = int(self.headers.get("Content-Length", 0))
         MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB — SEC-10: Prevent OOM via unbounded payload
         if content_len > MAX_BODY_SIZE:
-            self.send_error(413, "Payload Too Large")
+            self._send_json({"error": "Payload Too Large", "max_bytes": MAX_BODY_SIZE}, status=413)
             return
         body = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
         try:
@@ -493,6 +493,16 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                 return self._send_json({"error": "Command is required for pre-flight test."}, status=400)
 
             cwd = payload.get("cwd")
+            # SEC-12: Enforce workspace boundary on cwd to prevent path traversal
+            if cwd:
+                try:
+                    resolved_cwd = Path(cwd).resolve()
+                    workspace_root = Path.cwd().resolve()
+                    if not resolved_cwd.is_relative_to(workspace_root):
+                        return self._send_json({"error": "Preflight cwd must remain within the workspace boundary."}, status=400)
+                    cwd = str(resolved_cwd)
+                except Exception:
+                    return self._send_json({"error": "Invalid cwd path provided."}, status=400)
 
             # REL-07: Safe timeout parsing and bounding
             try:

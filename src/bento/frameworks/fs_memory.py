@@ -85,15 +85,26 @@ class FileSystemMemoryGateway(MemoryGateway):
         self._atomic_write_text(md_file, "\n".join(lines))
 
     def _atomic_write_text(self, path: Path, content: str) -> None:
+        import tempfile
         path.parent.mkdir(parents=True, exist_ok=True)
-        temp_file = path.with_suffix(f"{path.suffix}.tmp.{os.getpid()}")
+        temp_path: Path | None = None
         try:
-            temp_file.write_text(content, encoding="utf-8")
-            os.replace(temp_file, path)
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=path.parent,
+                prefix=f"{path.name}.tmp.",
+                delete=False,
+            ) as tf:
+                temp_path = Path(tf.name)
+                tf.write(content)
+                tf.flush()
+                os.fsync(tf.fileno())
+            os.replace(temp_path, path)
         except Exception:
-            if temp_file.exists():
+            if temp_path and temp_path.exists():
                 try:
-                    temp_file.unlink()
+                    temp_path.unlink()
                 except Exception:
                     pass
             raise

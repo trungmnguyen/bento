@@ -70,19 +70,20 @@ class BackgroundTaskRunner:
             f.write(f"Started at: {datetime.datetime.now().isoformat()}\n")
             f.write("=" * 60 + "\n\n")
 
-        log_handle = open(log_file, "a", encoding="utf-8")
         effective_cwd = working_dir or self._default_base_dir or os.getcwd()
-
-        process = subprocess.Popen(
-            command,
-            shell=True,
-            cwd=effective_cwd,
-            stdout=log_handle,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-        )
-        # Close parent's handle; child keeps its duplicate open
-        log_handle.close()
+        log_handle = open(log_file, "a", encoding="utf-8")
+        try:
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                cwd=effective_cwd,
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        finally:
+            # REL-14: Ensure parent closes file handle even if Popen raises an exception
+            log_handle.close()
 
         task_info = {
             "id": short_id,

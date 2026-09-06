@@ -493,6 +493,15 @@ class TestBentoWebServer(unittest.TestCase):
         finally:
             BentoApiHandler._active_sse_connections = orig_count
 
+    def test_sec_12_preflight_cwd_boundary(self):
+        # SEC-12: Reject cwd outside workspace root
+        status, body = self._post("/api/benchmarks/preflight", {
+            "command": "echo test",
+            "cwd": "/tmp/outside_workspace"
+        })
+        self.assertEqual(status, 400)
+        self.assertIn("workspace boundary", body)
+
 
 if __name__ == "__main__":
     unittest.main()
