@@ -96,6 +96,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
     playClack();
     setRunning(true);
     setRunError(null);
+    showToast('info', 'Tasting Menu Started', `Serving ${scenarios.length} contract tasting flights...`);
     try {
       const res = await fetch('/api/benchmarks/run', { method: 'POST' });
       const data = await res.json();
@@ -103,12 +104,18 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         setSuiteResult(data);
         if (data.all_passed) {
           playZenBell();
+          showToast('success', 'Tasting Menu Complete 🍱', `All ${data.total_scenarios} contracts passed in ${data.total_duration_ms.toFixed(1)}ms!`);
+        } else {
+          showToast('error', 'Tasting Flaw Detected', `${data.total_scenarios - data.passed_scenarios} of ${data.total_scenarios} flights failed.`);
         }
       } else {
-        setRunError(data.error || 'Failed to execute benchmark suite.');
+        const msg = data.error || 'Failed to execute benchmark suite.';
+        setRunError(msg);
+        showToast('error', 'Execution Error', msg);
       }
     } catch (err) {
       setRunError('Failed to execute benchmark suite.');
+      showToast('error', 'Network Error', 'Could not communicate with tasting server.');
     } finally {
       setRunning(false);
     }

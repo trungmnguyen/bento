@@ -1,6 +1,7 @@
 """CLI Entrypoint (Composition Root) for Bento Harness System."""
 from __future__ import annotations
 import argparse
+import os
 import sys
 from bento.adapters.controllers.cli_controller import CliController
 from bento.adapters.presenters.console_presenter import ConsolePresenter
@@ -48,7 +49,7 @@ SAMPLE_SCENARIO_TEMPLATE = """{
 
 
 def build_controller() -> CliController:
-    storage = FileSystemStorageGateway()
+    storage = FileSystemStorageGateway(base_dir=os.getcwd())
     executor = SubprocessExecutionGateway()
     git = SubprocessGitGateway()
     memory = FileSystemMemoryGateway()
@@ -210,7 +211,7 @@ def main(args: list[str] | None = None) -> int:
 
     # bento completion (Shell Autocompletion)
     completion_parser = subparsers.add_parser("completion", help="Generate shell autocompletion script")
-    completion_parser.add_argument("shell", choices=["zsh", "bash"], default="zsh", nargs="?", help="Shell type (zsh or bash)")
+    completion_parser.add_argument("shell", choices=["zsh", "bash", "fish"], default="zsh", nargs="?", help="Shell type (zsh, bash, or fish)")
 
     # bento new (Bento Origami Interactive Wizard)
     new_parser = subparsers.add_parser("new", help="Scaffold verification contracts interactively (Bento Origami)")
@@ -463,7 +464,9 @@ def main(args: list[str] | None = None) -> int:
         return controller.handle_check(target_dir=parsed.target)
 
     elif parsed.command == "completion":
-        return controller.handle_completion(shell=parsed.shell)
+        exit_code, output = controller.handle_completion(shell=parsed.shell)
+        print(output)
+        return exit_code
 
     elif parsed.command == "new":
         if parsed.new_action == "contract":

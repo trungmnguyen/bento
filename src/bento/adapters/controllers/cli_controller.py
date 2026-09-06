@@ -810,11 +810,14 @@ complete -F _bento_completions bento
             memory_gateway=self._memory,
             trace_gateway=self._trace,
         )
-        report_md = use_case.execute(
-            output_file=output_file,
-            system_info=system_info,
-            working_dir=working_dir,
-        )
+        try:
+            report_md = use_case.execute(
+                output_file=output_file,
+                system_info=system_info,
+                working_dir=working_dir,
+            )
+        except PermissionError as pe:
+            return 1, f"❌ Export failed: {pe}"
 
         if output_file:
             msg = f"✨ Report exported successfully to {output_file}"
@@ -822,6 +825,14 @@ complete -F _bento_completions bento
             msg = report_md
 
         return 0, msg
+
+    def handle_completion(self, shell: str) -> tuple[int, str]:
+        from bento.use_cases.completion import GenerateCompletionUseCase
+        try:
+            script = GenerateCompletionUseCase().execute(shell)
+            return 0, script
+        except ValueError as e:
+            return 1, f"Error: {e}"
 
 
 
