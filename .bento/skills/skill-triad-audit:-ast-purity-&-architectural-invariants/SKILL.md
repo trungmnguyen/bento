@@ -1,13 +1,13 @@
 ---
 name: skill-triad-audit:-ast-purity-&-architectural-invariants
 description: >-
-  Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (4 executions observed)
-trigger_tags: ['triad_sprint', 'wasabi', 'ast_purity', 'red_team', 'security']
+  Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (3 executions observed)
+trigger_tags: ['triad_sprint', 'ast_purity', 'wasabi', 'security', 'red_team']
 ---
 
 # 🛠️ skill-triad-audit:-ast-purity-&-architectural-invariants
 
-> Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (4 executions observed)
+> Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (3 executions observed)
 
 ## 📋 Procedural Execution Steps
 

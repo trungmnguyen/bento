@@ -390,6 +390,32 @@
         "ui"
       ],
       "source_scenario": ""
+    },
+    {
+      "id": "MEM-D0E34694",
+      "title": "LAN Network Mode Authentication",
+      "category": "security",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "When binding bento ui to 0.0.0.0 for LAN access, auto-generate a cryptographic token (secrets.token_urlsafe(24)) and enforce it on all /api/* routes. Print the token-bearing URL. Open browser with ?token= so the React frontend can persist it to localStorage via initAuthToken(). Loopback (127.0.0.1/::1) is always exempt from auth for desktop UX.",
+      "anti_pattern": "Running bento ui --network without authentication exposes /api/bg/run (arbitrary shell execution) to any device on the local subnet \u2014 a critical RCE risk on shared Wi-Fi.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "security"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-FDBB213B",
+      "title": "Frontend Auth Token Pattern",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Use a shared apiFetch() wrapper in web/src/utils/api.ts that reads X-Bento-Token from localStorage and injects it as a header on every fetch(). For EventSource (SSE), use authEventSourceUrl() to append ?token= to the URL since EventSource does not support custom headers. Call initAuthToken() on app mount to extract ?token= from the URL into localStorage.",
+      "anti_pattern": "Never scatter raw fetch() calls across React components when auth is involved. Never skip auth on EventSource SSE endpoints just because they appear read-only.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "architecture"
+      ],
+      "source_scenario": ""
     }
   ]
 }

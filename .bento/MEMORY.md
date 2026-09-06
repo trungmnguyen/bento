@@ -1,6 +1,6 @@
 # 🧠 Bento Persistent Memory Bank
 
-> Auto-distilled architectural rules and edge-case guards (25 rules stored).
+> Auto-distilled architectural rules and edge-case guards (27 rules stored).
 
 ### `[MEM-50790948]` Clean Architecture Port Rule
 - **Category:** `architecture` | **Discovered:** 2026-09-01
@@ -150,6 +150,18 @@
 - **Anti-Pattern:** Unwrapped flex rows for dynamic items causing card expansion beyond 100vw, or omitting whitespace-nowrap causing mid-hyphen multi-line word breaks.
 - **Tags:** ui
 
+### `[MEM-D0E34694]` LAN Network Mode Authentication
+- **Category:** `security` | **Discovered:** 2026-09-06
+- **Hard Rule:** When binding bento ui to 0.0.0.0 for LAN access, auto-generate a cryptographic token (secrets.token_urlsafe(24)) and enforce it on all /api/* routes. Print the token-bearing URL. Open browser with ?token= so the React frontend can persist it to localStorage via initAuthToken(). Loopback (127.0.0.1/::1) is always exempt from auth for desktop UX.
+- **Anti-Pattern:** Running bento ui --network without authentication exposes /api/bg/run (arbitrary shell execution) to any device on the local subnet — a critical RCE risk on shared Wi-Fi.
+- **Tags:** security
+
+### `[MEM-FDBB213B]` Frontend Auth Token Pattern
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Use a shared apiFetch() wrapper in web/src/utils/api.ts that reads X-Bento-Token from localStorage and injects it as a header on every fetch(). For EventSource (SSE), use authEventSourceUrl() to append ?token= to the URL since EventSource does not support custom headers. Call initAuthToken() on app mount to extract ?token= from the URL into localStorage.
+- **Anti-Pattern:** Never scatter raw fetch() calls across React components when auth is involved. Never skip auth on EventSource SSE endpoints just because they appear read-only.
+- **Tags:** architecture
+
 ---
 
 ## 🛠️ Bento Crystallized Procedural Skills (11 skills stored)
@@ -157,8 +169,8 @@
 > Reusable macros synthesized from recurring successful executions.
 
 ### `[skill-quant-calc-signal-normalizer-contract]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (13 executions observed)
-- **Tags:** quant, benchmark, auto-loop, blue_team, triad_sprint, brigade_sprint, chef, demo
+- **Description:** Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (14 executions observed)
+- **Tags:** triad_sprint, benchmark, chef, brigade_sprint, blue_team, quant, demo, auto-loop
 - **Steps:**
   1. Step 1: Check pre-conditions for Quant Calc Signal Normalizer Contract
   1. Step 2: Execute validated deterministic routine for Quant Calc Signal Normalizer Contract
@@ -166,7 +178,7 @@
 
 ### `[skill-mobile-ui-&-navigation-verification]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (13 executions observed)
-- **Tags:** tailwind, benchmark, triad_sprint, blue_team, brigade_sprint, ui, mobile, ux, chef
+- **Tags:** triad_sprint, tailwind, benchmark, chef, brigade_sprint, ux, blue_team, ui, mobile
 - **Steps:**
   1. Step 1: Check pre-conditions for Mobile UI & Navigation Verification
   1. Step 2: Execute validated deterministic routine for Mobile UI & Navigation Verification
@@ -174,7 +186,7 @@
 
 ### `[skill-dashboard-resilience-&-security-verification-rig]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (13 executions observed)
-- **Tags:** dashboard, resilience, benchmark, triad_sprint, blue_team, brigade_sprint, web, chef, security
+- **Tags:** triad_sprint, benchmark, chef, brigade_sprint, security, web, blue_team, dashboard, resilience
 - **Steps:**
   1. Step 1: Check pre-conditions for Dashboard Resilience & Security Verification Rig
   1. Step 2: Execute validated deterministic routine for Dashboard Resilience & Security Verification Rig
@@ -182,7 +194,7 @@
 
 ### `[skill-core-system-health-check]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Core System Health Check' (15 executions observed)
-- **Tags:** sanity, benchmark, triad_sprint, blue_team, brigade_sprint, core, contract, chef
+- **Tags:** triad_sprint, benchmark, chef, brigade_sprint, sanity, contract, blue_team, core
 - **Steps:**
   1. Step 1: Check pre-conditions for Core System Health Check
   1. Step 2: Execute validated deterministic routine for Core System Health Check
@@ -190,23 +202,23 @@
 
 ### `[skill-agent-code-gen-verification-rig]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (13 executions observed)
-- **Tags:** agent, benchmark, cyrilXBT-paradigm, blue_team, triad_sprint, brigade_sprint, eval, chef
+- **Tags:** triad_sprint, benchmark, chef, brigade_sprint, eval, blue_team, cyrilXBT-paradigm, agent
 - **Steps:**
   1. Step 1: Check pre-conditions for Agent Code-Gen Verification Rig
   1. Step 2: Execute validated deterministic routine for Agent Code-Gen Verification Rig
   1. Step 3: Verify output assertions
 
 ### `[skill-accessibility-&-sensory-verification-rig]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (11 executions observed)
-- **Tags:** wcag21aa, benchmark, accessibility, blue_team, chef, brigade_sprint, a11y, sensory, python311
+- **Description:** Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (13 executions observed)
+- **Tags:** benchmark, accessibility, chef, brigade_sprint, wcag21aa, blue_team, a11y, sensory, python311
 - **Steps:**
   1. Step 1: Check pre-conditions for Accessibility & Sensory Verification Rig
   1. Step 2: Execute validated deterministic routine for Accessibility & Sensory Verification Rig
   1. Step 3: Verify output assertions
 
 ### `[skill-orchestra_round_1]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (8 executions observed)
-- **Tags:** brigade_sprint, orchestra, triad_sprint, culinary_brigade
+- **Description:** Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (7 executions observed)
+- **Tags:** triad_sprint, brigade_sprint, culinary_brigade, orchestra
 - **Steps:**
   1. Step 1: Check pre-conditions for orchestra_round_1
   1. Step 2: Execute validated deterministic routine for orchestra_round_1
@@ -214,7 +226,7 @@
 
 ### `[skill-culinary-brigade-audit:-ui-accessibility-&-visual-invariants]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (3 executions observed)
-- **Tags:** culinary_brigade, yuzu, yellow_team, ui, a11y
+- **Tags:** yuzu, yellow_team, culinary_brigade, a11y, ui
 - **Steps:**
   1. Step 1: Check pre-conditions for Culinary Brigade Audit: UI Accessibility & Visual Invariants
   1. Step 2: Execute validated deterministic routine for Culinary Brigade Audit: UI Accessibility & Visual Invariants
@@ -222,23 +234,23 @@
 
 ### `[skill-culinary-brigade-audit:-ast-purity-&-architectural-invariants]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (3 executions observed)
-- **Tags:** culinary_brigade, wasabi, ast_purity, red_team, security
+- **Tags:** ast_purity, wasabi, security, culinary_brigade, red_team
 - **Steps:**
   1. Step 1: Check pre-conditions for Culinary Brigade Audit: AST Purity & Architectural Invariants
   1. Step 2: Execute validated deterministic routine for Culinary Brigade Audit: AST Purity & Architectural Invariants
   1. Step 3: Verify output assertions
 
 ### `[skill-triad-audit:-ui-accessibility-&-visual-invariants]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (4 executions observed)
-- **Tags:** triad_sprint, yuzu, yellow_team, ui, a11y
+- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (3 executions observed)
+- **Tags:** triad_sprint, yuzu, yellow_team, a11y, ui
 - **Steps:**
   1. Step 1: Check pre-conditions for Triad Audit: UI Accessibility & Visual Invariants
   1. Step 2: Execute validated deterministic routine for Triad Audit: UI Accessibility & Visual Invariants
   1. Step 3: Verify output assertions
 
 ### `[skill-triad-audit:-ast-purity-&-architectural-invariants]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (4 executions observed)
-- **Tags:** triad_sprint, wasabi, ast_purity, red_team, security
+- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (3 executions observed)
+- **Tags:** triad_sprint, ast_purity, wasabi, security, red_team
 - **Steps:**
   1. Step 1: Check pre-conditions for Triad Audit: AST Purity & Architectural Invariants
   1. Step 2: Execute validated deterministic routine for Triad Audit: AST Purity & Architectural Invariants
