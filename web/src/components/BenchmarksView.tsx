@@ -370,17 +370,17 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
             {suiteResult.results.map((res, idx) => (
               <div
                 key={idx}
-                className="bg-bento-lacquer border border-bento-border rounded-xl p-3 flex justify-between items-center text-xs hover:border-bento-border/90 transition"
+                className="bg-bento-lacquer border border-bento-border rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs hover:border-bento-border/90 transition overflow-hidden"
               >
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
                   {res.passed ? (
-                    <WasabiBadgeIcon className="w-4 h-4" />
+                    <WasabiBadgeIcon className="w-4 h-4 shrink-0" />
                   ) : (
-                    <XCircle className="w-4 h-4 text-bento-salmon" />
+                    <XCircle className="w-4 h-4 text-bento-salmon shrink-0" />
                   )}
-                  <span className="font-bold text-gray-200">{res.scenario_name}</span>
+                  <span className="font-bold text-gray-200 break-words">{res.scenario_name}</span>
                 </div>
-                <div className="flex items-center gap-3 text-gray-400 font-mono">
+                <div className="flex items-center gap-3 text-gray-400 font-mono shrink-0">
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-gray-500" /> {res.duration_ms.toFixed(1)}ms</span>
                   <span className={res.passed ? 'text-bento-matcha font-bold' : 'text-bento-salmon font-bold'}>
                     {res.passed ? 'PASSED ✓' : 'FAILED ✗'}
@@ -404,12 +404,12 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {scenarios.map((scenario) => (
-          <div key={scenario.name} className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card flex flex-col justify-between hover:border-amber-400/40 transition">
+          <div key={scenario.name} className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card flex flex-col justify-between hover:border-amber-400/40 transition overflow-hidden">
             <div>
               <div className="flex justify-between items-start mb-2 gap-2">
-                <h3 className="text-sm font-bold text-bento-rice flex items-center gap-2">
+                <h3 className="text-sm font-bold text-bento-rice flex items-center gap-2 min-w-0 break-words">
                   <FileCode className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>{scenario.name}</span>
+                  <span className="break-all sm:break-normal">{scenario.name}</span>
                 </h3>
                 <button
                   onClick={() => {
@@ -424,7 +424,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                   <span>Taste Flight 🥢</span>
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mb-3">{scenario.description || 'No description provided.'}</p>
+              <p className="text-xs text-gray-400 mb-3 break-words">{scenario.description || 'No description provided.'}</p>
 
               {singleResults[scenario.name] && (
                 <div
@@ -443,12 +443,12 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
 
               <div className="space-y-2 mb-3">
                 {scenario.steps.map((step, sIdx) => (
-                  <div key={sIdx} className="bg-bento-lacquer border border-bento-border rounded-xl p-2.5 text-xs font-mono">
-                    <div className="text-bento-tamago font-bold mb-1">Step: {step.name}</div>
-                    <div className="text-gray-400 truncate mb-1.5">$ {step.command}</div>
+                  <div key={sIdx} className="bg-bento-lacquer border border-bento-border rounded-xl p-2.5 text-xs font-mono overflow-hidden">
+                    <div className="text-bento-tamago font-bold mb-1 break-words">Step: {step.name}</div>
+                    <div className="text-gray-400 break-all mb-1.5">$ {step.command}</div>
                     <div className="space-y-0.5">
                       {step.assertions.map((a, aIdx) => (
-                        <div key={aIdx} className="text-[11px] text-bento-matcha font-medium">
+                        <div key={aIdx} className="text-[11px] text-bento-matcha font-medium break-words">
                           ✓ [{a.type}] {a.description || `${a.target_field} == ${a.expected}`}
                         </div>
                       ))}
@@ -458,9 +458,9 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-1.5 pt-3 border-t border-bento-border">
+            <div className="flex flex-wrap gap-1.5 pt-3 border-t border-bento-border min-w-0">
               {scenario.tags.map((t) => (
-                <span key={t} className="text-[11px] font-mono text-gray-300 bg-bento-lacquer px-2.5 py-0.5 rounded-lg border border-bento-border">
+                <span key={t} className="text-[11px] font-mono text-gray-300 bg-bento-lacquer px-2.5 py-0.5 rounded-lg border border-bento-border whitespace-nowrap">
                   #{t}
                 </span>
               ))}

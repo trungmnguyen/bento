@@ -634,7 +634,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="log-viewer-title"
-            className="w-full max-w-3xl bg-bento-surface border-l border-bento-border h-full flex flex-col p-6 shadow-2xl"
+            className="w-full max-w-3xl bg-bento-surface border-l border-bento-border h-full flex flex-col p-4 sm:p-6 shadow-2xl overflow-hidden"
           >
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-bento-border">
@@ -654,7 +654,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                     <span className="text-[10px] text-gray-500 font-mono">Stream closed</span>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 font-mono mt-1">{selectedTask.command}</p>
+                <p className="text-xs text-gray-400 font-mono mt-1 break-all">{selectedTask.command}</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
                 <button

@@ -1077,15 +1077,15 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
             {filteredLessons.map((lesson) => (
               <div
                 key={lesson.id}
-                className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card flex flex-col justify-between hover:border-bento-salmon/60 hover:shadow-bento-glow transition duration-200"
+                className="bg-bento-surface border border-bento-border rounded-bento p-5 shadow-bento-card flex flex-col justify-between hover:border-bento-salmon/60 hover:shadow-bento-glow transition duration-200 overflow-hidden"
               >
                 <div>
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="font-mono text-xs font-bold px-2.5 py-1 bg-bento-salmon/15 text-bento-salmon border border-bento-salmon/30 rounded-lg flex items-center gap-1.5">
+                  <div className="flex justify-between items-start gap-2 mb-3">
+                    <span className="font-mono text-xs font-bold px-2.5 py-1 bg-bento-salmon/15 text-bento-salmon border border-bento-salmon/30 rounded-lg flex items-center gap-1.5 shrink-0">
                       <OnigiriIcon className="w-3.5 h-3.5" />
                       {lesson.id}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <CopyButton
                         text={`${lesson.title}\n\nRule: ${lesson.rule}${lesson.anti_pattern ? `\nAnti-Pattern: ${lesson.anti_pattern}` : ''}`}
                         tooltip="Copy recipe"
@@ -1097,46 +1097,46 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                     </div>
                   </div>
 
-                  <h3 className="text-sm font-bold text-bento-rice mb-2 flex items-center gap-1.5">
+                  <h3 className="text-sm font-bold text-bento-rice mb-2 flex items-center gap-1.5 break-words">
                     {lesson.title}
                   </h3>
 
                   {lesson.context && (
-                    <p className="text-xs text-gray-300 mb-3 bg-bento-lacquer/80 p-2.5 rounded-xl border border-bento-border/70">
+                    <p className="text-xs text-gray-300 mb-3 bg-bento-lacquer/80 p-2.5 rounded-xl border border-bento-border/70 break-words">
                       {lesson.context}
                     </p>
                   )}
 
                   {/* Hard Rule Box: Seasoned Recipe */}
-                  <div className="bg-bento-nori border border-bento-matcha/40 rounded-xl p-3 mb-3 shadow-inner">
+                  <div className="bg-bento-nori border border-bento-matcha/40 rounded-xl p-3 mb-3 shadow-inner overflow-hidden">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-bento-matcha mb-1">
-                      <WasabiBadgeIcon className="w-4 h-4" /> GOLDEN RECIPE RULE
+                      <WasabiBadgeIcon className="w-4 h-4 shrink-0" /> GOLDEN RECIPE RULE
                     </div>
-                    <p className="text-xs text-emerald-100/90 leading-relaxed font-sans font-medium">{lesson.rule}</p>
+                    <p className="text-xs text-emerald-100/90 leading-relaxed font-sans font-medium break-words">{lesson.rule}</p>
                   </div>
 
                   {/* Anti-Pattern Box: Burnt Dish */}
                   {lesson.anti_pattern && (
-                    <div className="bg-rose-950/20 border border-bento-salmon/40 rounded-xl p-3 mb-3">
+                    <div className="bg-rose-950/20 border border-bento-salmon/40 rounded-xl p-3 mb-3 overflow-hidden">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-bento-salmon mb-1">
-                        <AlertCircle className="w-3.5 h-3.5" /> BURNT DISH / FORBIDDEN ANTI-PATTERN
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" /> BURNT DISH / FORBIDDEN ANTI-PATTERN
                       </div>
-                      <p className="text-xs text-rose-200/90 leading-relaxed font-sans">{lesson.anti_pattern}</p>
+                      <p className="text-xs text-rose-200/90 leading-relaxed font-sans break-words">{lesson.anti_pattern}</p>
                     </div>
                   )}
                 </div>
 
                 {/* Tags & Source footer */}
                 <div className="pt-3 border-t border-bento-border/70 flex flex-wrap justify-between items-center gap-2">
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1.5 min-w-0">
                     {Array.isArray(lesson?.tags) && lesson.tags.map((t) => (
-                      <span key={t} className="text-[11px] font-mono text-gray-300 bg-bento-lacquer px-2.5 py-0.5 rounded-lg border border-bento-border">
+                      <span key={t} className="text-[11px] font-mono text-gray-300 bg-bento-lacquer px-2.5 py-0.5 rounded-lg border border-bento-border whitespace-nowrap">
                         #{t}
                       </span>
                     ))}
                   </div>
                   {lesson.source_scenario && (
-                    <span className="text-[11px] text-gray-400 font-mono truncate max-w-[170px]">
+                    <span className="text-[11px] text-gray-400 font-mono truncate max-w-full sm:max-w-[170px]">
                       Origin: {lesson.source_scenario}
                     </span>
                   )}

@@ -28,16 +28,16 @@ export const CompartmentBreadcrumbs: React.FC<BreadcrumbsProps> = ({
   return (
     <nav
       aria-label="Compartment Breadcrumbs"
-      className="bg-[#15121b]/80 border-b border-bento-border/50 px-4 sm:px-6 lg:px-8 py-1.5 flex items-center justify-between text-xs font-mono backdrop-blur-xs"
+      className="bg-[#15121b]/80 border-b border-bento-border/50 px-4 sm:px-6 lg:px-8 py-1.5 flex items-center justify-between text-xs font-mono backdrop-blur-xs gap-2 min-w-0 overflow-hidden"
     >
-      <div className="flex items-center gap-1.5 text-zinc-400 truncate">
-        <span className="flex items-center gap-1 text-zinc-500 hover:text-zinc-300 transition select-none">
+      <div className="flex items-center gap-1.5 text-zinc-400 truncate min-w-0">
+        <span className="flex items-center gap-1 text-zinc-500 hover:text-zinc-300 transition select-none shrink-0">
           <BentoBoxIcon className="w-3.5 h-3.5" /> Bento
         </span>
         <ChevronRight className="w-3 h-3 text-zinc-600 shrink-0" />
-        <span className="text-zinc-300 font-bold flex items-center gap-1">
+        <span className="text-zinc-300 font-bold flex items-center gap-1 shrink-0">
           <span>{current.icon}</span>
-          <span>{current.label}</span>
+          <span className="hidden xs:inline">{current.label}</span>
         </span>
         {subResource && (
           <>
@@ -45,7 +45,7 @@ export const CompartmentBreadcrumbs: React.FC<BreadcrumbsProps> = ({
             <button
               type="button"
               onClick={onClearSubResource}
-              className="text-amber-400 font-bold hover:underline truncate max-w-[200px]"
+              className="text-amber-400 font-bold hover:underline truncate max-w-[110px] sm:max-w-[200px]"
               title={`Active Resource: ${subResource} (Click to reset)`}
             >
               {subResource}

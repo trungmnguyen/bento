@@ -364,6 +364,19 @@
         "security"
       ],
       "source_scenario": ""
+    },
+    {
+      "id": "MEM-7A0CF677",
+      "title": "Responsive Card Boundaries & Mobile Flex Wrapping",
+      "category": "ui",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "All dashboard card headers and tag lists must use flex-col sm:flex-row with flex-wrap, overflow-hidden, and break-words/break-all on code and identifiers to prevent mobile text truncation and viewport overflow.",
+      "anti_pattern": "Using flex justify-between items-center with long monospace identifiers and non-wrapping tag chips that stretch cards beyond mobile viewports.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "ui"
+      ],
+      "source_scenario": ""
     }
   ]
 }

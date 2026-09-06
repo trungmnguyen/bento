@@ -301,10 +301,10 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
 
       {/* Scorecard Results */}
       {scorecard && (
-        <div className="bg-bento-surface border border-bento-border rounded-2xl p-6 shadow-2xl space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300">
+        <div className="bg-bento-surface border border-bento-border rounded-2xl p-4 sm:p-6 shadow-2xl space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300 overflow-hidden">
           {/* Victory Banner */}
           <div
-            className={`p-4 rounded-xl border flex items-center justify-between ${
+            className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
               scorecard.winner === 'challenger'
                 ? 'bg-red-500/10 border-red-500/40 text-red-200'
                 : scorecard.winner === 'defender'
@@ -312,37 +312,37 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
                 : 'bg-amber-500/10 border-amber-500/40 text-amber-200'
             }`}
           >
-            <div className="flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-amber-400" />
-              <div>
-                <h3 className="text-base font-black tracking-tight uppercase">
+            <div className="flex items-center gap-3 min-w-0">
+              <Trophy className="w-8 h-8 text-amber-400 shrink-0" />
+              <div className="min-w-0">
+                <h3 className="text-base font-black tracking-tight uppercase break-words">
                   {scorecard.winner === 'challenger'
                     ? `🏆 Challenger Victory: ${scorecard.challenger_name}`
                     : scorecard.winner === 'defender'
                     ? `🛡️ Defender Victory: ${scorecard.defender_name}`
                     : '🤝 Match Ended in a Draw'}
                 </h3>
-                <p className="text-xs opacity-80">
+                <p className="text-xs opacity-80 break-words">
                   Evaluated on <span className="font-bold font-mono">{scorecard.metric_used.toUpperCase()}</span> · Winning Margin: {typeof scorecard.margin === 'number' ? scorecard.margin.toFixed(2) : '0.00'}
                 </p>
               </div>
             </div>
 
-            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/10 uppercase">
+            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/10 uppercase shrink-0 self-start sm:self-auto">
               {scorecard.winner} wins
             </span>
           </div>
 
           {/* Arcade Versus Combat Bar */}
-          <div className="bg-[#0e0d13] border border-bento-border rounded-xl p-4 shadow-inner">
-            <div className="flex items-center justify-between text-xs font-mono font-bold mb-2">
-              <span className="text-red-400 flex items-center gap-1.5">
+          <div className="bg-[#0e0d13] border border-bento-border rounded-xl p-4 shadow-inner overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono font-bold mb-2">
+              <span className="text-red-400 flex items-center gap-1.5 break-all min-w-0">
                 🥊 {scorecard.challenger_name}
               </span>
-              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]">
+              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] shrink-0">
                 VS · {scorecard.metric_used.toUpperCase()}
               </span>
-              <span className="text-blue-400 flex items-center gap-1.5">
+              <span className="text-blue-400 flex items-center gap-1.5 break-all min-w-0">
                 🛡️ {scorecard.defender_name}
               </span>
             </div>
@@ -379,9 +379,9 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
             </div>
 
             {/* Sub-label speed comparison */}
-            <div className="flex justify-between items-center text-[10px] text-gray-400 font-mono mt-2 pt-2 border-t border-white/5">
+            <div className="flex flex-col sm:flex-row justify-between items-center text-[10px] text-gray-400 font-mono mt-2 pt-2 border-t border-white/5 gap-1.5 text-center sm:text-left">
               <span>Duration: {typeof scorecard.challenger_duration_ms === 'number' ? scorecard.challenger_duration_ms.toFixed(1) : '0.0'}ms</span>
-              <span className="text-amber-400 font-semibold">
+              <span className="text-amber-400 font-semibold break-words">
                 {typeof scorecard.challenger_duration_ms === 'number' && typeof scorecard.defender_duration_ms === 'number'
                   ? scorecard.challenger_duration_ms < scorecard.defender_duration_ms
                     ? `⚡ Challenger ${(scorecard.defender_duration_ms - scorecard.challenger_duration_ms).toFixed(1)}ms faster`
@@ -505,7 +505,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
                     playClack();
                   }
                 }}
-                className="bg-[#131117] border border-bento-border/70 hover:border-bento-matcha/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon rounded-xl p-3 text-xs cursor-pointer transition shadow-sm space-y-2 group"
+                className="bg-[#131117] border border-bento-border/70 hover:border-bento-matcha/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon rounded-xl p-3 text-xs cursor-pointer transition shadow-sm space-y-2 group overflow-hidden"
               >
                 <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
                   <span>{b.timestamp}</span>
@@ -519,7 +519,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
                     {b.winner} wins
                   </span>
                 </div>
-                <div className="font-bold text-gray-200 truncate group-hover:text-white">
+                <div className="font-bold text-gray-200 truncate group-hover:text-white" title={`${b.challenger} vs ${b.defender}`}>
                   {b.challenger} vs {b.defender}
                 </div>
                 <div className="text-[11px] text-gray-400 flex justify-between font-mono">

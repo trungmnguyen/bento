@@ -2,7 +2,7 @@
 name: skill-orchestra_round_1
 description: >-
   Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (9 executions observed)
-trigger_tags: ['brigade_sprint', 'culinary_brigade', 'orchestra', 'triad_sprint']
+trigger_tags: ['triad_sprint', 'brigade_sprint', 'culinary_brigade', 'orchestra']
 ---
 
 # 🛠️ skill-orchestra_round_1

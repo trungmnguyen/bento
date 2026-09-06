@@ -220,7 +220,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                     item.read
                       ? 'bg-[#181520]/40 border-bento-border/40 opacity-80'
                       : 'bg-[#1e1a29]/90 border-bento-salmon/25 shadow-xs'
-                  } hover:border-bento-salmon/40 flex items-start gap-3 group`}
+                  } hover:border-bento-salmon/40 flex items-start gap-3 group overflow-hidden`}
                 >
                   <div className="p-2 rounded-lg bg-black/30 border border-white/5 shrink-0 mt-0.5">
                     {getCategoryIcon(item.category, item.severity)}

@@ -546,22 +546,24 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {skills.map((skill) => (
-              <div key={skill.name} className="bg-bento-lacquer border border-bento-border rounded-xl p-4 hover:border-bento-salmon/40 transition">
-                <div className="flex justify-between items-center mb-1.5">
-                  <h4 className="font-mono text-xs font-bold text-bento-salmon">{skill.name}</h4>
-                  <div className="flex gap-1">
+              <div key={skill.name} className="bg-bento-lacquer border border-bento-border rounded-xl p-4 hover:border-bento-salmon/40 transition overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                  <h4 className="font-mono text-xs font-bold text-bento-salmon break-all sm:break-normal min-w-0">
+                    {skill.name}
+                  </h4>
+                  <div className="flex flex-wrap gap-1 shrink-0">
                     {skill.trigger_tags.map((t) => (
-                      <span key={t} className="text-[10px] font-mono text-gray-400 bg-bento-elevated px-2 py-0.5 rounded-full border border-bento-border">
+                      <span key={t} className="text-[10px] font-mono text-gray-400 bg-bento-elevated px-2 py-0.5 rounded-full border border-bento-border whitespace-nowrap">
                         #{t}
                       </span>
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-gray-300 mb-2.5">{skill.description}</p>
-                <div className="bg-[#100e14] rounded-lg p-2.5 text-[11px] font-mono text-gray-300 space-y-1 border border-bento-border/60">
+                <p className="text-xs text-gray-300 mb-2.5 break-words">{skill.description}</p>
+                <div className="bg-[#100e14] rounded-lg p-2.5 text-[11px] font-mono text-gray-300 space-y-1 border border-bento-border/60 overflow-x-auto">
                   {skill.steps.map((step, idx) => (
-                    <div key={idx} className="text-bento-rice flex items-center gap-1.5">
-                      <span className="text-bento-tamago font-bold">↳</span> {step}
+                    <div key={idx} className="text-bento-rice flex items-start gap-1.5 break-words">
+                      <span className="text-bento-tamago font-bold shrink-0">↳</span> <span>{step}</span>
                     </div>
                   ))}
                 </div>
@@ -697,19 +699,19 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
                 }}
                 className="p-5 hover:bg-bento-elevated/40 transition cursor-pointer group focus:outline-none focus:bg-white/5"
               >
-                <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
-                  <div className="flex items-center gap-2.5">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
                     {trace.passed ? (
-                      <WasabiBadgeIcon className="w-4 h-4" />
+                      <WasabiBadgeIcon className="w-4 h-4 shrink-0" />
                     ) : (
-                      <XCircle className="w-4 h-4 text-bento-salmon" />
+                      <XCircle className="w-4 h-4 text-bento-salmon shrink-0" />
                     )}
-                    <span className="font-bold text-sm text-gray-100 group-hover:text-amber-300 transition">{trace.task_name}</span>
-                    <span className="text-xs font-mono bg-bento-lacquer border border-bento-border px-2 py-0.5 rounded-lg text-bento-tamago font-semibold">
+                    <span className="font-bold text-sm text-gray-100 group-hover:text-amber-300 transition break-words">{trace.task_name}</span>
+                    <span className="text-xs font-mono bg-bento-lacquer border border-bento-border px-2 py-0.5 rounded-lg text-bento-tamago font-semibold shrink-0">
                       Iteration {trace.iteration}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     <span className="text-xs text-gray-400 font-mono flex items-center gap-1">
                       <Clock className="w-3 h-3 text-gray-500" />
                       {trace.timestamp || 'Recent'}
@@ -721,20 +723,20 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
                 </div>
 
                 {trace.failed_assertions && trace.failed_assertions.length > 0 && (
-                  <div className="my-2.5 bg-rose-950/20 border border-bento-salmon/30 rounded-xl p-3 text-xs text-rose-200 font-mono">
+                  <div className="my-2.5 bg-rose-950/20 border border-bento-salmon/30 rounded-xl p-3 text-xs text-rose-200 font-mono break-words overflow-x-auto">
                     <strong className="text-bento-salmon font-bold">Failed Assertions:</strong>
                     <ul className="list-disc list-inside mt-1 space-y-0.5 text-gray-300">
                       {trace.failed_assertions.map((fail, fIdx) => (
-                        <li key={fIdx}>{fail}</li>
+                        <li key={fIdx} className="break-all">{fail}</li>
                       ))}
                     </ul>
                   </div>
                 )}
 
                 {trace.prompt_sent && (
-                  <div className="mt-2 text-xs text-gray-400">
+                  <div className="mt-2 text-xs text-gray-400 min-w-0">
                     <span className="text-zinc-500 font-mono text-[11px]">Prompt:</span>{' '}
-                    <span className="text-zinc-300 font-mono text-[11px] truncate inline-block max-w-xl align-bottom">
+                    <span className="text-zinc-300 font-mono text-[11px] truncate inline-block max-w-full sm:max-w-xl align-bottom">
                       {trace.prompt_sent.slice(0, 120)}...
                     </span>
                   </div>
