@@ -2,7 +2,7 @@
 name: skill-quant-calc-signal-normalizer-contract
 description: >-
   Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (14 executions observed)
-trigger_tags: ['blue_team', 'auto-loop', 'demo', 'benchmark', 'quant', 'triad_sprint', 'chef']
+trigger_tags: ['triad_sprint', 'benchmark', 'chef', 'blue_team', 'quant', 'demo', 'auto-loop']
 ---
 
 # 🛠️ skill-quant-calc-signal-normalizer-contract

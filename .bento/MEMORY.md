@@ -1,6 +1,6 @@
 # 🧠 Bento Persistent Memory Bank
 
-> Auto-distilled architectural rules and edge-case guards (18 rules stored).
+> Auto-distilled architectural rules and edge-case guards (19 rules stored).
 
 ### `[MEM-50790948]` Clean Architecture Port Rule
 - **Category:** `architecture` | **Discovered:** 2026-09-01
@@ -108,6 +108,12 @@
 - **Anti-Pattern:** Initial failing mode: Verify useA11yModal Focus Trap Hook: Target 'stdout' contains 'focusTrap': False
 - **Tags:** python311, harness-recovery, accessibility, a11y, sensory, dream-distilled, wcag21aa
 
+### `[MEM-EDD86A56]` Triad Sprint Butler, Memory & Dream Integration
+- **Category:** `orchestration` | **Discovered:** 2026-09-06
+- **Hard Rule:** Every triad sprint must: 1. Register in Bento Butler via 'bento bg run' so it tracks in Kitchen Chefs, 2. Distill findings into 'bento memory add' to populate Seasoned Recipes, 3. Pair deliverables with contracts to emit traces, and 4. Conclude with 'bento bg run "bento dream --harvest"' to synthesize skills in Night Dream.
+- **Anti-Pattern:** Running multi-agent sprints entirely inside ephemeral AI chat without registering tasks in Bento Butler, leaving Kitchen Chefs, Seasoned Recipes, and Night Dream unpopulated.
+- **Tags:** triad_sprint,orchestration,butler,memory,dream,skills
+
 ---
 
 ## 🛠️ Bento Crystallized Procedural Skills (9 skills stored)
@@ -116,7 +122,7 @@
 
 ### `[skill-accessibility-&-sensory-verification-rig]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (4 executions observed)
-- **Tags:** python311, accessibility, a11y, sensory, wcag21aa
+- **Tags:** accessibility, wcag21aa, a11y, sensory, python311
 - **Steps:**
   1. Step 1: Check pre-conditions for Accessibility & Sensory Verification Rig
   1. Step 2: Execute validated deterministic routine for Accessibility & Sensory Verification Rig
@@ -124,7 +130,7 @@
 
 ### `[skill-quant-calc-signal-normalizer-contract]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (14 executions observed)
-- **Tags:** blue_team, auto-loop, demo, benchmark, quant, triad_sprint, chef
+- **Tags:** triad_sprint, benchmark, chef, blue_team, quant, demo, auto-loop
 - **Steps:**
   1. Step 1: Check pre-conditions for Quant Calc Signal Normalizer Contract
   1. Step 2: Execute validated deterministic routine for Quant Calc Signal Normalizer Contract
@@ -132,7 +138,7 @@
 
 ### `[skill-mobile-ui-&-navigation-verification]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (14 executions observed)
-- **Tags:** blue_team, benchmark, ux, tailwind, mobile, chef, triad_sprint, ui
+- **Tags:** triad_sprint, tailwind, benchmark, chef, ux, blue_team, ui, mobile
 - **Steps:**
   1. Step 1: Check pre-conditions for Mobile UI & Navigation Verification
   1. Step 2: Execute validated deterministic routine for Mobile UI & Navigation Verification
@@ -140,7 +146,7 @@
 
 ### `[skill-dashboard-resilience-&-security-verification-rig]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (14 executions observed)
-- **Tags:** resilience, blue_team, security, dashboard, benchmark, triad_sprint, chef, web
+- **Tags:** triad_sprint, benchmark, chef, security, web, blue_team, dashboard, resilience
 - **Steps:**
   1. Step 1: Check pre-conditions for Dashboard Resilience & Security Verification Rig
   1. Step 2: Execute validated deterministic routine for Dashboard Resilience & Security Verification Rig
@@ -148,7 +154,7 @@
 
 ### `[skill-core-system-health-check]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Core System Health Check' (15 executions observed)
-- **Tags:** core, contract, blue_team, sanity, benchmark, triad_sprint, chef
+- **Tags:** triad_sprint, benchmark, chef, sanity, contract, blue_team, core
 - **Steps:**
   1. Step 1: Check pre-conditions for Core System Health Check
   1. Step 2: Execute validated deterministic routine for Core System Health Check
@@ -156,7 +162,7 @@
 
 ### `[skill-agent-code-gen-verification-rig]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (13 executions observed)
-- **Tags:** blue_team, eval, agent, benchmark, triad_sprint, chef, cyrilXBT-paradigm
+- **Tags:** triad_sprint, benchmark, chef, eval, blue_team, cyrilXBT-paradigm, agent
 - **Steps:**
   1. Step 1: Check pre-conditions for Agent Code-Gen Verification Rig
   1. Step 2: Execute validated deterministic routine for Agent Code-Gen Verification Rig
@@ -164,7 +170,7 @@
 
 ### `[skill-orchestra_round_1]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (9 executions observed)
-- **Tags:** orchestra, culinary_brigade, triad_sprint
+- **Tags:** triad_sprint, culinary_brigade, orchestra
 - **Steps:**
   1. Step 1: Check pre-conditions for orchestra_round_1
   1. Step 2: Execute validated deterministic routine for orchestra_round_1
@@ -172,7 +178,7 @@
 
 ### `[skill-triad-audit:-ui-accessibility-&-visual-invariants]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (6 executions observed)
-- **Tags:** yuzu, a11y, triad_sprint, yellow_team, ui
+- **Tags:** triad_sprint, yuzu, yellow_team, a11y, ui
 - **Steps:**
   1. Step 1: Check pre-conditions for Triad Audit: UI Accessibility & Visual Invariants
   1. Step 2: Execute validated deterministic routine for Triad Audit: UI Accessibility & Visual Invariants
@@ -180,7 +186,7 @@
 
 ### `[skill-triad-audit:-ast-purity-&-architectural-invariants]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (10 executions observed)
-- **Tags:** red_team, wasabi, security, ast_purity, triad_sprint
+- **Tags:** triad_sprint, ast_purity, wasabi, security, red_team
 - **Steps:**
   1. Step 1: Check pre-conditions for Triad Audit: AST Purity & Architectural Invariants
   1. Step 2: Execute validated deterministic routine for Triad Audit: AST Purity & Architectural Invariants

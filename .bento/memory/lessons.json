@@ -292,6 +292,19 @@
         "wcag21aa"
       ],
       "source_scenario": "Accessibility & Sensory Verification Rig"
+    },
+    {
+      "id": "MEM-EDD86A56",
+      "title": "Triad Sprint Butler, Memory & Dream Integration",
+      "category": "orchestration",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Every triad sprint must: 1. Register in Bento Butler via 'bento bg run' so it tracks in Kitchen Chefs, 2. Distill findings into 'bento memory add' to populate Seasoned Recipes, 3. Pair deliverables with contracts to emit traces, and 4. Conclude with 'bento bg run \"bento dream --harvest\"' to synthesize skills in Night Dream.",
+      "anti_pattern": "Running multi-agent sprints entirely inside ephemeral AI chat without registering tasks in Bento Butler, leaving Kitchen Chefs, Seasoned Recipes, and Night Dream unpopulated.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "triad_sprint,orchestration,butler,memory,dream,skills"
+      ],
+      "source_scenario": ""
     }
   ]
 }
