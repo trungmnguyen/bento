@@ -2,6 +2,8 @@
 from __future__ import annotations
 import json
 import os
+import shutil
+import time
 from pathlib import Path
 from bento.domain.models import MemoryBank, MemoryLesson, Scenario
 from bento.domain.ports import MemoryGateway
@@ -46,7 +48,17 @@ class FileSystemMemoryGateway(MemoryGateway):
                 version=data.get("version", "1.0"),
                 updated_at=data.get("updated_at", ""),
             )
-        except Exception:
+        except Exception as e:
+            if json_file.exists() and json_file.stat().st_size > 0:
+                backup_file = bento_dir / "memory" / f"lessons.json.corrupted.{int(time.time())}.bak"
+                try:
+                    shutil.copy2(json_file, backup_file)
+                except Exception:
+                    pass
+                raise ValueError(
+                    f"Institutional memory file '{json_file}' is corrupted: {e}. "
+                    f"A backup was preserved at '{backup_file}'. Refusing to overwrite memory bank."
+                )
             return MemoryBank(lessons=[])
 
     def save_memory(self, memory: MemoryBank, working_dir: str | None = None) -> None:

@@ -81,6 +81,26 @@ class TestMemoryRules(unittest.TestCase):
         self.assertIn("MEM-RSI-MDRP", lesson_ids)
         self.assertIn("MEM-RSI-STUDY", lesson_ids)
 
+    def test_corrupt_memory_file_creates_backup_and_raises(self):
+        import tempfile
+        from pathlib import Path
+        from bento.frameworks.fs_memory import FileSystemMemoryGateway
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            mem_dir = Path(tmp_dir) / ".bento" / "memory"
+            mem_dir.mkdir(parents=True, exist_ok=True)
+            corrupt_file = mem_dir / "lessons.json"
+            corrupt_file.write_text("{corrupt json payload: [}")
+
+            gateway = FileSystemMemoryGateway()
+            with self.assertRaises(ValueError) as ctx:
+                gateway.load_memory(working_dir=tmp_dir)
+
+            self.assertIn("is corrupted", str(ctx.exception))
+            # Verify backup was created
+            backup_files = list(mem_dir.glob("lessons.json.corrupted.*.bak"))
+            self.assertEqual(len(backup_files), 1)
+            self.assertEqual(backup_files[0].read_text(), "{corrupt json payload: [}")
 
 
 class TestMemorySelfEvolution(unittest.TestCase):

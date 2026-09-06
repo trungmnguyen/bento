@@ -538,6 +538,41 @@ class TestBentoWebServer(unittest.TestCase):
         })
         self.assertEqual(status, 400)
 
+    def test_sec_17_dns_rebinding_origin_checks(self):
+        # SEC-17: Host safety validation rejects public domains and allows loopback / RFC 1918
+        from bento.frameworks.web_server import BentoApiHandler
+        self.assertTrue(BentoApiHandler._is_safe_host("localhost"))
+        self.assertTrue(BentoApiHandler._is_safe_host("127.0.0.1"))
+        self.assertTrue(BentoApiHandler._is_safe_host("::1"))
+        self.assertTrue(BentoApiHandler._is_safe_host("0.0.0.0"))
+        self.assertTrue(BentoApiHandler._is_safe_host("mbp.local"))
+        self.assertTrue(BentoApiHandler._is_safe_host("192.168.1.50"))
+        self.assertTrue(BentoApiHandler._is_safe_host("10.0.0.2"))
+        self.assertTrue(BentoApiHandler._is_safe_host("172.16.0.5"))
+
+        # Public IPs and attacker domains must be blocked
+        self.assertFalse(BentoApiHandler._is_safe_host("evil.com"))
+        self.assertFalse(BentoApiHandler._is_safe_host("attacker.xyz"))
+        self.assertFalse(BentoApiHandler._is_safe_host("8.8.8.8"))
+        self.assertFalse(BentoApiHandler._is_safe_host("1.1.1.1"))
+        self.assertFalse(BentoApiHandler._is_safe_host(""))
+
+    def test_sec_17_post_cross_origin_blocked(self):
+        # SEC-17: Mutating POST from unauthorized origin returns 403 Cross-Origin Forbidden
+        import http.client
+        conn = http.client.HTTPConnection("127.0.0.1", self.server.port, timeout=5.0)
+        conn.request(
+            "POST",
+            "/api/benchmarks/run-one",
+            body=json.dumps({"name": "test"}),
+            headers={"Content-Type": "application/json", "Origin": "http://evil-attacker.com"}
+        )
+        resp = conn.getresponse()
+        self.assertEqual(resp.status, 403)
+        body = resp.read().decode("utf-8")
+        self.assertIn("Cross-Origin Forbidden", body)
+        conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()

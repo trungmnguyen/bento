@@ -149,6 +149,13 @@ class TerminalMonitor:
                 rlist, _, _ = select.select([sys.stdin], [], [], self.refresh_interval)
                 if rlist:
                     ch = sys.stdin.read(1).lower()
+                    # REL-20: Drain any excess queued input (e.g. pasted blocks or held keys)
+                    while select.select([sys.stdin], [], [], 0)[0]:
+                        try:
+                            sys.stdin.read(1)
+                        except Exception:
+                            break
+
                     if ch == "q":
                         break
                     elif ch == "r":
@@ -163,6 +170,9 @@ class TerminalMonitor:
                         self._handle_dream()
                     elif ch == "k":
                         self._handle_kill_all()
+
+                # REL-20: 50ms minimum loop debounce to protect against high-frequency CPU pegging
+                time.sleep(0.05)
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
             print("\nExiting Bento Terminal Watch.")

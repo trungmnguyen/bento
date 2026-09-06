@@ -60,15 +60,32 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             return True
         try:
             parsed = urlparse(origin)
-            hostname = parsed.hostname or ""
-            if hostname in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
-                return True
+            origin_host = (parsed.hostname or "").lower().strip("[]")
+            if not self._is_safe_host(origin_host):
+                return False
+
             host_header = self.headers.get("Host", "")
-            if host_header and (host_header == parsed.netloc or host_header.split(":")[0] == hostname):
-                return True
+            if host_header:
+                host_val = host_header.split(":")[0].lower().strip("[]")
+                if not self._is_safe_host(host_val):
+                    return False
+
+            return True
         except Exception:
-            pass
-        return False
+            return False
+
+    @staticmethod
+    def _is_safe_host(hostname: str) -> bool:
+        if not hostname:
+            return False
+        if hostname in ("localhost", "127.0.0.1", "::1", "0.0.0.0") or hostname.endswith(".local"):
+            return True
+        try:
+            import ipaddress
+            ip = ipaddress.ip_address(hostname)
+            return ip.is_loopback or ip.is_private
+        except ValueError:
+            return False
 
     def _get_cors_origin(self) -> str | None:
         origin = self.headers.get("Origin")
