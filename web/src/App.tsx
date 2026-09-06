@@ -37,6 +37,7 @@ import { MobileBottomDock } from './components/MobileBottomDock';
 import { ExportStudioModal } from './components/ExportStudioModal';
 import { runA11yDoctor } from './utils/a11yDoctor';
 import { copyHarnessReport } from './utils/harnessReport';
+import { apiFetch, initAuthToken } from './utils/api';
 import {
   SystemStatus,
   BackgroundTask,
@@ -115,6 +116,10 @@ function BentoDashboard() {
   const [telemetry, setTelemetry] = useState<TelemetryMetrics | null>(null);
   const [vitals, setVitals] = useState<{ rss_mb: number; load_avg: number[]; active_daemons: number } | null>(null);
   const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
+  // Capture ?token= from URL on first load (bento ui --network auth)
+  useEffect(() => {
+    initAuthToken();
+  }, []);
 
   // Sync audio enabled state
   useEffect(() => {
@@ -244,13 +249,13 @@ function BentoDashboard() {
     setLoading(true);
     try {
       const [statusRes, bgRes, memRes, tracesRes, benchRes, telemRes, vitalsRes] = await Promise.all([
-        fetch('/api/status').then((r) => r.json()).catch(() => null),
-        fetch('/api/bg').then((r) => r.json()).catch(() => []),
-        fetch('/api/memory').then((r) => r.json()).catch(() => []),
-        fetch('/api/traces').then((r) => r.json()).catch(() => ({ traces: [], skills: [] })),
-        fetch('/api/benchmarks').then((r) => r.json()).catch(() => []),
-        fetch('/api/telemetry').then((r) => r.json()).catch(() => null),
-        fetch('/api/system/vitals').then((r) => r.json()).catch(() => null),
+        apiFetch('/api/status').then((r) => r.json()).catch(() => null),
+        apiFetch('/api/bg').then((r) => r.json()).catch(() => []),
+        apiFetch('/api/memory').then((r) => r.json()).catch(() => []),
+        apiFetch('/api/traces').then((r) => r.json()).catch(() => ({ traces: [], skills: [] })),
+        apiFetch('/api/benchmarks').then((r) => r.json()).catch(() => []),
+        apiFetch('/api/telemetry').then((r) => r.json()).catch(() => null),
+        apiFetch('/api/system/vitals').then((r) => r.json()).catch(() => null),
       ]);
 
       if (statusRes) {

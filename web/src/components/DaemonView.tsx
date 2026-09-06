@@ -19,6 +19,7 @@ import { ChefTamagoIcon, SoyFishIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { BackgroundTask } from '../types';
 import { playClack, playTaskFinished, playTasteFail, playTastePass } from '../utils/audio';
 import { showToast } from './Toast';
+import { apiFetch, authEventSourceUrl } from '../utils/api';
 import { useA11yModal } from '../hooks/useA11yModal';
 import { CopyButton } from './CopyButton';
 import { SimmerWaveform } from './telemetry/SimmerWaveform';
@@ -76,7 +77,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     if (activeTaskIdRef.current !== taskId) return;
     setLoadingLogs(true);
     try {
-      const res = await fetch(`/api/bg/${encodeURIComponent(taskId)}/logs`);
+      const res = await apiFetch(`/api/bg/${encodeURIComponent(taskId)}/logs`);
       const data = await res.json();
       if (activeTaskIdRef.current === taskId && isMountedRef.current) {
         const text = data.logs || 'No logs captured yet.';
@@ -106,7 +107,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     setLoadingLogs(true);
     setIsStreaming(true);
 
-    const eventSource = new EventSource(`/api/bg/${encodeURIComponent(selectedTask.task_id)}/stream`);
+    const eventSource = new EventSource(authEventSourceUrl(`/api/bg/${encodeURIComponent(selectedTask.task_id)}/stream`));
 
     eventSource.onmessage = (e) => {
       try {
@@ -162,7 +163,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const handleKill = async (taskId: string) => {
     playClack();
     try {
-      const res = await fetch(`/api/bg/${encodeURIComponent(taskId)}/kill`, { method: 'POST' });
+      const res = await apiFetch(`/api/bg/${encodeURIComponent(taskId)}/kill`, { method: 'POST' });
       if (res.ok) {
         showToast({
           title: 'Task Terminated',
@@ -189,7 +190,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     setPruneMessage(null);
 
     try {
-      const res = await fetch('/api/bg/run', {
+      const res = await apiFetch('/api/bg/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: newCmd, tag: newTag }),
@@ -233,7 +234,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     setPruneMessage(null);
     setActionError(null);
     try {
-      const res = await fetch('/api/bg/prune', { method: 'POST' });
+      const res = await apiFetch('/api/bg/prune', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         const count = data.pruned_tasks_count || 0;

@@ -18,6 +18,7 @@ import { TraceEvent, CrystallizedSkill, TelemetryMetrics } from '../types';
 import { playZenBell, playClack, playTastePass, playShisoSnap } from '../utils/audio';
 import { showToast } from './Toast';
 import { useA11yModal } from '../hooks/useA11yModal';
+import { apiFetch } from '../utils/api';
 
 interface TracesViewProps {
   traces: TraceEvent[];
@@ -68,7 +69,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
   const fetchTelemetry = async (signal?: AbortSignal) => {
     setLoadingTelemetry(true);
     try {
-      const res = await fetch('/api/telemetry', signal ? { signal } : undefined);
+      const res = await apiFetch('/api/telemetry', signal ? { signal } : undefined);
       if (res.ok) {
         const data = await res.json();
         setTelemetry(data.metrics);
@@ -97,7 +98,7 @@ export const TracesView: React.FC<TracesViewProps> = ({ traces, skills, onRefres
     setDreaming(true);
     setDreamMessage(null);
     try {
-      const res = await fetch('/api/dream', { method: 'POST' });
+      const res = await apiFetch('/api/dream', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         playZenBell();

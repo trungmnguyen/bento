@@ -30,7 +30,7 @@ To view the monitor from your phone or tablet on the same Wi-Fi network:
 ```bash
 bento ui --network --no-browser --port 8765
 ```
-Access via `http://<your-lan-ip>:8765` (e.g. `http://192.168.5.23:8765`).
+Access via `http://<your-lan-ip>:8765` (e.g. `http://192.168.1.100:8765`).
 
 ---
 

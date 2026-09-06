@@ -3,6 +3,7 @@ import { Swords, Trophy, Clock, Target, Play, ShieldAlert, Sparkles, History, Ro
 import { Scenario } from '../types';
 import { playZenBell, playClack, playTastePass } from '../utils/audio';
 import { showToast } from './Toast';
+import { apiFetch } from '../utils/api';
 
 interface ArenaScorecardResponse {
   challenger_name: string;
@@ -102,7 +103,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
-      const res = await fetch('/api/arena/match', {
+      const res = await apiFetch('/api/arena/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ challenger: c, defender: d, metric }),

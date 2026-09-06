@@ -13,7 +13,7 @@ if [ -x "/opt/homebrew/bin/bento" ]; then
 fi
 
 # Fallback: execute via Python module with PYTHONPATH
-BENTO_ROOT="${BENTO_DIR:-/Users/tmnguyen/Dev/bento}"
+BENTO_ROOT="${BENTO_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 if [ -d "$BENTO_ROOT/src" ]; then
     export PYTHONPATH="$BENTO_ROOT/src:${PYTHONPATH:-}"
     exec python3.12 -m bento.frameworks.cli "$@"

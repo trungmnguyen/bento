@@ -51,7 +51,8 @@ For complete architectural specifications, see [`ARCHITECTURE.md`](ARCHITECTURE.
 
 To make the `bento` command globally accessible across your terminal:
 ```bash
-cd /Users/tmnguyen/Dev/bento
+git clone https://github.com/trungmnguyen/bento.git
+cd bento
 pip install -e .
 ```
 

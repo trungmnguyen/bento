@@ -15,6 +15,7 @@ import { Scenario } from '../types';
 import { playClack, playTastePass, playTasteFail } from '../utils/audio';
 import { showToast } from './Toast';
 import { useA11yModal } from '../hooks/useA11yModal';
+import { apiFetch } from '../utils/api';
 
 interface QuickRunnerModalProps {
   isOpen: boolean;
@@ -96,7 +97,7 @@ export const QuickRunnerModal: React.FC<QuickRunnerModalProps> = ({
     setResult(null);
 
     try {
-      const res = await fetch('/api/benchmarks/run-one', {
+      const res = await apiFetch('/api/benchmarks/run-one', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: selectedName }),

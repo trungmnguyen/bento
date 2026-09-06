@@ -200,6 +200,7 @@ def main(args: list[str] | None = None) -> int:
     ui_parser.add_argument("--host", default="127.0.0.1", help="Host to bind web server (default: 127.0.0.1)")
     ui_parser.add_argument("--network", action="store_true", help="Bind to 0.0.0.0 for phone/LAN access on same Wi-Fi")
     ui_parser.add_argument("--no-browser", action="store_true", help="Do not automatically open browser")
+    ui_parser.add_argument("--no-auth", action="store_true", help="Disable LAN auth token (use carefully on shared networks)")
 
     # bento monitor (Live ANSI Terminal Watcher)
     monitor_parser = subparsers.add_parser("monitor", help="Launch live interactive terminal telemetry watch")
@@ -458,6 +459,7 @@ def main(args: list[str] | None = None) -> int:
             port=parsed.port,
             host=host,
             open_browser=not parsed.no_browser,
+            no_auth=getattr(parsed, "no_auth", False),
             block=True,
         )
 

@@ -18,6 +18,7 @@ import { ChopsticksIcon, WasabiBadgeIcon, BentoBoxIcon } from './icons/BentoIcon
 import { Scenario, SuiteResult, PreflightResult } from '../types';
 import { playZenBell, playClack } from '../utils/audio';
 import { showToast } from './Toast';
+import { apiFetch } from '../utils/api';
 import { QuickRunnerModal } from './QuickRunnerModal';
 import { useA11yModal } from '../hooks/useA11yModal';
 
@@ -94,7 +95,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
     playClack();
     setRunningSingle(scenarioName);
     try {
-      const res = await fetch('/api/benchmarks/run-one', {
+      const res = await apiFetch('/api/benchmarks/run-one', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: scenarioName }),
@@ -127,7 +128,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
     setRunError(null);
     showToast('info', 'Tasting Menu Started', `Serving ${scenarios.length} contract tasting flights...`);
     try {
-      const res = await fetch('/api/benchmarks/run', { method: 'POST' });
+      const res = await apiFetch('/api/benchmarks/run', { method: 'POST' });
       const data = await res.json();
       if (!isMountedRef.current) return;
       if (res.ok) {
@@ -166,7 +167,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
     setPreflightResult(null);
 
     try {
-      const res = await fetch('/api/benchmarks/preflight', {
+      const res = await apiFetch('/api/benchmarks/preflight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -271,7 +272,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         })),
       };
 
-      const res = await fetch('/api/benchmarks/create', {
+      const res = await apiFetch('/api/benchmarks/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

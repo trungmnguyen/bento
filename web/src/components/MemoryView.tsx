@@ -26,6 +26,7 @@ import { MemoryLesson, MemoryGraph, MemoryGraphNode, MemoryGraphEdge } from '../
 import { playClack, playZenBell } from '../utils/audio';
 import { useA11yModal } from '../hooks/useA11yModal';
 import { CopyButton } from './CopyButton';
+import { apiFetch } from '../utils/api';
 
 interface MemoryViewProps {
   lessons: MemoryLesson[];
@@ -119,7 +120,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
   const loadGraph = async () => {
     setLoadingGraph(true);
     try {
-      const res = await fetch('/api/memory/graph');
+      const res = await apiFetch('/api/memory/graph');
       if (res.ok) {
         const data: MemoryGraph = await res.json();
         setGraphData(data);
@@ -151,7 +152,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
         .map((t) => t.trim())
         .filter(Boolean);
 
-      const res = await fetch('/api/memory/add', {
+      const res = await apiFetch('/api/memory/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

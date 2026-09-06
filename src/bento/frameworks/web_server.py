@@ -2,6 +2,7 @@
 from __future__ import annotations
 import datetime
 import hashlib
+import hmac
 import json
 import mimetypes
 import os
@@ -43,6 +44,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
     static_dir: Path
     workspace_dir: str | None = None
     start_time: float
+    auth_token: str | None = None
     # SEC-11 & REL-02: Bound concurrent SSE connections with thread-safe lock
     _active_sse_connections: int = 0
     _sse_lock = threading.Lock()
@@ -107,6 +109,40 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         except ValueError:
             return False
 
+    def _is_authenticated(self) -> bool:
+        """Validate request against configured auth_token (SEC-20)."""
+        if not BentoApiHandler.auth_token:
+            return True
+
+        # Loopback exception: requests originating locally from 127.0.0.1 / ::1
+        client_ip = str(self.client_address[0])
+        is_loopback = client_ip in ("127.0.0.1", "::1", "localhost")
+        if is_loopback and not getattr(BentoApiHandler, "require_local_auth", False):
+            return True
+
+        # Check Authorization header: Bearer <token>
+        auth_header = self.headers.get("Authorization", "").strip()
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+            if hmac.compare_digest(token, BentoApiHandler.auth_token):
+                return True
+
+        # Check X-Bento-Token header
+        bento_token = self.headers.get("X-Bento-Token", "").strip()
+        if bento_token and hmac.compare_digest(bento_token, BentoApiHandler.auth_token):
+            return True
+
+        # Check URL query param 'token' (for SSE streams and initial browser landing)
+        parsed = urlparse(self.path)
+        if parsed.query:
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            tokens = qs.get("token", [])
+            if tokens and any(hmac.compare_digest(t, BentoApiHandler.auth_token) for t in tokens):
+                return True
+
+        return False
+
     def _get_cors_origin(self) -> str | None:
         origin = self.headers.get("Origin")
         if not origin:
@@ -128,7 +164,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         if cors_origin:
             self.send_header("Access-Control-Allow-Origin", cors_origin)
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Bento-Token")
             self.send_header("Vary", "Origin")
         self.end_headers()
         self.wfile.write(payload)
@@ -139,7 +175,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             self.send_response(HTTPStatus.NO_CONTENT)
             self.send_header("Access-Control-Allow-Origin", cors_origin)
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Bento-Token")
             self.send_header("Vary", "Origin")
             self.end_headers()
         else:
@@ -153,6 +189,11 @@ class BentoApiHandler(BaseHTTPRequestHandler):
 
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
+
+        # SEC-20: Enforce authentication for all API endpoints
+        if path.startswith("/api/") and not self._is_authenticated():
+            self._send_json({"error": "Unauthorized: Valid Bento access token required", "code": "AUTH_REQUIRED"}, status=401)
+            return
 
         if path == "/api/status":
             memory = self.memory_gateway.load_memory()
@@ -398,6 +439,11 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
+        # SEC-20: Enforce authentication for all API endpoints
+        if path.startswith("/api/") and not self._is_authenticated():
+            self._send_json({"error": "Unauthorized: Valid Bento access token required", "code": "AUTH_REQUIRED"}, status=401)
+            return
+
         raw_len = self.headers.get("Content-Length", "0")
         try:
             content_len = max(0, int(str(raw_len).strip()))
@@ -425,7 +471,10 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             tag = payload.get("tag", "task").strip()
             if not cmd:
                 return self._send_json({"error": "Command is required"}, status=400)
-            task = self.bg_runner.start_task(cmd, tag=tag)
+            if len(cmd) > 2000:
+                return self._send_json({"error": "Command exceeds 2000 character limit"}, status=400)
+            clean_tag = re.sub(r"[^a-zA-Z0-9_\-]", "_", tag)[:50] or "task"
+            task = self.bg_runner.start_task(cmd, tag=clean_tag)
             task_id = task.get("id", getattr(task, "task_id", "")) if isinstance(task, dict) else getattr(task, "task_id", "")
             pid = task.get("pid", getattr(task, "pid", 0)) if isinstance(task, dict) else getattr(task, "pid", 0)
             return self._send_json({"started": True, "task_id": task_id, "pid": pid})
@@ -1001,11 +1050,13 @@ class BentoWebServer:
         execution_gateway: ExecutionGateway | None = None,
         host: str = "127.0.0.1",
         port: int = 8765,
+        auth_token: str | None = None,
         static_dir: str | Path | None = None,
         workspace_dir: str | Path | None = None,
     ):
         self.host = host
         self.port = port
+        self.auth_token = auth_token
         self.bg_runner = bg_runner
         self.memory_gateway = memory_gateway
         self.storage_gateway = storage_gateway
@@ -1029,6 +1080,7 @@ class BentoWebServer:
         handler_cls.dream_uc = self.dream_uc
         handler_cls.static_dir = self.static_dir
         handler_cls.workspace_dir = str(self.workspace_dir)
+        handler_cls.auth_token = self.auth_token
         handler_cls.start_time = time.monotonic()
 
         self._server = FastThreadingHTTPServer((self.host, self.port), handler_cls)
@@ -1036,11 +1088,18 @@ class BentoWebServer:
         local_url = f"http://localhost:{self.port}"
         net_ip = _get_network_ip()
         net_url = f"http://{net_ip}:{self.port}"
+        if self.auth_token:
+            local_url += f"/?token={self.auth_token}"
+            net_url += f"/?token={self.auth_token}"
 
         print("🍱 Bento Web Monitor is serving!")
         print(f"   • Local (Mac):    {local_url}")
         if self.host in ("0.0.0.0", ""):
             print(f"   • Network (Phone): {net_url}  📱 (Open this on your phone on the same Wi-Fi)")
+            if self.auth_token:
+                print("   🔒 Network Authentication Enabled: Bearer token active.")
+            else:
+                print("   ⚠️  Warning: Network authentication disabled (--no-auth). Anyone on LAN has full access.")
         else:
             print(f"   • Phone Access:   Use 'bento ui --network' or '--host 0.0.0.0'")
 

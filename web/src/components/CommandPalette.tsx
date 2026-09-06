@@ -19,6 +19,7 @@ import { MemoryLesson, Scenario, BackgroundTask } from '../types';
 import { playClack, playTastePass, playTasteFail, playZenBell } from '../utils/audio';
 import { showToast } from './Toast';
 import { useA11yModal } from '../hooks/useA11yModal';
+import { apiFetch } from '../utils/api';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -103,7 +104,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   const handleSweepKitchen = async () => {
     playClack();
     try {
-      const res = await fetch('/api/bg/prune', { method: 'POST' });
+      const res = await apiFetch('/api/bg/prune', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         playTastePass();
@@ -127,7 +128,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       type: 'info',
     });
     try {
-      const res = await fetch('/api/benchmarks/run', { method: 'POST' });
+      const res = await apiFetch('/api/benchmarks/run', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         if (data.all_passed) {
@@ -160,7 +161,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       type: 'info',
     });
     try {
-      const res = await fetch('/api/dream', { method: 'POST' });
+      const res = await apiFetch('/api/dream', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         playZenBell();

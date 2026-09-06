@@ -601,8 +601,10 @@ class CliController:
         port: int = 8765,
         host: str = "127.0.0.1",
         open_browser: bool = True,
+        no_auth: bool = False,
         block: bool = True,
     ) -> int:
+        import secrets
         import webbrowser
         from bento.frameworks.bg_runner import BackgroundTaskRunner
         from bento.frameworks.web_server import BentoWebServer
@@ -616,6 +618,13 @@ class CliController:
             trace_gateway=self._trace,
         )
 
+        # Auto-generate a random access token when serving over LAN (0.0.0.0).
+        # Loopback requests (127.0.0.1/::1) are always exempt on the server side,
+        # so localhost-only usage requires no token.
+        auth_token: str | None = None
+        if host in ("0.0.0.0", "") and not no_auth:
+            auth_token = secrets.token_urlsafe(24)
+
         server = BentoWebServer(
             bg_runner=bg_runner,
             memory_gateway=self._memory,
@@ -626,10 +635,15 @@ class CliController:
             execution_gateway=getattr(self._run_scenario, "_execution_gateway", None),
             host=host,
             port=port,
+            auth_token=auth_token,
         )
 
         if open_browser:
-            webbrowser.open(f"http://{host}:{port}")
+            browser_host = "127.0.0.1" if host in ("0.0.0.0", "") else host
+            browser_url = f"http://{browser_host}:{port}"
+            if auth_token:
+                browser_url += f"?token={auth_token}"
+            webbrowser.open(browser_url)
 
         server.start(block=block)
         return 0
