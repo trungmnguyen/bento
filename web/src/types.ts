@@ -148,3 +148,14 @@ export interface TelemetryMetrics {
   recent_pass_flags: boolean[];
 }
 
+export interface BentoNotification {
+  id: string;
+  timestamp: string;
+  category: 'DAEMON' | 'ARENA' | 'DREAM' | 'BATTERY' | 'SYSTEM';
+  severity: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+  title: string;
+  description: string;
+  metadata?: Record<string, any>;
+  read: boolean;
+  actionTab?: string;
+}

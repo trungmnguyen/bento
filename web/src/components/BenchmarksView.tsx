@@ -17,6 +17,7 @@ import { ChopsticksIcon, WasabiBadgeIcon, BentoBoxIcon } from './icons/BentoIcon
 import { Scenario, SuiteResult, PreflightResult } from '../types';
 import { playZenBell, playClack } from '../utils/audio';
 import { showToast } from './Toast';
+import { QuickRunnerModal } from './QuickRunnerModal';
 
 interface BenchmarksViewProps {
   scenarios: Scenario[];
@@ -44,8 +45,15 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
   const [suiteResult, setSuiteResult] = useState<SuiteResult | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
 
+  // Quick Runner Modal State
+  const [quickRunnerOpen, setQuickRunnerOpen] = useState(false);
+  const [selectedScenarioName, setSelectedScenarioName] = useState<string | null>(null);
+
   // Tasting Studio: Scenario Builder State
   const [showCraftModal, setShowCraftModal] = useState(false);
+  const [craftMode, setCraftMode] = useState<'visual' | 'json'>('visual');
+  const [craftJson, setCraftJson] = useState('');
+  const [craftJsonError, setCraftJsonError] = useState<string | null>(null);
   const [craftName, setCraftName] = useState('');
   const [craftDesc, setCraftDesc] = useState('');
   const [craftTags, setCraftTags] = useState('tasting,contract');
@@ -280,6 +288,20 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          {/* Quick Runner Modal Trigger */}
+          <button
+            onClick={() => {
+              playClack();
+              setSelectedScenarioName(scenarios[0]?.name || null);
+              setQuickRunnerOpen(true);
+            }}
+            className="w-full sm:w-auto bg-bento-lacquer hover:bg-bento-border border border-amber-500/40 text-amber-300 font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-sm min-h-[42px] touch-manipulation"
+            title="Open Instant Tasting Flight Runner"
+          >
+            <Terminal className="w-4 h-4 text-amber-400" />
+            <span>Instant Runner ✈️</span>
+          </button>
+
           {/* Tasting Studio Button */}
           <button
             onClick={() => {
@@ -373,17 +395,16 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                   <span>{scenario.name}</span>
                 </h3>
                 <button
-                  onClick={() => handleRunSingle(scenario.name)}
-                  disabled={runningSingle === scenario.name || running}
-                  className="shrink-0 bg-bento-lacquer hover:bg-bento-border border border-bento-border rounded-lg px-2.5 py-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1 disabled:opacity-50"
-                  title="Run single scenario contract"
+                  onClick={() => {
+                    playClack();
+                    setSelectedScenarioName(scenario.name);
+                    setQuickRunnerOpen(true);
+                  }}
+                  className="shrink-0 bg-bento-lacquer hover:bg-bento-border border border-amber-500/40 rounded-lg px-2.5 py-1 text-[11px] font-bold text-amber-300 hover:text-amber-200 transition flex items-center gap-1"
+                  title="Run contract in Instant Tasting Flight Runner"
                 >
-                  {runningSingle === scenario.name ? (
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <ChopsticksIcon className="w-3 h-3" />
-                  )}
-                  <span>{runningSingle === scenario.name ? 'Tasting...' : 'Taste Flight 🥢'}</span>
+                  <ChopsticksIcon className="w-3 h-3" />
+                  <span>Taste Flight 🥢</span>
                 </button>
               </div>
               <p className="text-xs text-gray-400 mb-3">{scenario.description || 'No description provided.'}</p>
@@ -579,6 +600,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-[11px] font-semibold text-gray-400">Contract Assertions</label>
                     <button
+                      type="button"
                       onClick={() => {
                         playClack();
                         setCurrentAssertions((prev) => [
@@ -589,6 +611,63 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                       className="text-[11px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1"
                     >
                       <Plus className="w-3 h-3" /> Add Assertion
+                    </button>
+                  </div>
+
+                  {/* Assertion Quick Presets */}
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+                    <span className="text-[10px] text-gray-400 font-semibold uppercase">Presets:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClack();
+                        setCurrentAssertions((prev) => [
+                          ...prev,
+                          { type: 'EXIT_CODE_EQUALS', target_field: 'exit_code', expected: '0', description: 'Clean exit code 0' },
+                        ]);
+                      }}
+                      className="px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-[10px] text-bento-matcha border border-emerald-500/30 font-mono transition"
+                    >
+                      + Exit 0
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClack();
+                        setCurrentAssertions((prev) => [
+                          ...prev,
+                          { type: 'CONTAINS', target_field: 'stdout', expected: '', description: 'Contains expected pattern' },
+                        ]);
+                      }}
+                      className="px-2 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-[10px] text-amber-300 border border-amber-500/30 font-mono transition"
+                    >
+                      + Contains
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClack();
+                        setCurrentAssertions((prev) => [
+                          ...prev,
+                          { type: 'NOT_CONTAINS', target_field: 'stderr', expected: 'Traceback', description: 'No errors or exceptions' },
+                        ]);
+                      }}
+                      className="px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-[10px] text-rose-300 border border-rose-500/30 font-mono transition"
+                    >
+                      + No Stderr
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClack();
+                        setCurrentAssertions((prev) => [
+                          ...prev,
+                          { type: 'REGEX', target_field: 'stdout', expected: '.*', description: 'Regex match' },
+                        ]);
+                      }}
+                      className="px-2 py-0.5 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-[10px] text-indigo-300 border border-indigo-500/30 font-mono transition"
+                    >
+                      + Regex
                     </button>
                   </div>
 
@@ -766,6 +845,14 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
           </div>
         </div>
       )}
+      {/* Instant Tasting Flight Runner Modal */}
+      <QuickRunnerModal
+        isOpen={quickRunnerOpen}
+        onClose={() => setQuickRunnerOpen(false)}
+        scenarios={scenarios}
+        initialScenarioName={selectedScenarioName}
+        onRunComplete={onRefresh}
+      />
     </div>
   );
 };

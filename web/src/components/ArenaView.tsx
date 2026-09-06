@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Swords, Trophy, Clock, Target, Play, ShieldAlert, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Swords, Trophy, Clock, Target, Play, ShieldAlert, Sparkles, History, RotateCcw, CheckCircle2, XCircle } from 'lucide-react';
 import { Scenario } from '../types';
 import { playZenBell, playClack } from '../utils/audio';
 import { showToast } from './Toast';
@@ -20,6 +20,17 @@ interface ArenaScorecardResponse {
   margin: number;
 }
 
+interface BoutHistoryItem {
+  id: string;
+  timestamp: string;
+  challenger: string;
+  defender: string;
+  winner: string;
+  metric: string;
+  margin: number;
+  scorecard: ArenaScorecardResponse;
+}
+
 interface ArenaViewProps {
   scenarios: Scenario[];
 }
@@ -30,6 +41,25 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
   const [metric, setMetric] = useState<string>('pass_rate');
   const [loading, setLoading] = useState<boolean>(false);
   const [scorecard, setScorecard] = useState<ArenaScorecardResponse | null>(null);
+  const isMountedRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const [bouts, setBouts] = useState<BoutHistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('bento_arena_history');
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Fallback scenario options
   const scenarioOptions = scenarios.length > 0
@@ -69,16 +99,38 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
 
       const data = await res.json().catch(() => ({ error: 'Failed to parse response' }));
 
+      if (!isMountedRef.current) return;
+
       if (res.ok) {
         setScorecard(data);
         playZenBell();
         const winnerName = data.winner === 'challenger' ? data.challenger_name : (data.winner === 'defender' ? data.defender_name : 'Draw');
         showToast('success', 'Arena Match Complete', `Winner: ${winnerName} (${data.metric_used})`);
+
+        // Save to Bout History
+        const newBout: BoutHistoryItem = {
+          id: `bout-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          challenger: data.challenger_name,
+          defender: data.defender_name,
+          winner: data.winner,
+          metric: data.metric_used,
+          margin: data.margin,
+          scorecard: data,
+        };
+        setBouts((prev) => {
+          const updated = [newBout, ...prev.filter((b) => b.challenger !== data.challenger_name || b.defender !== data.defender_name)].slice(0, 8);
+          try {
+            localStorage.setItem('bento_arena_history', JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
       } else {
         const msg = data.error || `Arena match failed (HTTP ${res.status})`;
         showToast('error', 'Match Failed', msg);
       }
     } catch (err: any) {
+      if (!isMountedRef.current) return;
       if (err?.name === 'AbortError') {
         showToast('error', 'Match Timeout', 'Arena match timed out after 30 seconds.');
       } else {
@@ -86,7 +138,9 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
       }
     } finally {
       clearTimeout(timeoutId);
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -145,6 +199,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
           </h3>
 
           <select
+            aria-label="Select Challenger Contract"
             value={challengerPath || (scenarioOptions[0]?.path ?? '')}
             onChange={(e) => setChallengerPath(e.target.value)}
             className="w-full bg-[#131117] border border-bento-border rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-red-500/60"
@@ -169,6 +224,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
           </h3>
 
           <select
+            aria-label="Select Defender Baseline"
             value={defenderPath || (scenarioOptions[1]?.path ?? scenarioOptions[0]?.path ?? '')}
             onChange={(e) => setDefenderPath(e.target.value)}
             className="w-full bg-[#131117] border border-bento-border rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-blue-500/60"
@@ -187,6 +243,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
         <button
           onClick={handleFight}
           disabled={loading}
+          aria-label="Launch Arena Sparring Match"
           className={`px-8 py-3.5 rounded-2xl font-black text-sm tracking-wider uppercase transition-all shadow-xl flex items-center gap-2.5 ${
             loading
               ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
@@ -230,6 +287,63 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
             <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/10 uppercase">
               {scorecard.winner} wins
             </span>
+          </div>
+
+          {/* Arcade Versus Combat Bar */}
+          <div className="bg-[#0e0d13] border border-bento-border rounded-xl p-4 shadow-inner">
+            <div className="flex items-center justify-between text-xs font-mono font-bold mb-2">
+              <span className="text-red-400 flex items-center gap-1.5">
+                🥊 {scorecard.challenger_name}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]">
+                VS · {scorecard.metric_used.toUpperCase()}
+              </span>
+              <span className="text-blue-400 flex items-center gap-1.5">
+                🛡️ {scorecard.defender_name}
+              </span>
+            </div>
+
+            {/* Dual Health Gauges */}
+            <div className="grid grid-cols-2 gap-2 items-center">
+              {/* Challenger HP Bar (Right-aligned fill) */}
+              <div className="h-4 bg-red-950/40 rounded-l-md overflow-hidden flex justify-end p-0.5 border border-red-500/30">
+                <div
+                  className="h-full bg-gradient-to-l from-red-500 to-rose-600 rounded-sm transition-all duration-700 ease-out shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                  style={{
+                    width: `${
+                      scorecard.challenger_total_steps > 0
+                        ? (scorecard.challenger_passed / scorecard.challenger_total_steps) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+
+              {/* Defender HP Bar (Left-aligned fill) */}
+              <div className="h-4 bg-blue-950/40 rounded-r-md overflow-hidden flex justify-start p-0.5 border border-blue-500/30">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-sm transition-all duration-700 ease-out shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                  style={{
+                    width: `${
+                      scorecard.defender_total_steps > 0
+                        ? (scorecard.defender_passed / scorecard.defender_total_steps) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Sub-label speed comparison */}
+            <div className="flex justify-between items-center text-[10px] text-gray-400 font-mono mt-2 pt-2 border-t border-white/5">
+              <span>Duration: {scorecard.challenger_duration_ms.toFixed(1)}ms</span>
+              <span className="text-amber-400 font-semibold">
+                {scorecard.challenger_duration_ms < scorecard.defender_duration_ms
+                  ? `⚡ Challenger ${(scorecard.defender_duration_ms - scorecard.challenger_duration_ms).toFixed(1)}ms faster`
+                  : `🛡️ Defender ${(scorecard.challenger_duration_ms - scorecard.defender_duration_ms).toFixed(1)}ms faster`}
+              </span>
+              <span>Duration: {scorecard.defender_duration_ms.toFixed(1)}ms</span>
+            </div>
           </div>
 
           {/* Side-by-Side Comparison Metrics */}
@@ -303,6 +417,63 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Past Bout History */}
+      {bouts.length > 0 && (
+        <div className="bg-bento-surface border border-bento-border rounded-2xl p-5 shadow-bento-card space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+              <History className="w-4 h-4 text-bento-matcha" />
+              Recent Arena Bouts ({bouts.length})
+            </h3>
+            <button
+              onClick={() => {
+                setBouts([]);
+                localStorage.removeItem('bento_arena_history');
+                playClack();
+              }}
+              className="text-[11px] text-gray-500 hover:text-gray-300 font-mono transition"
+            >
+              Clear Bouts
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {bouts.map((b) => (
+              <div
+                key={b.id}
+                onClick={() => {
+                  setScorecard(b.scorecard);
+                  playClack();
+                }}
+                className="bg-[#131117] border border-bento-border/70 hover:border-bento-matcha/50 rounded-xl p-3 text-xs cursor-pointer transition shadow-sm space-y-2 group"
+              >
+                <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+                  <span>{b.timestamp}</span>
+                  <span className={`px-1.5 py-0.5 rounded font-bold uppercase ${
+                    b.winner === 'challenger'
+                      ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                      : b.winner === 'defender'
+                      ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  }`}>
+                    {b.winner} wins
+                  </span>
+                </div>
+                <div className="font-bold text-gray-200 truncate group-hover:text-white">
+                  {b.challenger} vs {b.defender}
+                </div>
+                <div className="text-[11px] text-gray-400 flex justify-between font-mono">
+                  <span>Margin: {b.margin.toFixed(1)}</span>
+                  <span className="text-bento-matcha group-hover:underline flex items-center gap-1">
+                    <RotateCcw className="w-3 h-3" /> Replay
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

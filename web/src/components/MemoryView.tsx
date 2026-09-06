@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Search,
   Tag,
@@ -14,10 +14,17 @@ import {
   ExternalLink,
   Eye,
   CheckCircle,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Copy,
+  Download,
+  FileText,
 } from 'lucide-react';
 import { OnigiriIcon, WasabiBadgeIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { MemoryLesson, MemoryGraph, MemoryGraphNode, MemoryGraphEdge } from '../types';
 import { playClack, playZenBell } from '../utils/audio';
+import { useA11yModal } from '../hooks/useA11yModal';
 
 interface MemoryViewProps {
   lessons: MemoryLesson[];
@@ -35,6 +42,19 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
   const [selectedNode, setSelectedNode] = useState<MemoryGraphNode | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
+  // Flavor Constellation 2.0: Pan, Zoom, and In-Graph Search HUD
+  const [zoom, setZoom] = useState(1.0);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [graphQuery, setGraphQuery] = useState('');
+
+  // Export Sheet State
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'agents_md' | 'claude_md' | 'json'>('agents_md');
+  const [copiedExport, setCopiedExport] = useState(false);
+  const copyExportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Modal State: Add Recipe
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -45,6 +65,29 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const addModalRef = useRef<HTMLDivElement>(null);
+  const exportModalRef = useRef<HTMLDivElement>(null);
+
+  const { modalProps: addModalProps } = useA11yModal({
+    isOpen: showAddModal,
+    onClose: () => setShowAddModal(false),
+    containerRef: addModalRef,
+  });
+
+  const { modalProps: exportModalProps } = useA11yModal({
+    isOpen: showExportModal,
+    onClose: () => setShowExportModal(false),
+    containerRef: exportModalRef,
+  });
+
+  useEffect(() => {
+    return () => {
+      if (copyExportTimerRef.current) {
+        clearTimeout(copyExportTimerRef.current);
+      }
+    };
+  }, []);
 
   // Extract unique tags
   const allTags = useMemo(() => {
@@ -135,6 +178,104 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
     }
   };
 
+  // Pan & Zoom physics handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only pan if clicking canvas background or svg element itself
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'svg' || target.id === 'canvas-bg' || target.classList.contains('canvas-area')) {
+      setIsPanning(true);
+      setStartPos({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    setPan({ x: e.clientX - startPos.x, y: e.clientY - startPos.y });
+  };
+
+  const handleMouseUp = () => setIsPanning(false);
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.15 : -0.15;
+    setZoom((z) => Math.min(Math.max(0.4, Number((z + delta).toFixed(2))), 3.0));
+  };
+
+  const resetTransform = () => {
+    setZoom(1.0);
+    setPan({ x: 0, y: 0 });
+    playClack();
+  };
+
+  // Rule Export Generation
+  const exportContent = useMemo(() => {
+    if (exportFormat === 'json') {
+      return JSON.stringify(lessons, null, 2);
+    }
+    if (exportFormat === 'claude_md') {
+      const lines = [
+        '# Institutional Directives & Harness Guidelines',
+        '',
+        'Adhere strictly to these rules seasoned from automated verification runs:',
+        '',
+      ];
+      lessons.forEach((l) => {
+        lines.push(`- **${l.title}**: ${l.rule}`);
+        if (l.anti_pattern) lines.push(`  *AVOID*: ${l.anti_pattern}`);
+      });
+      return lines.join('\n');
+    }
+    // Default: AGENTS.md format
+    const lines = [
+      '# Bento Institutional Memory Bank (AGENTS.md)',
+      '',
+      'Rules seasoned from automated harness testing, verification rigs, and self-healing loops.',
+      '',
+    ];
+    const categories = Array.from(new Set(lessons.map((l) => l.category))).sort();
+    categories.forEach((cat) => {
+      lines.push(`## ${cat.toUpperCase()}`);
+      lines.push('');
+      lessons
+        .filter((l) => l.category === cat)
+        .forEach((l) => {
+          lines.push(`### ${l.title} (\`${l.id}\`)`);
+          lines.push(`- **Rule**: ${l.rule}`);
+          if (l.anti_pattern) lines.push(`- **Anti-Pattern**: ${l.anti_pattern}`);
+          if (l.tags && l.tags.length > 0) lines.push(`- **Tags**: ${l.tags.join(', ')}`);
+          lines.push('');
+        });
+    });
+    return lines.join('\n');
+  }, [lessons, exportFormat]);
+
+  const handleCopyExport = async () => {
+    try {
+      await navigator.clipboard.writeText(exportContent);
+      setCopiedExport(true);
+      playZenBell();
+      if (copyExportTimerRef.current) {
+        clearTimeout(copyExportTimerRef.current);
+      }
+      copyExportTimerRef.current = setTimeout(() => setCopiedExport(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleDownloadExport = () => {
+    const filename =
+      exportFormat === 'json' ? 'bento_rules.json' : exportFormat === 'claude_md' ? 'CLAUDE.md' : 'AGENTS.md';
+    const blob = new Blob([exportContent], { type: exportFormat === 'json' ? 'application/json' : 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    playZenBell();
+  };
+
   // Connected edges for the selected node
   const connectedEdges = useMemo(() => {
     if (!selectedNode || !graphData) return [];
@@ -172,8 +313,8 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              <Layers className="w-3.5 h-3.5 text-bento-tamago" />
-              <span>Recipe Cards</span>
+              <Layers className="w-3.5 h-3.5" />
+              <span>Cards</span>
             </button>
             <button
               onClick={() => {
@@ -191,6 +332,17 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
               <span>Flavor Graph 🕸️</span>
             </button>
           </div>
+
+          <button
+            onClick={() => {
+              playClack();
+              setShowExportModal(true);
+            }}
+            className="shrink-0 bg-bento-lacquer border border-bento-border hover:border-bento-matcha/60 text-gray-300 hover:text-white font-bold px-3.5 py-2 rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5 min-h-[40px] shadow-sm"
+          >
+            <FileText className="w-4 h-4 text-bento-matcha" />
+            <span>Export Rules 📋</span>
+          </button>
 
           <button
             onClick={() => {
@@ -292,7 +444,14 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
           {/* Interactive Celestial Graph Canvas & Slide-over Details Drawer */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* SVG Visualizer */}
-            <div className="lg:col-span-2 bg-bento-surface border border-bento-border rounded-bento overflow-hidden relative shadow-2xl min-h-[550px] flex items-center justify-center">
+            <div
+              className="lg:col-span-2 bg-bento-surface border border-bento-border rounded-bento overflow-hidden relative shadow-2xl min-h-[550px] flex items-center justify-center cursor-grab active:cursor-grabbing select-none"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+            >
               {loadingGraph && (
                 <div className="text-center text-gray-400 space-y-2">
                   <Network className="w-8 h-8 text-bento-matcha animate-spin mx-auto" />
@@ -300,10 +459,60 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                 </div>
               )}
 
+              {/* In-Graph Search HUD */}
+              {!loadingGraph && graphData && (
+                <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-[#131117]/85 backdrop-blur-md border border-bento-border/80 rounded-xl px-3 py-1.5 text-xs text-white shadow-lg">
+                  <Search className="w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Filter constellation..."
+                    value={graphQuery}
+                    onChange={(e) => setGraphQuery(e.target.value)}
+                    className="bg-transparent border-none text-xs text-white placeholder-gray-500 focus:outline-none w-36 font-mono"
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                  {graphQuery && (
+                    <button onClick={() => setGraphQuery('')} className="text-gray-400 hover:text-white">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Canvas Controls HUD */}
+              {!loadingGraph && graphData && (
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-[#131117]/85 backdrop-blur-md border border-bento-border/80 rounded-xl p-1 text-xs text-white shadow-lg">
+                  <button
+                    onClick={() => setZoom((z) => Math.min(3.0, Number((z + 0.15).toFixed(2))))}
+                    className="p-1.5 hover:bg-white/10 rounded-lg text-gray-300 hover:text-white transition"
+                    title="Zoom In (+)"
+                  >
+                    <ZoomIn className="w-4 h-4" />
+                  </button>
+                  <span className="font-mono text-[11px] px-1 text-gray-300 min-w-[36px] text-center">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <button
+                    onClick={() => setZoom((z) => Math.max(0.4, Number((z - 0.15).toFixed(2))))}
+                    className="p-1.5 hover:bg-white/10 rounded-lg text-gray-300 hover:text-white transition"
+                    title="Zoom Out (-)"
+                  >
+                    <ZoomOut className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={resetTransform}
+                    className="p-1.5 hover:bg-white/10 rounded-lg text-gray-300 hover:text-white transition ml-0.5 border-l border-white/10"
+                    title="Reset View (0)"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {!loadingGraph && graphData && (
                 <svg
                   viewBox="0 0 1000 800"
-                  className="w-full h-auto max-h-[680px] select-none"
+                  className="w-full h-auto max-h-[680px] select-none pointer-events-auto"
                   style={{ background: 'radial-gradient(ellipse at center, #18191f 0%, #0d0e12 100%)' }}
                 >
                   <defs>
@@ -325,201 +534,241 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                     </filter>
                   </defs>
 
-                  {/* Graph Grid Coordinates Subtle Rings */}
-                  <circle cx="500" cy="400" r="180" fill="none" stroke="#252833" strokeDasharray="4 4" strokeWidth="1" />
-                  <circle cx="500" cy="400" r="320" fill="none" stroke="#20222b" strokeDasharray="6 6" strokeWidth="1" />
+                  {/* Transformed Canvas Group */}
+                  <g
+                    transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
+                    style={{ transformOrigin: '500px 400px', transition: isPanning ? 'none' : 'transform 150ms ease-out' }}
+                  >
+                    {/* Graph Grid Coordinates Subtle Rings */}
+                    <circle cx="500" cy="400" r="180" fill="none" stroke="#252833" strokeDasharray="4 4" strokeWidth="1" />
+                    <circle cx="500" cy="400" r="320" fill="none" stroke="#20222b" strokeDasharray="6 6" strokeWidth="1" />
 
-                  {/* Edges */}
-                  {graphData.edges.map((edge, idx) => {
-                    const src = graphData.nodes.find((n) => n.id === edge.source);
-                    const tgt = graphData.nodes.find((n) => n.id === edge.target);
-                    if (!src || !tgt) return null;
+                    {/* Edges */}
+                    {graphData.edges.map((edge, idx) => {
+                      const src = graphData.nodes.find((n) => n.id === edge.source);
+                      const tgt = graphData.nodes.find((n) => n.id === edge.target);
+                      if (!src || !tgt) return null;
 
-                    const isHighlighted =
-                      selectedNode && (selectedNode.id === src.id || selectedNode.id === tgt.id);
+                      const isHighlighted =
+                        selectedNode && (selectedNode.id === src.id || selectedNode.id === tgt.id);
 
-                    let strokeColor = '#3f4455';
-                    let dashArray = 'none';
-                    if (edge.relation === 'has_anti_pattern') {
-                      strokeColor = '#f43f5e';
-                      dashArray = '3 3';
-                    } else if (edge.relation === 'verified_by') {
-                      strokeColor = '#06b6d4';
-                      dashArray = '5 3';
-                    } else if (edge.relation === 'category_of') {
-                      strokeColor = '#10b981';
-                    }
+                      // Match filter
+                      const q = graphQuery.toLowerCase();
+                      const isMatch = !q ||
+                        src.label.toLowerCase().includes(q) ||
+                        tgt.label.toLowerCase().includes(q) ||
+                        src.id.toLowerCase().includes(q) ||
+                        tgt.id.toLowerCase().includes(q);
 
-                    return (
-                      <line
-                        key={idx}
-                        x1={src.x}
-                        y1={src.y}
-                        x2={tgt.x}
-                        y2={tgt.y}
-                        stroke={isHighlighted ? '#ffffff' : strokeColor}
-                        strokeWidth={isHighlighted ? 2.5 : 1.2}
-                        strokeOpacity={isHighlighted ? 0.95 : 0.45}
-                        strokeDasharray={dashArray}
-                        filter={isHighlighted ? 'url(#glow)' : undefined}
-                      />
-                    );
-                  })}
+                      let strokeColor = '#3f4455';
+                      let dashArray = 'none';
+                      if (edge.relation === 'has_anti_pattern') {
+                        strokeColor = '#f43f5e';
+                        dashArray = '3 3';
+                      } else if (edge.relation === 'verified_by') {
+                        strokeColor = '#06b6d4';
+                        dashArray = '5 3';
+                      } else if (edge.relation === 'category_of') {
+                        strokeColor = '#10b981';
+                      }
 
-                  {/* Nodes */}
-                  {graphData.nodes.map((node) => {
-                    if (selectedCategory && node.category !== selectedCategory) {
-                      return null;
-                    }
-
-                    const isSelected = selectedNode?.id === node.id;
-
-                    if (node.node_type === 'category_hub') {
                       return (
-                        <g
-                          key={node.id}
-                          className="cursor-pointer transition-transform duration-200"
-                          onClick={() => {
-                            playClack();
-                            setSelectedNode(node);
-                          }}
-                        >
-                          <circle
-                            cx={node.x}
-                            cy={node.y}
-                            r={isSelected ? 32 : 26}
-                            fill="url(#hubGradient)"
-                            stroke="#f59e0b"
-                            strokeWidth={isSelected ? 3 : 1.5}
-                            filter="url(#glow)"
-                          />
-                          <text
-                            x={node.x}
-                            y={node.y + 4}
-                            textAnchor="middle"
-                            fill="#ffffff"
-                            fontSize="11"
-                            fontWeight="bold"
-                            fontFamily="monospace"
-                          >
-                            {node.label.toUpperCase()}
-                          </text>
-                        </g>
-                      );
-                    }
-
-                    if (node.node_type === 'golden_rule') {
-                      return (
-                        <g
-                          key={node.id}
-                          className="cursor-pointer"
-                          onClick={() => {
-                            playClack();
-                            setSelectedNode(node);
-                          }}
-                        >
-                          <circle
-                            cx={node.x}
-                            cy={node.y}
-                            r={isSelected ? 22 : 17}
-                            fill="url(#ruleGradient)"
-                            stroke="#10b981"
-                            strokeWidth={isSelected ? 2.5 : 1}
-                            filter={isSelected ? 'url(#glow)' : undefined}
-                          />
-                          <text
-                            x={node.x}
-                            y={node.y + 4}
-                            textAnchor="middle"
-                            fill="#ffffff"
-                            fontSize="9"
-                            fontWeight="bold"
-                            fontFamily="monospace"
-                          >
-                            {node.id.replace('MEM-', '')}
-                          </text>
-                          <text
-                            x={node.x}
-                            y={node.y + 26}
-                            textAnchor="middle"
-                            fill="#d1d5db"
-                            fontSize="9"
-                            fontFamily="sans-serif"
-                            className="pointer-events-none"
-                          >
-                            {node.label.length > 16 ? node.label.slice(0, 14) + '…' : node.label}
-                          </text>
-                        </g>
-                      );
-                    }
-
-                    if (node.node_type === 'anti_pattern') {
-                      return (
-                        <g
-                          key={node.id}
-                          className="cursor-pointer"
-                          onClick={() => {
-                            playClack();
-                            setSelectedNode(node);
-                          }}
-                        >
-                          <circle
-                            cx={node.x}
-                            cy={node.y}
-                            r={isSelected ? 16 : 12}
-                            fill="url(#antiGradient)"
-                            stroke="#f43f5e"
-                            strokeWidth={isSelected ? 2 : 1}
-                            filter={isSelected ? 'url(#glow)' : undefined}
-                          />
-                          <text
-                            x={node.x}
-                            y={node.y + 4}
-                            textAnchor="middle"
-                            fill="#ffffff"
-                            fontSize="10"
-                            fontWeight="bold"
-                          >
-                            ✕
-                          </text>
-                        </g>
-                      );
-                    }
-
-                    // Scenario chip
-                    return (
-                      <g
-                        key={node.id}
-                        className="cursor-pointer"
-                        onClick={() => {
-                          playClack();
-                          setSelectedNode(node);
-                        }}
-                      >
-                        <rect
-                          x={node.x - 24}
-                          y={node.y - 12}
-                          width="48"
-                          height="24"
-                          rx="6"
-                          fill="#082f49"
-                          stroke="#06b6d4"
-                          strokeWidth={isSelected ? 2 : 1}
+                        <line
+                          key={idx}
+                          x1={src.x}
+                          y1={src.y}
+                          x2={tgt.x}
+                          y2={tgt.y}
+                          stroke={isHighlighted ? '#ffffff' : strokeColor}
+                          strokeWidth={isHighlighted ? 2.5 : 1.2}
+                          strokeOpacity={!isMatch ? 0.08 : (isHighlighted ? 0.95 : 0.45)}
+                          strokeDasharray={dashArray}
+                          filter={isHighlighted ? 'url(#glow)' : undefined}
                         />
-                        <text
-                          x={node.x}
-                          y={node.y + 4}
-                          textAnchor="middle"
-                          fill="#38bdf8"
-                          fontSize="9"
-                          fontWeight="bold"
-                          fontFamily="monospace"
+                      );
+                    })}
+
+                    {/* Nodes */}
+                    {graphData.nodes.map((node) => {
+                      if (selectedCategory && node.category !== selectedCategory) {
+                        return null;
+                      }
+
+                      const isSelected = selectedNode?.id === node.id;
+                      const q = graphQuery.toLowerCase();
+                      const isMatch = !q ||
+                        node.label.toLowerCase().includes(q) ||
+                        node.id.toLowerCase().includes(q) ||
+                        (node.details.rule && node.details.rule.toLowerCase().includes(q));
+
+                      const nodeOpacity = !isMatch ? 0.15 : 1.0;
+                      const hasAntiPattern =
+                        node.node_type === 'golden_rule' && Boolean(node.details.anti_pattern);
+
+                      if (node.node_type === 'category_hub') {
+                        return (
+                          <g
+                            key={node.id}
+                            className="cursor-pointer transition-transform duration-200"
+                            opacity={nodeOpacity}
+                            onClick={() => {
+                              playClack();
+                              setSelectedNode(node);
+                            }}
+                          >
+                            <circle
+                              cx={node.x}
+                              cy={node.y}
+                              r={isSelected ? 32 : 26}
+                              fill="url(#hubGradient)"
+                              stroke="#f59e0b"
+                              strokeWidth={isSelected ? 3 : 1.5}
+                              filter="url(#glow)"
+                            />
+                            <text
+                              x={node.x}
+                              y={node.y + 4}
+                              textAnchor="middle"
+                              fill="#ffffff"
+                              fontSize="11"
+                              fontWeight="bold"
+                              fontFamily="monospace"
+                            >
+                              {node.label.toUpperCase()}
+                            </text>
+                          </g>
+                        );
+                      }
+
+                      if (node.node_type === 'golden_rule') {
+                        return (
+                          <g
+                            key={node.id}
+                            className="cursor-pointer"
+                            opacity={nodeOpacity}
+                            onClick={() => {
+                              playClack();
+                              setSelectedNode(node);
+                            }}
+                          >
+                            {/* Anti-Pattern Warning Halo */}
+                            {hasAntiPattern && (
+                              <circle
+                                cx={node.x}
+                                cy={node.y}
+                                r={isSelected ? 26 : 21}
+                                fill="none"
+                                stroke="#f43f5e"
+                                strokeWidth="1.5"
+                                strokeDasharray="3 3"
+                                className="animate-pulse"
+                              />
+                            )}
+                            <circle
+                              cx={node.x}
+                              cy={node.y}
+                              r={isSelected ? 22 : 17}
+                              fill="url(#ruleGradient)"
+                              stroke="#10b981"
+                              strokeWidth={isSelected ? 2.5 : 1}
+                              filter={isSelected || (q && isMatch) ? 'url(#glow)' : undefined}
+                            />
+                            <text
+                              x={node.x}
+                              y={node.y + 4}
+                              textAnchor="middle"
+                              fill="#ffffff"
+                              fontSize="9"
+                              fontWeight="bold"
+                              fontFamily="monospace"
+                            >
+                              {node.id.replace('MEM-', '')}
+                            </text>
+                            <text
+                              x={node.x}
+                              y={node.y + 26}
+                              textAnchor="middle"
+                              fill="#d1d5db"
+                              fontSize="9"
+                              fontFamily="sans-serif"
+                              className="pointer-events-none"
+                            >
+                              {node.label.length > 16 ? node.label.slice(0, 14) + '…' : node.label}
+                            </text>
+                          </g>
+                        );
+                      }
+
+                      if (node.node_type === 'anti_pattern') {
+                        return (
+                          <g
+                            key={node.id}
+                            className="cursor-pointer"
+                            opacity={nodeOpacity}
+                            onClick={() => {
+                              playClack();
+                              setSelectedNode(node);
+                            }}
+                          >
+                            <circle
+                              cx={node.x}
+                              cy={node.y}
+                              r={isSelected ? 18 : 14}
+                              fill="url(#antiGradient)"
+                              stroke="#f43f5e"
+                              strokeWidth={isSelected ? 2.5 : 1.5}
+                              filter="url(#glow)"
+                            />
+                            <text
+                              x={node.x}
+                              y={node.y + 4}
+                              textAnchor="middle"
+                              fill="#ffffff"
+                              fontSize="10"
+                              fontWeight="bold"
+                            >
+                              ✕
+                            </text>
+                          </g>
+                        );
+                      }
+
+                      // Scenario chip
+                      return (
+                        <g
+                          key={node.id}
+                          className="cursor-pointer"
+                          opacity={nodeOpacity}
+                          onClick={() => {
+                            playClack();
+                            setSelectedNode(node);
+                          }}
                         >
-                          TEST
-                        </text>
-                      </g>
-                    );
-                  })}
+                          <rect
+                            x={node.x - 24}
+                            y={node.y - 12}
+                            width="48"
+                            height="24"
+                            rx="6"
+                            fill="#082f49"
+                            stroke="#06b6d4"
+                            strokeWidth={isSelected ? 2 : 1}
+                          />
+                          <text
+                            x={node.x}
+                            y={node.y + 4}
+                            textAnchor="middle"
+                            fill="#38bdf8"
+                            fontSize="9"
+                            fontWeight="bold"
+                            fontFamily="monospace"
+                          >
+                            TEST
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </g>
                 </svg>
               )}
             </div>
@@ -749,15 +998,35 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
 
       {/* Modal: Season New Recipe */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-bento-surface border border-bento-border rounded-bento w-full max-w-xl overflow-hidden shadow-2xl animate-scale-up">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              playClack();
+              setShowAddModal(false);
+            }
+          }}
+        >
+          <div
+            ref={addModalRef}
+            {...addModalProps}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-recipe-title"
+            className="bg-bento-surface border border-bento-border rounded-bento w-full max-w-xl overflow-hidden shadow-2xl animate-scale-up"
+          >
             <div className="px-6 py-4 border-b border-bento-border flex justify-between items-center bg-bento-elevated">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <h3 id="add-recipe-title" className="text-base font-bold text-white flex items-center gap-2">
                 <OnigiriIcon className="w-5 h-5" /> Season New Recipe (Architectural Axiom)
               </h3>
               <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-white transition p-1"
+                onClick={() => {
+                  playClack();
+                  setShowAddModal(false);
+                }}
+                aria-label="Close Season New Recipe modal"
+                title="Close"
+                className="text-gray-400 hover:text-white transition p-1 rounded-lg hover:bg-white/5"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -772,10 +1041,11 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label htmlFor="new-recipe-title" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                   Recipe Title *
                 </label>
                 <input
+                  id="new-recipe-title"
                   type="text"
                   placeholder="e.g. Clean Domain Port Rule"
                   value={newTitle}
@@ -787,10 +1057,11 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                  <label htmlFor="new-recipe-category" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                     Category
                   </label>
                   <select
+                    id="new-recipe-category"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     className="w-full bg-bento-lacquer border border-bento-border rounded-xl px-3.5 py-2 text-sm text-bento-rice focus:outline-none focus:border-bento-salmon transition"
@@ -805,10 +1076,11 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                  <label htmlFor="new-recipe-tags" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                     Tags (comma-separated)
                   </label>
                   <input
+                    id="new-recipe-tags"
                     type="text"
                     placeholder="e.g. domain, io, purity"
                     value={newTags}
@@ -819,10 +1091,11 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label htmlFor="new-recipe-rule" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                   Golden Rule (The Contract) *
                 </label>
                 <textarea
+                  id="new-recipe-rule"
                   placeholder="State the non-negotiable rule..."
                   value={newRule}
                   onChange={(e) => setNewRule(e.target.value)}
@@ -833,10 +1106,11 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label htmlFor="new-recipe-antipattern" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                   Burnt Dish / Anti-Pattern (What to Avoid)
                 </label>
                 <textarea
+                  id="new-recipe-antipattern"
                   placeholder="Describe the dangerous temptation or anti-pattern..."
                   value={newAntiPattern}
                   onChange={(e) => setNewAntiPattern(e.target.value)}
@@ -862,6 +1136,99 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Export Rules */}
+      {showExportModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              playClack();
+              setShowExportModal(false);
+            }
+          }}
+        >
+          <div
+            ref={exportModalRef}
+            {...exportModalProps}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="export-rules-title"
+            className="bg-bento-surface border border-bento-border rounded-bento w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up flex flex-col max-h-[85vh]"
+          >
+            <div className="px-6 py-4 border-b border-bento-border flex justify-between items-center bg-bento-elevated">
+              <h3 id="export-rules-title" className="text-base font-bold text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-bento-matcha" /> Export Seasoned Memory Rules
+              </h3>
+              <button
+                onClick={() => {
+                  playClack();
+                  setShowExportModal(false);
+                }}
+                aria-label="Close Export Seasoned Memory Rules modal"
+                title="Close"
+                className="text-gray-400 hover:text-white transition p-1 rounded-lg hover:bg-white/5"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {/* Format Switcher */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex bg-bento-lacquer p-1 rounded-xl border border-bento-border">
+                  {(['agents_md', 'claude_md', 'json'] as const).map((fmt) => (
+                    <button
+                      key={fmt}
+                      onClick={() => {
+                        playClack();
+                        setExportFormat(fmt);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition ${
+                        exportFormat === fmt
+                          ? 'bg-bento-surface text-white shadow-sm border border-bento-border/60'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {fmt === 'agents_md' ? 'AGENTS.md' : fmt === 'claude_md' ? 'CLAUDE.md' : 'JSON'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopyExport}
+                    aria-label="Copy memory rules export to clipboard"
+                    className="px-3.5 py-1.5 rounded-xl bg-bento-matcha hover:bg-emerald-400 text-gray-950 font-bold text-xs transition flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{copiedExport ? 'Copied! ✓' : 'Copy'}</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadExport}
+                    aria-label="Download memory rules export file"
+                    className="px-3.5 py-1.5 rounded-xl bg-bento-lacquer border border-bento-border hover:border-bento-matcha/60 text-gray-200 hover:text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Text Area Preview */}
+              <div className="relative">
+                <textarea
+                  readOnly
+                  aria-label="Exported memory rules preview"
+                  value={exportContent}
+                  rows={14}
+                  className="w-full bg-[#0e0d13] border border-bento-border rounded-xl p-4 font-mono text-xs text-gray-300 focus:outline-none select-all leading-relaxed"
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}

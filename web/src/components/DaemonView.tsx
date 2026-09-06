@@ -1,12 +1,33 @@
-import React, { useState } from 'react';
-import { Square, RefreshCw, Clock, CheckCircle2, XCircle, Flame, Sparkles, Trash2 } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import {
+  Square,
+  RefreshCw,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Flame,
+  Sparkles,
+  Trash2,
+  Search,
+  Download,
+  RotateCcw,
+  Filter,
+  X,
+} from 'lucide-react';
 import { ChefTamagoIcon, SoyFishIcon, BentoBoxIcon } from './icons/BentoIcons';
 import { BackgroundTask } from '../types';
+import { playClack, playTaskFinished, playTasteFail, playTastePass } from '../utils/audio';
+import { showToast } from './Toast';
+import { useA11yModal } from '../hooks/useA11yModal';
 
 interface DaemonViewProps {
   tasks: BackgroundTask[];
   onRefresh: () => void;
 }
+
+type LogLevel = 'ALL' | 'ERROR' | 'WARN' | 'INFO';
+
+const MAX_LOG_BUFFER_CHARS = 500_000; // 500 KB rolling buffer guard
 
 export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const [selectedTask, setSelectedTask] = useState<BackgroundTask | null>(null);
@@ -14,7 +35,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const [loadingLogs, setLoadingLogs] = useState<boolean>(false);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
-  const logEndRef = React.useRef<HTMLDivElement>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
   const [newCmd, setNewCmd] = useState<string>('');
   const [newTag, setNewTag] = useState<string>('kitchen-task');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -22,37 +43,70 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   const [pruneMessage, setPruneMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Table Search Filter
+  const [tableSearch, setTableSearch] = useState<string>('');
+
+  // Log Scope Filters
+  const [logFilterQuery, setLogFilterQuery] = useState<string>('');
+  const [selectedLogLevel, setSelectedLogLevel] = useState<LogLevel>('ALL');
+  const activeTaskIdRef = useRef<string | null>(null);
+  const logDrawerRef = useRef<HTMLDivElement>(null);
+
+  const { modalProps: logModalProps } = useA11yModal({
+    isOpen: !!selectedTask,
+    onClose: () => setSelectedTask(null),
+    containerRef: logDrawerRef,
+  });
+
   const fetchLogs = async (taskId: string) => {
+    if (activeTaskIdRef.current !== taskId) return;
     setLoadingLogs(true);
     try {
-      const res = await fetch(`/api/bg/${taskId}/logs`);
+      const res = await fetch(`/api/bg/${encodeURIComponent(taskId)}/logs`);
       const data = await res.json();
-      setLogContent(data.logs || 'No logs captured yet.');
+      if (activeTaskIdRef.current === taskId) {
+        setLogContent(data.logs || 'No logs captured yet.');
+      }
     } catch (err) {
-      setLogContent('Failed to fetch logs.');
+      if (activeTaskIdRef.current === taskId) {
+        setLogContent('Failed to fetch logs.');
+      }
     } finally {
-      setLoadingLogs(false);
+      if (activeTaskIdRef.current === taskId) {
+        setLoadingLogs(false);
+      }
     }
   };
 
   React.useEffect(() => {
-    if (!selectedTask) return;
+    if (!selectedTask) {
+      activeTaskIdRef.current = null;
+      return;
+    }
 
+    activeTaskIdRef.current = selectedTask.task_id;
     setLogContent('');
     setLoadingLogs(true);
     setIsStreaming(true);
 
-    const eventSource = new EventSource(`/api/bg/${selectedTask.task_id}/stream`);
+    const eventSource = new EventSource(`/api/bg/${encodeURIComponent(selectedTask.task_id)}/stream`);
 
     eventSource.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
         if (data.chunk) {
-          setLogContent((prev) => prev + data.chunk);
+          setLogContent((prev) => {
+            const next = prev + data.chunk;
+            if (next.length > MAX_LOG_BUFFER_CHARS) {
+              return next.slice(next.length - MAX_LOG_BUFFER_CHARS);
+            }
+            return next;
+          });
         }
         if (data.status === 'COMPLETED' || data.status === 'STOPPED') {
           setIsStreaming(false);
           eventSource.close();
+          playTaskFinished();
           onRefresh();
         }
       } catch {
@@ -87,9 +141,15 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   }, [logContent, autoScroll]);
 
   const handleKill = async (taskId: string) => {
+    playClack();
     try {
-      const res = await fetch(`/api/bg/${taskId}/kill`, { method: 'POST' });
+      const res = await fetch(`/api/bg/${encodeURIComponent(taskId)}/kill`, { method: 'POST' });
       if (res.ok) {
+        showToast({
+          title: 'Task Terminated',
+          message: `Process for ${taskId} removed from stove.`,
+          type: 'info',
+        });
         onRefresh();
         if (selectedTask?.task_id === taskId) {
           fetchLogs(taskId);
@@ -102,23 +162,46 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
 
   const handleLaunch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCmd.trim() || isSubmitting) return;
+    if (!newCmd.trim()) return;
+
+    playClack();
     setIsSubmitting(true);
     setActionError(null);
+    setPruneMessage(null);
+
     try {
       const res = await fetch('/api/bg/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: newCmd, tag: newTag }),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.started) {
         setNewCmd('');
+        playTastePass();
+        showToast({
+          title: 'Order Started Cooking',
+          message: `Task ${data.task_id} (PID ${data.pid}) launched in background.`,
+          type: 'success',
+        });
         onRefresh();
+        setSelectedTask({
+          task_id: data.task_id,
+          tag: newTag,
+          command: newCmd,
+          pid: data.pid,
+          status: 'RUNNING',
+          start_time: new Date().toISOString(),
+          duration_sec: 0,
+          log_file: '',
+          exit_code: null,
+        });
       } else {
-        const data = await res.json().catch(() => ({}));
+        playTasteFail();
         setActionError(data.error || 'Failed to launch task.');
       }
     } catch (err) {
+      playTasteFail();
       setActionError('Failed to launch task.');
     } finally {
       setIsSubmitting(false);
@@ -126,6 +209,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   };
 
   const handlePrune = async () => {
+    playClack();
     setIsPruning(true);
     setPruneMessage(null);
     setActionError(null);
@@ -133,7 +217,14 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
       const res = await fetch('/api/bg/prune', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
-        setPruneMessage(`🧹 Kitchen Swept! Cleaned ${data.pruned_tasks_count || 0} finished task(s).`);
+        const count = data.pruned_tasks_count || 0;
+        setPruneMessage(`🧹 Kitchen Swept! Cleaned ${count} finished task(s).`);
+        playTastePass();
+        showToast({
+          title: 'Kitchen Swept',
+          message: `Cleaned ${count} finished task(s) from state.`,
+          type: 'success',
+        });
         onRefresh();
       } else {
         setActionError('Failed to sweep kitchen.');
@@ -144,6 +235,91 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
       setIsPruning(false);
     }
   };
+
+  // Re-cook Dish (Clone & Rerun)
+  const handleRecook = (cmd: string, tag: string) => {
+    playClack();
+    setNewCmd(cmd);
+    setNewTag(tag);
+    showToast({
+      title: 'Recipe Loaded to Stove',
+      message: 'Command copied to launch bar. Click "Start Cooking" to launch.',
+      type: 'info',
+    });
+  };
+
+  // Download Raw Log
+  const handleDownloadLog = () => {
+    if (!selectedTask) return;
+    playClack();
+    const blob = new Blob([logContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedTask.task_id}-${selectedTask.tag}.log`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Filter Tasks Table
+  const filteredTasks = useMemo(() => {
+    if (!tableSearch.trim()) return tasks;
+    const q = tableSearch.toLowerCase();
+    return tasks.filter(
+      (t) =>
+        t.task_id.toLowerCase().includes(q) ||
+        t.tag.toLowerCase().includes(q) ||
+        t.command.toLowerCase().includes(q) ||
+        t.status.toLowerCase().includes(q)
+    );
+  }, [tasks, tableSearch]);
+
+  // Pre-compiled query matcher with ReDoS protection (WASABI-DOS-01)
+  const queryMatcher = useMemo(() => {
+    if (!logFilterQuery.trim()) return null;
+    const trimmed = logFilterQuery.trim();
+    // Guard against dangerous nested quantifiers
+    if (trimmed.length > 50 || /([*+?])\1/.test(trimmed)) {
+      const lower = trimmed.toLowerCase();
+      return (line: string) => line.toLowerCase().includes(lower);
+    }
+    try {
+      const regex = new RegExp(trimmed, 'i');
+      return (line: string) => regex.test(line);
+    } catch {
+      const lower = trimmed.toLowerCase();
+      return (line: string) => line.toLowerCase().includes(lower);
+    }
+  }, [logFilterQuery]);
+
+  // Filter Log Lines
+  const processedLogLines = useMemo(() => {
+    if (!logContent) return [];
+    const lines = logContent.split('\n');
+
+    return lines.filter((line) => {
+      // Level check
+      if (selectedLogLevel === 'ERROR') {
+        const isError = /error|fatal|fail|traceback|exception/i.test(line);
+        if (!isError) return false;
+      } else if (selectedLogLevel === 'WARN') {
+        const isWarn = /warn|warning/i.test(line);
+        if (!isWarn) return false;
+      } else if (selectedLogLevel === 'INFO') {
+        const isInfo = /info|serving|ready|passed|listening/i.test(line);
+        if (!isInfo) return false;
+      }
+
+      // Query check using precompiled matcher
+      if (queryMatcher && !queryMatcher(line)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [logContent, selectedLogLevel, queryMatcher]);
 
   return (
     <div className="space-y-6">
@@ -172,29 +348,42 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
           <button
             type="submit"
             disabled={isSubmitting || !newCmd.trim()}
-            className="w-full sm:w-auto bg-gradient-to-r from-bento-tamago to-amber-500 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-gray-900 font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-tamago-glow min-h-[42px] touch-manipulation"
+            className="w-full sm:w-auto bg-gradient-to-r from-bento-tamago to-amber-500 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-gray-950 font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-tamago-glow min-h-[42px] touch-manipulation"
           >
             {isSubmitting ? (
               <>
-                <RefreshCw className="w-4 h-4 animate-spin text-gray-900" /> Cooking...
+                <RefreshCw className="w-4 h-4 animate-spin text-gray-950" /> Cooking...
               </>
             ) : (
               <>
-                <Flame className="w-4 h-4 fill-gray-900" /> Start Cooking
+                <Flame className="w-4 h-4 fill-gray-950" /> Start Cooking
               </>
             )}
           </button>
         </form>
-        {actionError && <p className="text-bento-salmon text-xs mt-2">{actionError}</p>}
+        {actionError && <p className="text-bento-salmon text-xs mt-2 font-medium">{actionError}</p>}
         {pruneMessage && <p className="text-emerald-400 text-xs mt-2 font-medium">{pruneMessage}</p>}
       </div>
 
       {/* Task Process Table */}
       <div className="bg-bento-surface border border-bento-border rounded-bento overflow-hidden shadow-bento-card">
-        <div className="px-6 py-4 border-b border-bento-border flex justify-between items-center bg-bento-elevated">
-          <h2 className="text-base font-bold text-gray-100 flex items-center gap-2">
-            <BentoBoxIcon className="w-5 h-5" /> Kitchen Orders & Daemons ({tasks.length})
-          </h2>
+        <div className="px-6 py-4 border-b border-bento-border flex flex-wrap justify-between items-center bg-bento-elevated gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-base font-bold text-gray-100 flex items-center gap-2">
+              <BentoBoxIcon className="w-5 h-5" /> Kitchen Orders & Daemons ({tasks.length})
+            </h2>
+            {/* Table Search */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={tableSearch}
+                onChange={(e) => setTableSearch(e.target.value)}
+                placeholder="Filter orders..."
+                className="bg-bento-lacquer border border-bento-border rounded-lg pl-8 pr-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-bento-tamago/60 font-mono w-36 sm:w-48"
+              />
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrune}
@@ -206,7 +395,10 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
               <span>{isPruning ? 'Sweeping...' : 'Sweep Kitchen 🧹'}</span>
             </button>
             <button
-              onClick={onRefresh}
+              onClick={() => {
+                playClack();
+                onRefresh();
+              }}
               className="p-2 hover:bg-bento-border rounded-xl text-gray-400 hover:text-white transition"
               title="Refresh kitchen orders"
             >
@@ -235,15 +427,28 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-bento-border/70">
-                {tasks.map((task) => {
+                {filteredTasks.map((task) => {
                   const isRunning = task.status === 'RUNNING';
+                  const handleSelect = () => {
+                    playClack();
+                    activeTaskIdRef.current = task.task_id;
+                    setSelectedTask(task);
+                    fetchLogs(task.task_id);
+                  };
+
                   return (
                     <tr
                       key={task.task_id}
-                      className="hover:bg-bento-elevated/70 transition cursor-pointer"
-                      onClick={() => {
-                        setSelectedTask(task);
-                        fetchLogs(task.task_id);
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View logs for task ${task.task_id} tagged ${task.tag}`}
+                      className="hover:bg-bento-elevated/70 transition cursor-pointer focus:outline-none focus:bg-white/10"
+                      onClick={handleSelect}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleSelect();
+                        }
                       }}
                     >
                       <td className="px-6 py-4 font-mono font-medium text-bento-tamago">
@@ -286,23 +491,36 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                         {task.duration_sec.toFixed(1)}s
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        {isRunning && (
+                        {isRunning ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleKill(task.task_id);
                             }}
+                            aria-label={`Terminate task ${task.task_id}`}
                             className="text-xs bg-bento-salmon/15 hover:bg-bento-salmon/25 text-bento-salmon border border-bento-salmon/40 px-3 py-1 rounded-xl transition font-medium"
                           >
                             Remove Pot
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRecook(task.command, task.tag);
+                            }}
+                            aria-label={`Re-cook task ${task.task_id}`}
+                            className="text-xs bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-1 rounded-xl transition font-medium inline-flex items-center gap-1"
+                            title="Load command to cook again"
+                          >
+                            <RotateCcw className="w-3 h-3" /> Re-cook
                           </button>
                         )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedTask(task);
-                            fetchLogs(task.task_id);
+                            handleSelect();
                           }}
+                          aria-label={`Taste logs for task ${task.task_id}`}
                           className="text-xs bg-bento-elevated hover:bg-bento-border text-gray-200 px-3 py-1 rounded-xl border border-bento-border transition"
                         >
                           Taste Logs
@@ -319,12 +537,28 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
 
       {/* Log Viewer Modal / Drawer */}
       {selectedTask && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-end">
-          <div className="w-full max-w-2xl bg-bento-surface border-l border-bento-border h-full flex flex-col p-6 shadow-2xl">
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-end animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              playClack();
+              setSelectedTask(null);
+            }
+          }}
+        >
+          <div
+            ref={logDrawerRef}
+            {...logModalProps}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="log-viewer-title"
+            className="w-full max-w-3xl bg-bento-surface border-l border-bento-border h-full flex flex-col p-6 shadow-2xl"
+          >
+            {/* Header */}
             <div className="flex justify-between items-start pb-4 border-b border-bento-border">
               <div>
                 <div className="flex items-center gap-2.5">
-                  <h3 className="text-base font-bold text-gray-100 flex items-center gap-2">
+                  <h3 id="log-viewer-title" className="text-base font-bold text-gray-100 flex items-center gap-2">
                     <SoyFishIcon className="w-6 h-6 text-bento-salmon" />
                     Task Output Logs: <span className="font-mono text-bento-tamago">{selectedTask.task_id}</span>
                   </h3>
@@ -341,6 +575,15 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  onClick={handleDownloadLog}
+                  className="px-2.5 py-1 bg-bento-elevated hover:bg-bento-border text-gray-300 hover:text-white rounded-xl text-xs border border-bento-border transition flex items-center gap-1"
+                  title="Download raw log file"
+                  aria-label="Download raw log file"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </button>
+                <button
                   onClick={() => setAutoScroll((prev) => !prev)}
                   className={`text-[11px] px-2.5 py-1 rounded-xl border font-mono transition ${
                     autoScroll
@@ -348,41 +591,138 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                       : 'bg-bento-elevated text-gray-400 border-bento-border'
                   }`}
                   title="Toggle automatic scrolling to bottom"
+                  aria-label={`Toggle automatic scrolling to bottom, currently ${autoScroll ? 'on' : 'off'}`}
                 >
                   Auto-scroll: {autoScroll ? 'ON' : 'OFF'}
                 </button>
                 <button
-                  onClick={() => fetchLogs(selectedTask.task_id)}
+                  onClick={() => {
+                    playClack();
+                    fetchLogs(selectedTask.task_id);
+                  }}
                   className="p-1.5 hover:bg-bento-border rounded-xl text-gray-300 hover:text-white"
                   title="Reload Logs"
+                  aria-label="Reload logs"
                 >
                   <RefreshCw className={`w-4 h-4 ${loadingLogs ? 'animate-spin text-bento-salmon' : ''}`} />
                 </button>
                 <button
-                  onClick={() => setSelectedTask(null)}
+                  onClick={() => {
+                    playClack();
+                    setSelectedTask(null);
+                  }}
                   className="px-3 py-1 bg-bento-elevated hover:bg-bento-border text-xs rounded-xl text-gray-300 border border-bento-border"
+                  aria-label="Close log viewer"
                 >
                   Close
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 my-4 bg-bento-lacquer border border-bento-border rounded-xl p-4 font-mono text-xs text-bento-rice overflow-y-auto whitespace-pre-wrap">
-              {logContent || 'Log buffer is empty.'}
+            {/* Chef's Log Scope Toolbar */}
+            <div className="my-3 p-2.5 bg-bento-elevated/60 border border-bento-border rounded-xl flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={logFilterQuery}
+                    onChange={(e) => setLogFilterQuery(e.target.value)}
+                    placeholder="Filter logs (regex / text)..."
+                    className="w-full bg-bento-lacquer border border-bento-border rounded-lg pl-8 pr-3 py-1 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-amber-400 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Log Level Filter Pills */}
+              <div className="flex items-center gap-1 text-[11px] font-mono">
+                {(['ALL', 'ERROR', 'WARN', 'INFO'] as LogLevel[]).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => {
+                      playClack();
+                      setSelectedLogLevel(level);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg border transition ${
+                      selectedLogLevel === level
+                        ? level === 'ERROR'
+                          ? 'bg-bento-salmon/20 text-bento-salmon border-bento-salmon/50 font-bold'
+                          : level === 'WARN'
+                          ? 'bg-amber-400/20 text-amber-300 border-amber-400/50 font-bold'
+                          : level === 'INFO'
+                          ? 'bg-bento-matcha/20 text-bento-matcha border-bento-matcha/50 font-bold'
+                          : 'bg-white/15 text-white border-white/30 font-bold'
+                        : 'bg-transparent text-gray-400 border-transparent hover:bg-white/5'
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+
+              {/* Line Counter */}
+              <span className="text-[11px] font-mono text-gray-400">
+                Showing {processedLogLines.length} line(s)
+              </span>
+            </div>
+
+            {/* Terminal Stream */}
+            <div
+              role="region"
+              aria-label="Task terminal output"
+              aria-live="polite"
+              className="flex-1 my-1 bg-bento-lacquer border border-bento-border rounded-xl p-4 font-mono text-xs text-bento-rice overflow-y-auto whitespace-pre-wrap leading-relaxed"
+            >
+              {processedLogLines.length > 0 ? (
+                processedLogLines.map((line, idx) => {
+                  const isError = /error|fatal|fail|traceback/i.test(line);
+                  const isWarn = /warn|warning/i.test(line);
+                  const isInfo = /info|serving|ready/i.test(line);
+
+                  let lineClass = 'text-gray-300';
+                  if (isError) lineClass = 'text-rose-400 font-semibold';
+                  else if (isWarn) lineClass = 'text-amber-300';
+                  else if (isInfo) lineClass = 'text-emerald-300';
+
+                  return (
+                    <div key={idx} className={`${lineClass} hover:bg-white/5 px-1 rounded`}>
+                      {line}
+                    </div>
+                  );
+                })
+              ) : (
+                <span className="text-gray-500">
+                  {logContent ? 'No lines matching filter.' : 'Log buffer is empty.'}
+                </span>
+              )}
               {isStreaming && <span className="inline-block w-2 h-3.5 bg-bento-tamago animate-pulse ml-0.5 align-middle" />}
               <div ref={logEndRef} />
             </div>
 
+            {/* Footer */}
             <div className="pt-3 border-t border-bento-border flex justify-between items-center text-xs text-gray-400">
-              <span>Status: <strong className="text-bento-tamago">{selectedTask.status}</strong></span>
-              {selectedTask.status === 'RUNNING' && (
+              <span>
+                Status: <strong className="text-bento-tamago">{selectedTask.status}</strong>
+              </span>
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleKill(selectedTask.task_id)}
-                  className="bg-bento-salmon/20 hover:bg-bento-salmon/30 text-bento-salmon border border-bento-salmon/50 px-4 py-1.5 rounded-xl transition font-bold"
+                  onClick={() => handleRecook(selectedTask.command, selectedTask.tag)}
+                  aria-label={`Re-cook task ${selectedTask.task_id}`}
+                  className="px-3 py-1.5 bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded-xl transition flex items-center gap-1 font-medium"
                 >
-                  Terminate Process (SIGTERM)
+                  <RotateCcw className="w-3.5 h-3.5" /> Re-cook
                 </button>
-              )}
+                {selectedTask.status === 'RUNNING' && (
+                  <button
+                    onClick={() => handleKill(selectedTask.task_id)}
+                    aria-label={`Terminate process for task ${selectedTask.task_id}`}
+                    className="bg-bento-salmon/20 hover:bg-bento-salmon/30 text-bento-salmon border border-bento-salmon/50 px-4 py-1.5 rounded-xl transition font-bold"
+                  >
+                    Terminate Process (SIGTERM)
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
