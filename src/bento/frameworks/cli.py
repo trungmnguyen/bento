@@ -227,7 +227,10 @@ def main(args: list[str] | None = None) -> int:
     orchestra_parser.add_argument("--benchmarks", default="examples", help="Directory of benchmark contracts (default: examples)")
     orchestra_parser.add_argument("--task", default=None, help="Task description or markdown file")
     orchestra_parser.add_argument("--auto-approve", action="store_true", help="Auto-approve patron review gate without interactive block")
+    orchestra_parser.add_argument("--finding", dest="findings", action="append", default=None, help="Adversarial finding or vulnerability to record in audit trace")
+    orchestra_parser.add_argument("--a11y-finding", dest="a11y_findings", action="append", default=None, help="UI layout or accessibility (A11y) finding to record in audit trace")
     orchestra_parser.add_argument("--cwd", default=None, help="Working directory")
+    orchestra_parser.add_argument("--no-dream", dest="dream", action="store_false", default=True, help="Skip automated dream cycle consolidation at sprint conclusion")
     orchestra_parser.add_argument("--json", action="store_true", help="Output raw JSON")
 
     # bento doctor (Automated System & Hygiene Diagnostics)
@@ -346,6 +349,9 @@ def main(args: list[str] | None = None) -> int:
             auto_approve=parsed.auto_approve,
             working_dir=parsed.cwd,
             json_output=parsed.json,
+            adversarial_findings=parsed.findings,
+            a11y_findings=parsed.a11y_findings,
+            dream=parsed.dream,
         )
         print(output)
         return exit_code

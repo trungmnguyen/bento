@@ -348,8 +348,12 @@ class CliController:
         auto_approve: bool = False,
         working_dir: str | None = None,
         json_output: bool = False,
+        adversarial_findings: list[str] | None = None,
+        a11y_findings: list[str] | None = None,
+        dream: bool = True,
     ) -> tuple[int, str]:
         from bento.use_cases.orchestra_sprint import OrchestraSprintUseCase
+        from bento.use_cases.dream_cycle import DreamCycleUseCase
 
         scenario = None
         if contract_file:
@@ -364,12 +368,22 @@ class CliController:
             else:
                 task_content = task_file
 
+        dream_uc = None
+        if self._memory:
+            dream_uc = DreamCycleUseCase(
+                memory_gateway=self._memory,
+                storage_gateway=self._storage,
+                run_suite_use_case=self._run_suite,
+                trace_gateway=self._trace,
+            )
+
         orchestra_uc = OrchestraSprintUseCase(
             storage_gateway=self._storage,
             run_scenario_use_case=self._run_scenario,
             run_suite_use_case=self._run_suite,
             memory_gateway=self._memory,
             trace_gateway=self._trace,
+            dream_cycle_use_case=dream_uc,
         )
 
         result = orchestra_uc.execute(
@@ -379,6 +393,9 @@ class CliController:
             task_description=task_content,
             auto_approve=auto_approve,
             working_dir=working_dir,
+            adversarial_findings=adversarial_findings,
+            a11y_findings=a11y_findings,
+            dream=dream,
         )
 
         if json_output:

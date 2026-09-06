@@ -184,6 +184,7 @@ class MemoryBank:
     lessons: list[MemoryLesson] = field(default_factory=list)
     version: str = "1.0"
     updated_at: str = ""
+    skills: list[CrystallizedSkill] = field(default_factory=list)
 
     def add_lesson(self, lesson: MemoryLesson) -> MemoryBank:
         filtered = [l for l in self.lessons if l.id != lesson.id]
@@ -191,6 +192,16 @@ class MemoryBank:
             lessons=filtered + [lesson],
             version=self.version,
             updated_at=lesson.discovery_date or self.updated_at,
+            skills=self.skills,
+        )
+
+    def add_skill(self, skill: CrystallizedSkill) -> MemoryBank:
+        filtered = [s for s in self.skills if s.name != skill.name]
+        return MemoryBank(
+            lessons=self.lessons,
+            version=self.version,
+            updated_at=self.updated_at,
+            skills=filtered + [skill],
         )
 
 
@@ -366,16 +377,20 @@ class TelemetryMetrics:
 
 # --- Level 5: Bento Orchestra Models ---
 
-class TriadRole(str, Enum):
+class BrigadeRole(str, Enum):
     WASABI = "WASABI"     # Red Team: Adversarial Security & AST Purity Auditor (Read-Only)
+    YUZU = "YUZU"         # Yellow Team: UI Layout & Accessibility (A11y) Auditor (Read-Only)
     MATCHA = "MATCHA"     # Green Team: UX & DX Innovation Explorer (Read-Only)
     PATRON = "PATRON"     # Patron Gate: User Reviewer & Approval Evaluator
     CHEF = "CHEF"         # Blue Team: Executive Implementation Craftsman
 
+# Backwards-compatibility alias
+TriadRole = BrigadeRole
+
 
 @dataclass(frozen=True)
-class TriadStageResult:
-    role: TriadRole
+class BrigadeStageResult:
+    role: BrigadeRole
     stage_name: str
     output_summary: str
     findings_count: int
@@ -383,11 +398,14 @@ class TriadStageResult:
     duration_ms: float
     details: list[str] = field(default_factory=list)
 
+# Backwards-compatibility alias
+TriadStageResult = BrigadeStageResult
+
 
 @dataclass(frozen=True)
 class OrchestraSprintRound:
     round_index: int
-    stage_results: list[TriadStageResult]
+    stage_results: list[BrigadeStageResult]
     passed: bool
     duration_ms: float
 
@@ -399,6 +417,7 @@ class OrchestraSprintResult:
     total_rounds: int
     all_passed: bool
     total_duration_ms: float
+    dream_result: DreamCycleResult | None = None
 
 
 # --- Level 6: Arena Head-to-Head Matchup Models ---
