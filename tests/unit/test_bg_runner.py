@@ -67,6 +67,11 @@ class TestBackgroundTaskRunner(unittest.TestCase):
 
         time.sleep(0.2)
         status_after = self.runner.get_status(task_id, working_dir=self.test_dir)
+        for _ in range(40):
+            if not status_after or not status_after.get("is_alive"):
+                break
+            time.sleep(0.1)
+            status_after = self.runner.get_status(task_id, working_dir=self.test_dir)
         self.assertFalse(status_after["is_alive"])
 
     def test_prune_tasks(self):

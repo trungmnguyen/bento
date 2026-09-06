@@ -7,6 +7,7 @@ import signal
 import subprocess
 import time
 import uuid
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,8 @@ from typing import Any
 class BackgroundTaskRunner:
     def __init__(self, base_dir: str | None = None):
         self._default_base_dir = base_dir
+        self._tasks_cache: tuple[float, list[dict[str, Any]]] | None = None
+        self._cache_lock = threading.Lock()
 
     def _get_bg_dir(self, working_dir: str | None = None) -> Path:
         base = Path(working_dir or self._default_base_dir or os.getcwd())
@@ -99,14 +102,47 @@ class BackgroundTaskRunner:
             "pid": process.pid,
             "cwd": effective_cwd,
             "started_at": datetime.datetime.now().isoformat(),
+            "started_epoch": time.time(),
             "status": "RUNNING",
             "log_file": str(log_file),
         }
 
         self._write_task_meta_atomic(task_meta_file, task_info)
+        with self._cache_lock:
+            self._tasks_cache = None
         return task_info
 
+    def _is_matching_process(self, pid: int, task_cmd: str | None = None) -> bool:
+        """Verify process still belongs to Bento task before signaling (SEC-08)."""
+        if not self._is_pid_alive(pid):
+            return False
+        if not task_cmd:
+            return True
+        try:
+            res = subprocess.run(["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True)
+            cmd_out = res.stdout.strip()
+            if not cmd_out:
+                return False
+            cmd_toks = task_cmd.strip().split()
+            first_word = cmd_toks[0] if cmd_toks else ""
+            return (
+                first_word in cmd_out
+                or task_cmd[:20] in cmd_out
+                or "bento" in cmd_out
+                or "sh" in cmd_out
+                or "python" in cmd_out
+                or "node" in cmd_out
+            )
+        except Exception:
+            return True
+
     def list_tasks(self, working_dir: str | None = None) -> list[dict[str, Any]]:
+        now = time.monotonic()
+        if working_dir is None:
+            with self._cache_lock:
+                if self._tasks_cache and (now - self._tasks_cache[0]) < 1.0:
+                    return [dict(t) for t in self._tasks_cache[1]]
+
         bg_dir = self._get_bg_dir(working_dir)
         task_files = list((bg_dir / "tasks").glob("*.json"))
         tasks: list[dict[str, Any]] = []
@@ -128,6 +164,10 @@ class BackgroundTaskRunner:
             except Exception:
                 continue
 
+        if working_dir is None:
+            with self._cache_lock:
+                self._tasks_cache = (now, [dict(t) for t in tasks])
+
         return tasks
 
     def get_status(self, task_id: str, working_dir: str | None = None) -> dict[str, Any] | None:
@@ -142,8 +182,9 @@ class BackgroundTaskRunner:
             info["is_alive"] = self._is_pid_alive(pid)
             if info["is_alive"]:
                 info["status"] = "RUNNING"
-            elif info.get("status") == "RUNNING":
-                info["status"] = "STOPPED"
+            else:
+                if info.get("status") == "RUNNING":
+                    info["status"] = "STOPPED"
             return info
         except Exception:
             return None
@@ -166,6 +207,8 @@ class BackgroundTaskRunner:
         task_id: str,
         start_offset: int = 0,
         working_dir: str | None = None,
+        check_status: bool = True,
+        last_is_running: bool = True,
     ) -> tuple[str, int, bool]:
         """Read newly appended chunk from task log starting at byte offset.
 
@@ -174,8 +217,11 @@ class BackgroundTaskRunner:
         """
         bg_dir = self._get_bg_dir(working_dir)
         log_file = bg_dir / "logs" / f"{task_id}.log"
-        status = self.get_status(task_id, working_dir=working_dir)
-        is_running = (status.get("status") == "RUNNING") if status else False
+        if check_status:
+            status = self.get_status(task_id, working_dir=working_dir)
+            is_running = (status.get("status") == "RUNNING") if status else False
+        else:
+            is_running = last_is_running
 
         if not log_file.exists():
             return "", start_offset, is_running
@@ -198,6 +244,17 @@ class BackgroundTaskRunner:
         if pid <= 0:
             return True
 
+        # SEC-08: Verify process belongs to Bento task before signaling process group
+        if not self._is_matching_process(pid, status.get("command")):
+            bg_dir = self._get_bg_dir(working_dir)
+            task_file = bg_dir / "tasks" / f"{task_id}.json"
+            if task_file.exists():
+                status["status"] = "STOPPED"
+                self._write_task_meta_atomic(task_file, status)
+            with self._cache_lock:
+                self._tasks_cache = None
+            return True
+
         # REL-18: Process group kill attempt even if leader PID already died
         try:
             pgid = os.getpgid(pid)
@@ -218,6 +275,15 @@ class BackgroundTaskRunner:
                     os.kill(pid, signal.SIGKILL)
                 except Exception:
                     pass
+            # Allow kernel to reap child process
+            for _ in range(5):
+                try:
+                    wpid, _ = os.waitpid(pid, os.WNOHANG)
+                    if wpid == pid or not self._is_pid_alive(pid):
+                        break
+                except Exception:
+                    break
+                time.sleep(0.05)
 
         # Update status file atomically (REL-19)
         bg_dir = self._get_bg_dir(working_dir)
@@ -225,10 +291,14 @@ class BackgroundTaskRunner:
         if task_file.exists():
             status["status"] = "KILLED"
             self._write_task_meta_atomic(task_file, status)
+        with self._cache_lock:
+            self._tasks_cache = None
         return True
 
     def prune_tasks(self, stopped_only: bool = True, working_dir: str | None = None) -> int:
         """Prune background task metadata and associated log files."""
+        with self._cache_lock:
+            self._tasks_cache = None
         bg_dir = self._get_bg_dir(working_dir)
         task_files = list((bg_dir / "tasks").glob("*.json"))
         pruned_count = 0

@@ -7,6 +7,7 @@ import mimetypes
 import os
 import re
 import socket
+import threading
 import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -42,9 +43,19 @@ class BentoApiHandler(BaseHTTPRequestHandler):
     static_dir: Path
     workspace_dir: str | None = None
     start_time: float
-    # SEC-11: Bound concurrent SSE connections to prevent thread exhaustion
+    # SEC-11 & REL-02: Bound concurrent SSE connections with thread-safe lock
     _active_sse_connections: int = 0
+    _sse_lock = threading.Lock()
+    _memory_lock = threading.Lock()
     MAX_SSE_CONNECTIONS: int = 10
+
+    def setup(self) -> None:
+        super().setup()
+        try:
+            # SEC-13: Set 15-second socket timeout to prevent Slowloris thread starvation
+            self.request.settimeout(15.0)
+        except Exception:
+            pass
 
     def address_string(self) -> str:
         # Avoid blocking reverse DNS lookups (socket.getfqdn) on every request
@@ -54,23 +65,32 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         # Suppress standard logging to avoid stderr pollution in tests and ambient monitoring
         pass
 
+    def _is_safe_host_header(self) -> bool:
+        """Validate Host header against DNS rebinding (SEC-09)."""
+        host_header = self.headers.get("Host", "")
+        if not host_header:
+            return True
+        host_val = host_header.split(":")[0].lower().strip("[]")
+        return self._is_safe_host(host_val)
+
     def _is_allowed_origin(self) -> bool:
+        """Enforce strict CORS origin whitelist (SEC-09)."""
         origin = self.headers.get("Origin")
         if not origin:
             return True
         try:
             parsed = urlparse(origin)
             origin_host = (parsed.hostname or "").lower().strip("[]")
-            if not self._is_safe_host(origin_host):
-                return False
+            if origin_host in ("localhost", "127.0.0.1", "::1"):
+                return True
 
             host_header = self.headers.get("Host", "")
             if host_header:
                 host_val = host_header.split(":")[0].lower().strip("[]")
-                if not self._is_safe_host(host_val):
-                    return False
+                if origin_host == host_val and self._is_safe_host(host_val):
+                    return True
 
-            return True
+            return False
         except Exception:
             return False
 
@@ -100,6 +120,10 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
+        # SEC-04: Enforce clickjacking and MIME-sniffing defenses
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
         cors_origin = self._get_cors_origin()
         if cors_origin:
             self.send_header("Access-Control-Allow-Origin", cors_origin)
@@ -123,6 +147,10 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_GET(self):
+        if not self._is_safe_host_header():
+            self._send_json({"error": "Forbidden Host"}, status=403)
+            return
+
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
@@ -191,9 +219,11 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             parts = path.split("/")
             if len(parts) != 5 or not re.match(r"^bg-[a-zA-Z0-9_\-]+$", parts[3]):
                 return self._send_json({"error": "Invalid task ID"}, status=400)
-            # SEC-11: Enforce concurrent SSE connection cap
-            if BentoApiHandler._active_sse_connections >= BentoApiHandler.MAX_SSE_CONNECTIONS:
-                return self._send_json({"error": "Too many concurrent SSE connections"}, status=429)
+            # SEC-11 & REL-02: Atomically check and reserve SSE connection slot
+            with BentoApiHandler._sse_lock:
+                if BentoApiHandler._active_sse_connections >= BentoApiHandler.MAX_SSE_CONNECTIONS:
+                    return self._send_json({"error": "Too many concurrent SSE connections"}, status=429)
+                BentoApiHandler._active_sse_connections += 1
             task_id = parts[3]
             self._stream_task_logs(task_id, query_params=parsed.query)
             return
@@ -267,23 +297,124 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                 "sparkline": sparkline,
             })
 
+        elif path == "/api/system/vitals":
+            import resource
+            import sys
+            rusage = resource.getrusage(resource.RUSAGE_SELF)
+            rss_bytes = rusage.ru_maxrss if sys.platform == "darwin" else rusage.ru_maxrss * 1024
+            rss_mb = round(rss_bytes / (1024 * 1024), 1)
+
+            try:
+                load_avg = list(os.getloadavg())
+            except (AttributeError, OSError):
+                load_avg = [0.0, 0.0, 0.0]
+
+            tasks = self.bg_runner.list_tasks()
+            active_tasks = [
+                t for t in tasks
+                if (getattr(t, "status", None) or (t.get("status") if isinstance(t, dict) else None)) == "RUNNING"
+            ]
+
+            uptime = round(time.monotonic() - self.start_time, 1)
+
+            data = {
+                "rss_mb": rss_mb,
+                "load_avg": [round(x, 2) for x in load_avg],
+                "active_daemons": len(active_tasks),
+                "total_tasks": len(tasks),
+                "active_sse": BentoApiHandler._active_sse_connections,
+                "uptime_sec": uptime,
+            }
+            return self._send_json(data)
+
+        elif path == "/api/memory/export":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            export_format = qs.get("format", ["agents_md"])[0].lower()
+
+            memory = self.memory_gateway.load_memory()
+            if export_format == "json":
+                data = [
+                    {
+                        "id": l.id,
+                        "title": l.title,
+                        "category": l.category,
+                        "context": l.context,
+                        "rule": l.rule,
+                        "anti_pattern": l.anti_pattern,
+                        "discovery_date": l.discovery_date,
+                        "tags": l.tags,
+                    }
+                    for l in memory.lessons
+                ]
+                return self._send_json(data)
+            else:
+                lines = [
+                    "# Bento Institutional Memory Bank",
+                    "",
+                    "Rules seasoned from automated harness testing, verification rigs, and self-healing loops.",
+                    "",
+                ]
+                categories = sorted(set(l.category for l in memory.lessons))
+                for cat in categories:
+                    lines.append(f"## {cat.title()}")
+                    lines.append("")
+                    cat_lessons = [l for l in memory.lessons if l.category == cat]
+                    for l in cat_lessons:
+                        lines.append(f"### {l.title} (`{l.id}`)")
+                        lines.append(f"- **Rule**: {l.rule}")
+                        if l.anti_pattern:
+                            lines.append(f"- **Anti-Pattern**: {l.anti_pattern}")
+                        if l.tags:
+                            lines.append(f"- **Tags**: {', '.join(l.tags)}")
+                        lines.append("")
+                export_text = "\n".join(lines)
+                self.send_response(200)
+                self.send_header("Content-Type", "text/markdown; charset=utf-8")
+                self.send_header("Content-Length", str(len(export_text.encode("utf-8"))))
+                self.send_header("X-Frame-Options", "DENY")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
+                cors_origin = self._get_cors_origin()
+                if cors_origin:
+                    self.send_header("Access-Control-Allow-Origin", cors_origin)
+                self.end_headers()
+                self.wfile.write(export_text.encode("utf-8"))
+                return
+
+        # Fallback: Reject unmatched API routes with 404 JSON (SEC-11)
+        if path.startswith("/api/"):
+            self._send_json({"error": f"API endpoint not found: {path}"}, status=404)
+            return
+
         # Fallback: Serve Static Files (React build)
         self._serve_static_file(parsed.path)
 
     def do_POST(self):
-        if not self._is_allowed_origin():
+        if not self._is_safe_host_header() or not self._is_allowed_origin():
             self.send_error(403, "Cross-Origin Forbidden")
             return
 
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
-        content_len = int(self.headers.get("Content-Length", 0))
+        raw_len = self.headers.get("Content-Length", "0")
+        try:
+            content_len = max(0, int(str(raw_len).strip()))
+        except (ValueError, TypeError):
+            self._send_json({"error": "Invalid Content-Length header"}, status=400)
+            return
+
         MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB — SEC-10: Prevent OOM via unbounded payload
         if content_len > MAX_BODY_SIZE:
             self._send_json({"error": "Payload Too Large", "max_bytes": MAX_BODY_SIZE}, status=413)
             return
-        body = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
+        try:
+            body = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
+        except (UnicodeDecodeError, ValueError):
+            self._send_json({"error": "Malformed UTF-8 body"}, status=400)
+            return
+
         try:
             payload = json.loads(body) if body else {}
         except Exception:
@@ -335,22 +466,28 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                     if trace_fn:
                         trace_fn(event)
 
-            data = {
+            return self._send_json({
                 "suite_name": suite_res.suite_name,
-                "passed_scenarios": suite_res.passed_scenarios,
-                "total_scenarios": suite_res.total_scenarios,
+                "passed": suite_res.passed,
                 "pass_rate": suite_res.pass_rate,
+                "total_scenarios": suite_res.total_scenarios,
+                "passed_scenarios": suite_res.passed_scenarios,
                 "total_duration_ms": suite_res.total_duration_ms,
-                "all_passed": suite_res.all_passed,
                 "results": [
                     {
                         "scenario_name": r.scenario_name,
                         "passed": r.passed,
+                        "status": r.status.value if hasattr(r.status, "value") else str(r.status),
                         "duration_ms": r.total_duration_ms,
                         "step_results": [
                             {
                                 "step_name": sr.step_name,
-                                "status": sr.status.value,
+                                "command": sr.command,
+                                "status": sr.status.value if hasattr(sr.status, "value") else str(sr.status),
+                                "exit_code": sr.exit_code,
+                                "stdout": sr.stdout,
+                                "stderr": sr.stderr,
+                                "duration_ms": sr.duration_ms,
                                 "error_message": sr.error_message,
                             }
                             for sr in r.step_results
@@ -358,10 +495,9 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                     }
                     for r in suite_res.scenario_results
                 ],
-            }
-            return self._send_json(data)
+            })
 
-        elif path == "/api/bg/prune":
+        elif path in ("/api/bg/prune", "/api/bg/sweep"):
             pruned_count = self.bg_runner.prune_tasks(stopped_only=True)
             return self._send_json({"pruned_tasks_count": pruned_count})
 
@@ -372,14 +508,22 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             anti_pattern = str(payload.get("anti_pattern", "")).strip()
             tags_raw = payload.get("tags")
             if isinstance(tags_raw, list):
-                tags = [str(t).strip() for t in tags_raw if str(t).strip()]
+                tags = [str(t).strip()[:30] for t in tags_raw if str(t).strip()][:20]
             elif isinstance(tags_raw, str) and tags_raw.strip():
-                tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+                tags = [t.strip()[:30] for t in tags_raw.split(",") if t.strip()][:20]
             else:
-                tags = [category]
+                tags = [category[:30]]
 
             if not title or not rule:
                 return self._send_json({"error": "Title and rule are required fields."}, status=400)
+            if len(title) > 200:
+                return self._send_json({"error": "Title exceeds maximum length of 200 characters."}, status=400)
+            if len(rule) > 2000:
+                return self._send_json({"error": "Rule exceeds maximum length of 2000 characters."}, status=400)
+            if len(anti_pattern) > 2000:
+                return self._send_json({"error": "Anti-pattern exceeds maximum length of 2000 characters."}, status=400)
+            if len(category) > 50:
+                return self._send_json({"error": "Category exceeds maximum length of 50 characters."}, status=400)
 
             h = hashlib.sha256(f"{title}_{rule}".encode()).hexdigest()[:8]
             lesson = MemoryLesson(
@@ -392,9 +536,12 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                 discovery_date=datetime.datetime.now().strftime("%Y-%m-%d"),
                 tags=tags,
             )
-            bank = self.memory_gateway.load_memory()
-            updated_bank = bank.add_lesson(lesson)
-            self.memory_gateway.save_memory(updated_bank)
+            # SEC-14: Concurrency lock serializing memory persistence to avoid lost updates
+            with BentoApiHandler._memory_lock:
+                bank = self.memory_gateway.load_memory()
+                updated_bank = bank.add_lesson(lesson)
+                self.memory_gateway.save_memory(updated_bank)
+
             return self._send_json({
                 "success": True,
                 "lesson": {
@@ -467,6 +614,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             data = {
                 "consolidated_lessons_count": dream_res.consolidated_lessons_count,
                 "new_lessons_discovered": dream_res.new_lessons_discovered,
+                "crystallized_skills_count": len(dream_res.crystallized_skills),
                 "total_duration_ms": dream_res.total_duration_ms,
                 "all_passed": dream_res.suite_result.all_passed,
             }
@@ -486,7 +634,8 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 return self._send_json({"error": f"Invalid scenario format: {e}"}, status=400)
 
-            benchmarks_dir = Path("benchmarks")
+            workspace_root = (Path(self.workspace_dir) if self.workspace_dir else Path.cwd()).resolve()
+            benchmarks_dir = workspace_root / "benchmarks"
             benchmarks_dir.mkdir(parents=True, exist_ok=True)
             target_file = benchmarks_dir / f"{safe_name}.json"
             exists_fn = getattr(self.storage_gateway, "file_exists", getattr(self.storage_gateway, "exists", None))
@@ -515,7 +664,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             if cwd:
                 try:
                     resolved_cwd = Path(cwd).resolve()
-                    workspace_root = Path.cwd().resolve()
+                    workspace_root = (Path(self.workspace_dir) if self.workspace_dir else Path.cwd()).resolve()
                     if not resolved_cwd.is_relative_to(workspace_root):
                         return self._send_json({"error": "Preflight cwd must remain within the workspace boundary."}, status=400)
                     cwd = str(resolved_cwd)
@@ -708,36 +857,43 @@ class BentoApiHandler(BaseHTTPRequestHandler):
         return scenarios
 
     def _stream_task_logs(self, task_id: str, query_params: str = "") -> None:
-        status_info = self.bg_runner.get_status(task_id)
-        if status_info is None:
-            self.send_error(404, f"Task {task_id} not found")
-            return
-
-        offset = 0
-        last_event_id = self.headers.get("Last-Event-ID")
-        if last_event_id and last_event_id.isdigit():
-            offset = int(last_event_id)
-        elif query_params:
-            from urllib.parse import parse_qs
-            qs = parse_qs(query_params)
-            if "offset" in qs and qs["offset"][0].isdigit():
-                offset = int(qs["offset"][0])
-
-        cors_origin = self._get_cors_origin()
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
-        self.send_header("Cache-Control", "no-cache, no-transform")
-        self.send_header("Connection", "keep-alive")
-        if cors_origin:
-            self.send_header("Access-Control-Allow-Origin", cors_origin)
-            self.send_header("Vary", "Origin")
-        self.end_headers()
-
-        # SEC-11: Track active SSE connections for exhaustion prevention
-        BentoApiHandler._active_sse_connections += 1
         try:
-            for _ in range(600):  # Stream up to ~60s
-                chunk, new_offset, is_running = self.bg_runner.read_log_chunk(task_id, start_offset=offset)
+            status_info = self.bg_runner.get_status(task_id)
+            if status_info is None:
+                self.send_error(404, f"Task {task_id} not found")
+                return
+
+            offset = 0
+            last_event_id = self.headers.get("Last-Event-ID")
+            if last_event_id and last_event_id.isdigit():
+                offset = int(last_event_id)
+            elif query_params:
+                from urllib.parse import parse_qs
+                qs = parse_qs(query_params)
+                if "offset" in qs and qs["offset"][0].isdigit():
+                    offset = int(qs["offset"][0])
+
+            cors_origin = self._get_cors_origin()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-transform")
+            self.send_header("Connection", "keep-alive")
+            if cors_origin:
+                self.send_header("Access-Control-Allow-Origin", cors_origin)
+                self.send_header("Vary", "Origin")
+            self.end_headers()
+
+            last_is_running = True
+            for i in range(600):  # Stream up to ~60s
+                # REL-03: Throttle process status check to 1/sec (every 10 cycles) to eliminate fork storm
+                should_check_status = (i % 10 == 0)
+                chunk, new_offset, is_running = self.bg_runner.read_log_chunk(
+                    task_id,
+                    start_offset=offset,
+                    check_status=should_check_status,
+                    last_is_running=last_is_running,
+                )
+                last_is_running = is_running
                 if chunk:
                     offset = new_offset
                     msg = json.dumps({"chunk": chunk, "offset": offset, "status": "RUNNING" if is_running else "STOPPED"})
@@ -748,11 +904,23 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                     self.wfile.write(f"id: {offset}\ndata: {msg}\nevent: close\ndata: end\n\n".encode("utf-8"))
                     self.wfile.flush()
                     break
+                elif i % 50 == 0:
+                    # REL-04: Periodic SSE keepalive heartbeat to detect disconnects and keep proxies open
+                    self.wfile.write(b": ping\n\n")
+                    self.wfile.flush()
                 time.sleep(0.1)
+            else:
+                try:
+                    self.wfile.write(b"event: timeout\ndata: end\n\n")
+                    self.wfile.flush()
+                except Exception:
+                    pass
         except (BrokenPipeError, ConnectionResetError):
             pass
         finally:
-            BentoApiHandler._active_sse_connections -= 1
+            self.close_connection = True
+            with BentoApiHandler._sse_lock:
+                BentoApiHandler._active_sse_connections = max(0, BentoApiHandler._active_sse_connections - 1)
 
     def _serve_static_file(self, req_path: str) -> None:
         if not self.static_dir.exists():
@@ -786,6 +954,10 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", f"{mime}; charset=utf-8" if "text" in mime or "javascript" in mime else mime)
             self.send_header("Content-Length", str(len(content)))
+            # SEC-04: Enforce clickjacking and MIME-sniffing defenses on static assets
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
             self.end_headers()
             self.wfile.write(content)
         except Exception:
@@ -806,6 +978,9 @@ def _get_network_ip() -> str:
 
 class FastThreadingHTTPServer(ThreadingHTTPServer):
     """ThreadingHTTPServer that bypasses blocking reverse DNS lookups (socket.getfqdn) on bind."""
+    # REL-05: Enable daemon threads to avoid hanging on exit due to active SSE streams
+    daemon_threads = True
+
     def server_bind(self):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(self.server_address)

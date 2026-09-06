@@ -17,7 +17,25 @@ class SubprocessExecutionGateway(ExecutionGateway):
     ) -> tuple[int, str, str, float]:
         merged_env = os.environ.copy()
         if env:
-            merged_env.update(env)
+            # SEC-08: Filter hazardous process-hijacking environment variables
+            forbidden_prefixes = ("LD_", "DYLD_")
+            forbidden_keys = {
+                "BASH_ENV",
+                "ENV",
+                "NODE_OPTIONS",
+                "PYTHONHOME",
+                "PYTHONPATH",
+                "PERL5OPT",
+                "RUBYOPT",
+                "GIT_PAGER",
+                "PAGER",
+            }
+            safe_env = {
+                k: v
+                for k, v in env.items()
+                if k not in forbidden_keys and not any(k.startswith(p) for p in forbidden_prefixes)
+            }
+            merged_env.update(safe_env)
 
         start_time = time.monotonic()
         proc = None
@@ -70,8 +88,13 @@ class SubprocessExecutionGateway(ExecutionGateway):
             duration_ms = (time.monotonic() - start_time) * 1000.0
             if proc:
                 try:
-                    proc.kill()
+                    pgid = os.getpgid(proc.pid)
+                    os.killpg(pgid, signal.SIGKILL)
+                    proc.wait(timeout=0.5)
                 except Exception:
-                    pass
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
             return -1, "", str(e), duration_ms
 
