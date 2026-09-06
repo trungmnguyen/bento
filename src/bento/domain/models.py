@@ -16,6 +16,8 @@ class AssertionType(str, Enum):
     EXIT_CODE_EQUALS = "EXIT_CODE_EQUALS"
     JSON_KEY_EXISTS = "JSON_KEY_EXISTS"
     MAX_DURATION_MS = "MAX_DURATION_MS"
+    LESS_THAN = "LESS_THAN"
+    GREATER_THAN = "GREATER_THAN"
 
 
 class StepStatus(str, Enum):

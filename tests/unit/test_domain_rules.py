@@ -37,3 +37,25 @@ class TestDomainRules(unittest.TestCase):
         errors = validate_scenario(s)
         self.assertGreater(len(errors), 0)
         self.assertIn("non-empty name", errors[0])
+
+    def test_evaluate_assertion_less_than(self):
+        assertion = Assertion(type=AssertionType.LESS_THAN, expected="100.5", target_field="stdout")
+        res = evaluate_assertion(assertion, {"stdout": "42.0"})
+        self.assertTrue(res.passed)
+        res_fail = evaluate_assertion(assertion, {"stdout": "150.0"})
+        self.assertFalse(res_fail.passed)
+
+    def test_evaluate_assertion_greater_than(self):
+        assertion = Assertion(type=AssertionType.GREATER_THAN, expected="10", target_field="stdout")
+        res = evaluate_assertion(assertion, {"stdout": "25"})
+        self.assertTrue(res.passed)
+        res_fail = evaluate_assertion(assertion, {"stdout": "5"})
+        self.assertFalse(res_fail.passed)
+
+    def test_evaluate_assertion_regex_bounded(self):
+        # SEC-14: Target strings > 100KB are safely truncated
+        massive_str = "a" * 150_000 + "target"
+        assertion = Assertion(type=AssertionType.MATCHES_REGEX, expected=r"^a+", target_field="stdout")
+        res = evaluate_assertion(assertion, {"stdout": massive_str})
+        self.assertTrue(res.passed)
+

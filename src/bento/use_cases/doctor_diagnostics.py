@@ -50,10 +50,11 @@ class DoctorDiagnosticsUseCase:
         # 2. Node & Web Toolchain Check
         node_ver = info.get("node_version")
         if node_ver:
+            msg = f"Node.js {node_ver} detected for web dashboard." if node_ver != "detected" else "Node.js detected for web dashboard."
             checks.append(DoctorCheckResult(
                 name="Node Toolchain",
                 passed=True,
-                message=f"Node.js {node_ver} detected for web dashboard.",
+                message=msg,
                 severity=DiagnosticSeverity.OK,
             ))
         else:

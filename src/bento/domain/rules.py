@@ -71,8 +71,11 @@ def evaluate_assertion(assertion: Assertion, output_data: dict[str, Any]) -> Ass
 
     elif assertion.type == AssertionType.MATCHES_REGEX:
         try:
+            target_str = str(actual)
+            if len(target_str) > 100_000:
+                target_str = target_str[:100_000]  # SEC-14: Bound target size to 100KB to mitigate ReDoS
             pattern = re.compile(str(expected), re.MULTILINE | re.DOTALL)
-            passed = bool(pattern.search(str(actual)))
+            passed = bool(pattern.search(target_str))
             message = f"Regex '{expected}' matched against target: {passed}"
         except re.error as e:
             passed = False
@@ -94,6 +97,22 @@ def evaluate_assertion(assertion: Assertion, output_data: dict[str, Any]) -> Ass
         except (ValueError, TypeError):
             passed = False
             message = f"Invalid duration value '{actual}'"
+
+    elif assertion.type == AssertionType.LESS_THAN:
+        try:
+            passed = float(actual) < float(expected)
+            message = f"Value {actual} < limit {expected}: {passed}"
+        except (ValueError, TypeError):
+            passed = False
+            message = f"Invalid numeric comparison for LESS_THAN: actual='{actual}', expected='{expected}'"
+
+    elif assertion.type == AssertionType.GREATER_THAN:
+        try:
+            passed = float(actual) > float(expected)
+            message = f"Value {actual} > limit {expected}: {passed}"
+        except (ValueError, TypeError):
+            passed = False
+            message = f"Invalid numeric comparison for GREATER_THAN: actual='{actual}', expected='{expected}'"
 
     return AssertionResult(
         assertion=assertion,

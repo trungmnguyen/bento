@@ -38,8 +38,15 @@ class RunArenaMatchUseCase:
         c_raw = self._storage.read_text(matchup.challenger)
         d_raw = self._storage.read_text(matchup.defender)
 
-        c_scenario = ScenarioParser.from_json(c_raw)
-        d_scenario = ScenarioParser.from_json(d_raw)
+        try:
+            c_scenario = ScenarioParser.from_json(c_raw)
+        except Exception as e:
+            raise ValueError(f"Challenger contract '{matchup.challenger}' is malformed or invalid JSON: {e}")
+
+        try:
+            d_scenario = ScenarioParser.from_json(d_raw)
+        except Exception as e:
+            raise ValueError(f"Defender contract '{matchup.defender}' is malformed or invalid JSON: {e}")
 
         c_result = self._run_scenario.execute(c_scenario, working_dir_override=working_dir)
         d_result = self._run_scenario.execute(d_scenario, working_dir_override=working_dir)
