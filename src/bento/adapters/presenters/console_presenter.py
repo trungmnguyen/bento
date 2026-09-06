@@ -164,7 +164,8 @@ class ConsolePresenter(PresenterGateway):
         lines.append(f"🧠 Memory Bank: {result.consolidated_lessons_count} active rules enforced ({result.new_lessons_discovered} newly harvested)")
         if result.harvested_lessons:
             lines.append("─" * 60)
-            lines.append(f"✨ {self._c('1;32', 'Harvested Lessons from Yesterday\'s Logs')}:")
+            harvest_hdr = "Harvested Lessons from Yesterday's Logs"
+            lines.append(f"✨ {self._c('1;32', harvest_hdr)}:")
             for l in result.harvested_lessons:
                 lines.append(f"  - [{self._c('36', l.id)}] {self._c('1', l.title)}")
                 lines.append(f"    Rule: {self._c('32', l.rule)}")
