@@ -159,6 +159,7 @@ class TestBentoWebServer(unittest.TestCase):
             host="127.0.0.1",
             port=0,
             static_dir=self.static_dir,
+            workspace_dir=self.test_dir,
         )
         self.server.start(block=False)
         self.base_url = f"http://127.0.0.1:{self.server.port}"
@@ -519,6 +520,23 @@ class TestBentoWebServer(unittest.TestCase):
         self.assertIn("winner", data)
         self.assertIn("challenger_name", data)
         self.assertIn("defender_name", data)
+
+    def test_api_arena_match_traversal_blocked(self):
+        status, body = self._post("/api/arena/match", {
+            "challenger": "../../etc/passwd",
+            "defender": "benchmarks/c2.json",
+            "metric": "pass_rate",
+        })
+        self.assertEqual(status, 400)
+        self.assertIn("escapes workspace", body)
+
+    def test_api_arena_match_device_blocked(self):
+        status, body = self._post("/api/arena/match", {
+            "challenger": "/dev/null",
+            "defender": "benchmarks/c2.json",
+            "metric": "pass_rate",
+        })
+        self.assertEqual(status, 400)
 
 
 if __name__ == "__main__":

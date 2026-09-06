@@ -56,11 +56,15 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
     setLoading(true);
     setScorecard(null);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       const res = await fetch('/api/arena/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ challenger: c, defender: d, metric }),
+        signal: controller.signal,
       });
 
       const data = await res.json().catch(() => ({ error: 'Failed to parse response' }));
@@ -74,9 +78,14 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
         const msg = data.error || `Arena match failed (HTTP ${res.status})`;
         showToast('error', 'Match Failed', msg);
       }
-    } catch {
-      showToast('error', 'Network Error', 'Could not communicate with Arena endpoint.');
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        showToast('error', 'Match Timeout', 'Arena match timed out after 30 seconds.');
+      } else {
+        showToast('error', 'Network Error', 'Could not communicate with Arena endpoint.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };

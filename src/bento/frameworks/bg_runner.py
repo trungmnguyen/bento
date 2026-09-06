@@ -50,6 +50,12 @@ class BackgroundTaskRunner:
 
         return True
 
+    def _write_task_meta_atomic(self, file_path: Path, data: dict[str, Any]) -> None:
+        # REL-19: Atomic file write to prevent JSONDecodeError in concurrent readers
+        tmp_file = file_path.with_suffix(f".tmp.{uuid.uuid4().hex[:6]}")
+        tmp_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        os.replace(tmp_file, file_path)
+
     def start_task(
         self,
         command: str,
@@ -97,7 +103,7 @@ class BackgroundTaskRunner:
             "log_file": str(log_file),
         }
 
-        task_meta_file.write_text(json.dumps(task_info, indent=2), encoding="utf-8")
+        self._write_task_meta_atomic(task_meta_file, task_info)
         return task_info
 
     def list_tasks(self, working_dir: str | None = None) -> list[dict[str, Any]]:
@@ -192,9 +198,7 @@ class BackgroundTaskRunner:
         if pid <= 0:
             return True
 
-        if not self._is_pid_alive(pid):
-            return True
-
+        # REL-18: Process group kill attempt even if leader PID already died
         try:
             pgid = os.getpgid(pid)
             os.killpg(pgid, signal.SIGTERM)
@@ -215,12 +219,12 @@ class BackgroundTaskRunner:
                 except Exception:
                     pass
 
-        # Update status file
+        # Update status file atomically (REL-19)
         bg_dir = self._get_bg_dir(working_dir)
         task_file = bg_dir / "tasks" / f"{task_id}.json"
         if task_file.exists():
             status["status"] = "KILLED"
-            task_file.write_text(json.dumps(status, indent=2), encoding="utf-8")
+            self._write_task_meta_atomic(task_file, status)
         return True
 
     def prune_tasks(self, stopped_only: bool = True, working_dir: str | None = None) -> int:

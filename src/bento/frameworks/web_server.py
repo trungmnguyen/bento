@@ -40,6 +40,7 @@ class BentoApiHandler(BaseHTTPRequestHandler):
     run_suite_uc: RunSuiteUseCase
     dream_uc: DreamCycleUseCase
     static_dir: Path
+    workspace_dir: str | None = None
     start_time: float
     # SEC-11: Bound concurrent SSE connections to prevent thread exhaustion
     _active_sse_connections: int = 0
@@ -610,6 +611,26 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             if not challenger or not defender:
                 return self._send_json({"error": "Both 'challenger' and 'defender' paths are required."}, status=400)
 
+            # SEC-16: Workspace boundary and regular file validation
+            workspace_root = Path(getattr(self, "workspace_dir", None) or Path.cwd()).resolve()
+            exists_fn = getattr(self.storage_gateway, "file_exists", getattr(self.storage_gateway, "exists", None))
+
+            for path_key, path_val in [("challenger", challenger), ("defender", defender)]:
+                if not isinstance(path_val, str) or not path_val.strip():
+                    return self._send_json({"error": f"Invalid path for '{path_key}'."}, status=400)
+                p = Path(path_val)
+                resolved = (workspace_root / p).resolve() if not p.is_absolute() else p.resolve()
+                if not resolved.is_relative_to(workspace_root):
+                    return self._send_json({"error": f"Path traversal detected: '{path_val}' escapes workspace boundary."}, status=400)
+                if resolved.exists():
+                    if not resolved.is_file():
+                        return self._send_json({"error": f"Invalid scenario contract: '{path_val}' is not a regular file."}, status=400)
+                    if hasattr(os.path, "getsize") and resolved.stat().st_size > 2 * 1024 * 1024:
+                        return self._send_json({"error": f"Scenario contract '{path_val}' exceeds 2MB limit."}, status=400)
+                elif exists_fn:
+                    if not (exists_fn(str(resolved)) or exists_fn(path_val)):
+                        return self._send_json({"error": f"Scenario contract '{path_val}' not found."}, status=404)
+
             from bento.domain.models import ArenaMatchup
             from bento.use_cases.arena_match import RunArenaMatchUseCase
 
@@ -789,6 +810,7 @@ class BentoWebServer:
         host: str = "127.0.0.1",
         port: int = 8765,
         static_dir: str | Path | None = None,
+        workspace_dir: str | Path | None = None,
     ):
         self.host = host
         self.port = port
@@ -801,6 +823,7 @@ class BentoWebServer:
         scenario_runner = getattr(run_suite_uc, "_run_scenario_use_case", getattr(run_suite_uc, "_run_scenario", None))
         self.execution_gateway = execution_gateway or getattr(scenario_runner, "_execution_gateway", None)
         self.static_dir = Path(static_dir) if static_dir else Path(os.getcwd()) / "web" / "dist"
+        self.workspace_dir = Path(workspace_dir).resolve() if workspace_dir else Path.cwd().resolve()
         self._server: ThreadingHTTPServer | None = None
 
     def start(self, block: bool = True) -> None:
@@ -813,6 +836,7 @@ class BentoWebServer:
         handler_cls.run_suite_uc = self.run_suite_uc
         handler_cls.dream_uc = self.dream_uc
         handler_cls.static_dir = self.static_dir
+        handler_cls.workspace_dir = str(self.workspace_dir)
         handler_cls.start_time = time.monotonic()
 
         self._server = FastThreadingHTTPServer((self.host, self.port), handler_cls)
