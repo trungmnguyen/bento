@@ -119,6 +119,7 @@ export const AudioSettingsModal: React.FC<AudioSettingsModalProps> = ({ isOpen, 
               type="button"
               onClick={handleToggleEnabled}
               aria-label={settings.enabled ? 'Mute sound feedback' : 'Enable sound feedback'}
+              aria-pressed={settings.enabled}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
                 settings.enabled
                   ? 'bg-bento-matcha/20 text-bento-matcha border-bento-matcha/40 shadow-sm'
@@ -147,6 +148,7 @@ export const AudioSettingsModal: React.FC<AudioSettingsModalProps> = ({ isOpen, 
               type="button"
               onClick={handleToggleSubtitles}
               aria-label={settings.visualSubtitles ? 'Disable visual sound subtitles' : 'Enable visual sound subtitles'}
+              aria-pressed={settings.visualSubtitles}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
                 settings.visualSubtitles
                   ? 'bg-amber-400/20 text-amber-300 border-amber-400/40 shadow-sm'
@@ -178,10 +180,14 @@ export const AudioSettingsModal: React.FC<AudioSettingsModalProps> = ({ isOpen, 
 
           {/* Sound Pack Selection */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
+            <label id="soundpack-label" className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Sound Pack Flavor
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div
+              role="radiogroup"
+              aria-labelledby="soundpack-label"
+              className="grid grid-cols-3 gap-2"
+            >
               {[
                 { id: 'zen' as SoundPack, name: 'Zen Garden', desc: 'Singing bowl' },
                 { id: 'mechanical' as SoundPack, name: 'Mechanical', desc: 'Clicky switch' },
@@ -190,6 +196,8 @@ export const AudioSettingsModal: React.FC<AudioSettingsModalProps> = ({ isOpen, 
                 <button
                   key={pack.id}
                   type="button"
+                  role="radio"
+                  aria-checked={settings.pack === pack.id}
                   disabled={!settings.enabled}
                   onClick={() => handlePackChange(pack.id)}
                   className={`p-2.5 rounded-xl text-left border transition disabled:opacity-40 ${

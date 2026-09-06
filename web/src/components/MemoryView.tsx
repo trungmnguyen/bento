@@ -271,10 +271,18 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
     playZenBell();
   };
+
+  // Pre-index nodes into a Map for O(1) edge source/target resolution (WASABI-UI-04)
+  const nodeMap = useMemo(() => {
+    if (!graphData) return new Map<string, MemoryGraphNode>();
+    return new Map(graphData.nodes.map((n) => [n.id, n]));
+  }, [graphData]);
 
   // Connected edges for the selected node
   const connectedEdges = useMemo(() => {
@@ -413,6 +421,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedCategory(null)}
+                  aria-pressed={selectedCategory === null}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
                     selectedCategory === null
                       ? 'bg-bento-salmon text-white shadow-bento-glow'
@@ -428,6 +437,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                       playClack();
                       setSelectedCategory(selectedCategory === cat ? null : cat);
                     }}
+                    aria-pressed={selectedCategory === cat}
                     className={`px-2.5 py-1 rounded-lg text-xs font-mono transition ${
                       selectedCategory === cat
                         ? 'bg-bento-matcha text-gray-900 font-bold'
@@ -445,88 +455,84 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* SVG Visualizer */}
             <div
-              className="lg:col-span-2 bg-bento-surface border border-bento-border rounded-bento overflow-hidden relative shadow-2xl min-h-[550px] flex items-center justify-center cursor-grab active:cursor-grabbing select-none"
+              className="lg:col-span-2 bg-[#0c0d12] border border-bento-border rounded-bento overflow-hidden relative shadow-2xl h-[520px] select-none"
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
               onWheel={handleWheel}
             >
-              {loadingGraph && (
-                <div className="text-center text-gray-400 space-y-2">
-                  <Network className="w-8 h-8 text-bento-matcha animate-spin mx-auto" />
-                  <p className="font-mono text-xs">Simmering Flavor Constellation Graph...</p>
-                </div>
-              )}
-
-              {/* In-Graph Search HUD */}
-              {!loadingGraph && graphData && (
-                <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-[#131117]/85 backdrop-blur-md border border-bento-border/80 rounded-xl px-3 py-1.5 text-xs text-white shadow-lg">
-                  <Search className="w-3.5 h-3.5 text-gray-400" />
+              {/* In-Graph Search & Navigation Controls */}
+              <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
-                    placeholder="Filter constellation..."
                     value={graphQuery}
                     onChange={(e) => setGraphQuery(e.target.value)}
-                    className="bg-transparent border-none text-xs text-white placeholder-gray-500 focus:outline-none w-36 font-mono"
-                    onMouseDown={(e) => e.stopPropagation()}
+                    placeholder="Search node / axiom..."
+                    className="bg-bento-surface/90 backdrop-blur-md border border-bento-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono w-48 shadow-lg"
                   />
-                  {graphQuery && (
-                    <button onClick={() => setGraphQuery('')} className="text-gray-400 hover:text-white">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
                 </div>
-              )}
+              </div>
 
-              {/* Canvas Controls HUD */}
-              {!loadingGraph && graphData && (
-                <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-[#131117]/85 backdrop-blur-md border border-bento-border/80 rounded-xl p-1 text-xs text-white shadow-lg">
-                  <button
-                    onClick={() => setZoom((z) => Math.min(3.0, Number((z + 0.15).toFixed(2))))}
-                    className="p-1.5 hover:bg-white/10 rounded-lg text-gray-300 hover:text-white transition"
-                    title="Zoom In (+)"
-                  >
-                    <ZoomIn className="w-4 h-4" />
-                  </button>
-                  <span className="font-mono text-[11px] px-1 text-gray-300 min-w-[36px] text-center">
-                    {Math.round(zoom * 100)}%
-                  </span>
-                  <button
-                    onClick={() => setZoom((z) => Math.max(0.4, Number((z - 0.15).toFixed(2))))}
-                    className="p-1.5 hover:bg-white/10 rounded-lg text-gray-300 hover:text-white transition"
-                    title="Zoom Out (-)"
-                  >
-                    <ZoomOut className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={resetTransform}
-                    className="p-1.5 hover:bg-white/10 rounded-lg text-gray-300 hover:text-white transition ml-0.5 border-l border-white/10"
-                    title="Reset View (0)"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
+              {/* Floating Zoom & Pan Reset Controls */}
+              <div className="absolute bottom-4 right-4 z-10 flex items-center gap-1.5 bg-bento-surface/85 backdrop-blur-md border border-bento-border rounded-xl p-1.5 shadow-xl">
+                <button
+                  onClick={() => setZoom((z) => Math.min(3.0, Number((z + 0.2).toFixed(2))))}
+                  className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-bento-lacquer transition"
+                  title="Zoom In (+)"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                <span className="text-[11px] font-mono font-bold text-gray-300 w-10 text-center">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  onClick={() => setZoom((z) => Math.max(0.4, Number((z - 0.2).toFixed(2))))}
+                  className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-bento-lacquer transition"
+                  title="Zoom Out (-)"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <div className="w-[1px] h-4 bg-bento-border mx-1" />
+                <button
+                  onClick={resetTransform}
+                  className="p-1.5 text-gray-400 hover:text-bento-tamago rounded-lg hover:bg-bento-lacquer transition flex items-center gap-1 text-[11px] font-mono"
+                  title="Reset View (100%)"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset</span>
+                </button>
+              </div>
+
+              {loadingGraph ? (
+                <div className="h-full flex items-center justify-center text-gray-400 space-y-2">
+                  <div className="animate-spin w-6 h-6 border-2 border-bento-salmon border-t-transparent rounded-full" />
                 </div>
-              )}
-
-              {!loadingGraph && graphData && (
+              ) : !graphData || graphData.nodes.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
+                  <Network className="w-10 h-10 opacity-40 text-bento-tamago animate-pulse" />
+                  <p className="text-xs">No graph nodes seasoned yet.</p>
+                </div>
+              ) : (
                 <svg
+                  id="canvas-bg"
+                  className="w-full h-full cursor-grab active:cursor-grabbing"
                   viewBox="0 0 1000 800"
-                  className="w-full h-auto max-h-[680px] select-none pointer-events-auto"
-                  style={{ background: 'radial-gradient(ellipse at center, #18191f 0%, #0d0e12 100%)' }}
                 >
                   <defs>
                     <radialGradient id="hubGradient" cx="50%" cy="50%" r="50%">
-                      <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
-                      <stop offset="100%" stopColor="#b45309" stopOpacity="0.4" />
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.9" />
+                      <stop offset="100%" stopColor="#d97706" stopOpacity="0.4" />
                     </radialGradient>
                     <radialGradient id="ruleGradient" cx="50%" cy="50%" r="50%">
                       <stop offset="0%" stopColor="#10b981" stopOpacity="0.9" />
-                      <stop offset="100%" stopColor="#047857" stopOpacity="0.5" />
+                      <stop offset="100%" stopColor="#059669" stopOpacity="0.4" />
                     </radialGradient>
                     <radialGradient id="antiGradient" cx="50%" cy="50%" r="50%">
                       <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.9" />
-                      <stop offset="100%" stopColor="#be123c" stopOpacity="0.5" />
+                      <stop offset="100%" stopColor="#e11d48" stopOpacity="0.4" />
                     </radialGradient>
                     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
                       <feGaussianBlur stdDeviation="3" result="blur" />
@@ -534,25 +540,20 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                     </filter>
                   </defs>
 
-                  {/* Transformed Canvas Group */}
-                  <g
-                    transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
-                    style={{ transformOrigin: '500px 400px', transition: isPanning ? 'none' : 'transform 150ms ease-out' }}
-                  >
+                  {/* Transformation Container for Pan & Zoom */}
+                  <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
                     {/* Graph Grid Coordinates Subtle Rings */}
                     <circle cx="500" cy="400" r="180" fill="none" stroke="#252833" strokeDasharray="4 4" strokeWidth="1" />
                     <circle cx="500" cy="400" r="320" fill="none" stroke="#20222b" strokeDasharray="6 6" strokeWidth="1" />
 
-                    {/* Edges */}
+                    {/* Edges - O(1) resolution via nodeMap (WASABI-UI-04) */}
                     {graphData.edges.map((edge, idx) => {
-                      const src = graphData.nodes.find((n) => n.id === edge.source);
-                      const tgt = graphData.nodes.find((n) => n.id === edge.target);
+                      const src = nodeMap.get(edge.source);
+                      const tgt = nodeMap.get(edge.target);
                       if (!src || !tgt) return null;
 
                       const isHighlighted =
-                        selectedNode && (selectedNode.id === src.id || selectedNode.id === tgt.id);
-
-                      // Match filter
+                        Boolean(selectedNode && (selectedNode.id === src.id || selectedNode.id === tgt.id));
                       const q = graphQuery.toLowerCase();
                       const isMatch = !q ||
                         src.label.toLowerCase().includes(q) ||
@@ -609,11 +610,21 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                         return (
                           <g
                             key={node.id}
-                            className="cursor-pointer transition-transform duration-200"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Category Hub: ${node.label}`}
+                            className="cursor-pointer transition-transform duration-200 focus:outline-none"
                             opacity={nodeOpacity}
                             onClick={() => {
                               playClack();
                               setSelectedNode(node);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                playClack();
+                                setSelectedNode(node);
+                              }
                             }}
                           >
                             <circle
@@ -644,11 +655,21 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                         return (
                           <g
                             key={node.id}
-                            className="cursor-pointer"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Golden Rule: ${node.label} (${node.id})`}
+                            className="cursor-pointer focus:outline-none"
                             opacity={nodeOpacity}
                             onClick={() => {
                               playClack();
                               setSelectedNode(node);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                playClack();
+                                setSelectedNode(node);
+                              }
                             }}
                           >
                             {/* Anti-Pattern Warning Halo */}
@@ -703,11 +724,21 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                         return (
                           <g
                             key={node.id}
-                            className="cursor-pointer"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Anti-Pattern: ${node.label}`}
+                            className="cursor-pointer focus:outline-none"
                             opacity={nodeOpacity}
                             onClick={() => {
                               playClack();
                               setSelectedNode(node);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                playClack();
+                                setSelectedNode(node);
+                              }
                             }}
                           >
                             <circle
@@ -737,11 +768,21 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                       return (
                         <g
                           key={node.id}
-                          className="cursor-pointer"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Scenario Test: ${node.label}`}
+                          className="cursor-pointer focus:outline-none"
                           opacity={nodeOpacity}
                           onClick={() => {
                             playClack();
                             setSelectedNode(node);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              playClack();
+                              setSelectedNode(node);
+                            }
                           }}
                         >
                           <rect
@@ -890,10 +931,12 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
                 <Tag className="w-3.5 h-3.5 text-bento-salmon" /> Filter Ingredients:
               </span>
               <button
+                type="button"
                 onClick={() => {
                   playClack();
                   setSelectedTag(null);
                 }}
+                aria-pressed={selectedTag === null}
                 className={`text-xs px-3.5 py-1 rounded-full transition font-bold ${
                   selectedTag === null
                     ? 'bg-bento-salmon text-white shadow-bento-glow'
@@ -905,10 +948,12 @@ export const MemoryView: React.FC<MemoryViewProps> = ({ lessons, onRefresh }) =>
               {allTags.map((tag) => (
                 <button
                   key={tag}
+                  type="button"
                   onClick={() => {
                     playClack();
                     setSelectedTag(selectedTag === tag ? null : tag);
                   }}
+                  aria-pressed={selectedTag === tag}
                   className={`text-xs px-3.5 py-1 rounded-full transition font-medium ${
                     selectedTag === tag
                       ? 'bg-bento-salmon text-white shadow-bento-glow font-bold'

@@ -1,13 +1,13 @@
 ---
 name: skill-orchestra_round_1
 description: >-
-  Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (9 executions observed)
-trigger_tags: ['triad_sprint', 'culinary_brigade', 'orchestra']
+  Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (10 executions observed)
+trigger_tags: ['culinary_brigade', 'brigade_sprint', 'orchestra', 'triad_sprint']
 ---
 
 # 🛠️ skill-orchestra_round_1
 
-> Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (9 executions observed)
+> Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (10 executions observed)
 
 ## 📋 Procedural Execution Steps
 

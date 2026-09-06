@@ -44,8 +44,10 @@ import {
   BentoNotification,
 } from './types';
 import { getAudioSettings, playClack, playZenBell } from './utils/audio';
+import { AnnounceProvider, useAnnounce } from './hooks/useAnnounce';
 
-export default function App() {
+function BentoDashboard() {
+  const announce = useAnnounce();
   const [activeTab, setActiveTab] = useState<'daemons' | 'memory' | 'traces' | 'benchmarks' | 'arena'>('daemons');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
@@ -216,7 +218,15 @@ export default function App() {
       }
 
       if (Array.isArray(bgRes)) {
-        // Detect task completions and trigger notifications
+        // Prune stale task IDs to avoid unbounded memory leaks (WASABI-UI-07)
+        const currentIds = new Set(bgRes.map((t: BackgroundTask) => t.task_id));
+        for (const id of prevTasksRef.current.keys()) {
+          if (!currentIds.has(id)) {
+            prevTasksRef.current.delete(id);
+          }
+        }
+
+        // Detect task completions, trigger visual notification and screen-reader announcement
         bgRes.forEach((t: BackgroundTask) => {
           const prevStatus = prevTasksRef.current.get(t.task_id);
           if (prevStatus === 'RUNNING' && t.status !== 'RUNNING') {
@@ -227,6 +237,7 @@ export default function App() {
               description: `Command: ${t.command.slice(0, 60)}...`,
               actionTab: 'daemons',
             });
+            announce(`Kitchen task ${t.tag} completed with status ${t.status}.`, 'polite');
           }
           prevTasksRef.current.set(t.task_id, t.status);
         });
@@ -283,15 +294,56 @@ export default function App() {
       .join(' ');
   }, [telemetry]);
 
+  const tabKeys: Array<'daemons' | 'memory' | 'traces' | 'benchmarks' | 'arena'> = [
+    'daemons',
+    'memory',
+    'traces',
+    'benchmarks',
+    'arena',
+  ];
+
+  const handleTabKeyDown = (e: React.KeyboardEvent) => {
+    const currentIndex = tabKeys.indexOf(activeTab);
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const nextTab = tabKeys[(currentIndex + 1) % tabKeys.length];
+      setActiveTab(nextTab);
+      playClack();
+      document.getElementById(`tab-${nextTab}`)?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prevTab = tabKeys[(currentIndex - 1 + tabKeys.length) % tabKeys.length];
+      setActiveTab(prevTab);
+      playClack();
+      document.getElementById(`tab-${prevTab}`)?.focus();
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-gray-100 selection:bg-bento-salmon selection:text-white">
-      {/* Accessible Skip Link (WCAG 2.4.1) */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-bento-salmon focus:text-white focus:font-mono focus:text-xs focus:font-bold focus:rounded-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-300 transition-all"
-      >
-        Skip to Compartment Canvas 🥢
-      </a>
+      {/* Accessible Multi-Landmark Skip Dock (WCAG 2.4.1 / Matcha Proposal 1) */}
+      <nav aria-label="Skip navigation links" className="sr-only focus-within:not-sr-only focus-within:fixed focus-within:top-3 focus-within:left-3 focus-within:z-50 focus-within:flex focus-within:gap-2 focus-within:bg-bento-surface focus-within:border focus-within:border-bento-border focus-within:p-2 focus-within:rounded-xl focus-within:shadow-2xl">
+        <a
+          href="#main-content"
+          className="px-3 py-1.5 bg-bento-salmon text-white font-mono text-xs font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300"
+        >
+          Skip to Canvas 🥢
+        </a>
+        <a
+          href="#tab-daemons"
+          onClick={() => setActiveTab('daemons')}
+          className="px-3 py-1.5 bg-bento-elevated text-gray-200 font-mono text-xs font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300"
+        >
+          Skip to Chefs 🍳
+        </a>
+        <a
+          href="#tab-memory"
+          onClick={() => setActiveTab('memory')}
+          className="px-3 py-1.5 bg-bento-elevated text-gray-200 font-mono text-xs font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300"
+        >
+          Skip to Recipes 🍙
+        </a>
+      </nav>
 
       {/* Offline / Reconnecting Banner */}
       {isOffline && (
@@ -320,7 +372,7 @@ export default function App() {
               </div>
               <p className="text-xs text-gray-400 font-mono flex items-center gap-1.5 mt-0.5">
                 <FolderGit2 className="w-3 h-3 text-gray-500 shrink-0" />
-                <span className="text-gray-300 truncate max-w-[150px] xs:max-w-[220px] sm:max-w-md" title={status.cwd}>
+                <span className="text-gray-300 truncate max-w-[150px] sm:max-w-md" title={status.cwd}>
                   {status.cwd || 'Dev/bento'}
                 </span>
               </p>
@@ -352,22 +404,24 @@ export default function App() {
               </span>
             </div>
 
-            {/* Ambient Header Sparkline */}
+            {/* Ambient Header Sparkline Button (YUZU-A11Y-01) */}
             {telemetry && ambientSparklinePoints && (
-              <div
+              <button
+                type="button"
                 onClick={() => {
                   playClack();
                   setActiveTab('traces');
                 }}
-                className="hidden lg:flex items-center gap-2 bg-bento-surface border border-bento-border hover:border-bento-matcha/40 px-2.5 py-1.5 rounded-bento text-xs font-mono cursor-pointer transition shadow-inner"
+                aria-label={`Telemetry Sparkline: ${telemetry.pass_rate.toFixed(0)}% Pass, P90 latency ${telemetry.p90_latency_ms.toFixed(0)}ms. Click to view Traces.`}
+                className="hidden lg:flex items-center gap-2 bg-bento-surface border border-bento-border hover:border-bento-matcha/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-matcha px-2.5 py-1.5 rounded-bento text-xs font-mono cursor-pointer transition shadow-inner text-left"
                 title={`Pass Rate: ${telemetry.pass_rate.toFixed(1)}% · P90: ${telemetry.p90_latency_ms.toFixed(1)}ms (Click to view traces)`}
               >
                 <div className="flex flex-col text-[10px]">
                   <span className="text-emerald-400 font-bold leading-tight">{telemetry.pass_rate.toFixed(0)}% Pass</span>
                   <span className="text-gray-400 text-[9px] leading-tight font-mono">{telemetry.p90_latency_ms.toFixed(0)}ms</span>
                 </div>
-                <div className="w-20 h-5">
-                  <svg viewBox="0 0 80 20" className="w-full h-full overflow-visible">
+                <div className="w-20 h-5" aria-hidden="true">
+                  <svg viewBox="0 0 80 20" className="w-full h-full overflow-visible" focusable="false">
                     <polyline
                       fill="none"
                       stroke="#10b981"
@@ -378,7 +432,7 @@ export default function App() {
                     />
                   </svg>
                 </div>
-              </div>
+              </button>
             )}
 
             {/* Kitchen Vitals Telemetry Badge */}
@@ -404,10 +458,13 @@ export default function App() {
 
             {/* OmniPalette Trigger */}
             <button
+              type="button"
               onClick={() => {
                 playClack();
                 setIsPaletteOpen(true);
               }}
+              aria-haspopup="dialog"
+              aria-expanded={isPaletteOpen}
               aria-label="Open OmniSearch command palette (Cmd+K)"
               className="hidden sm:flex items-center gap-2 bg-bento-surface border border-bento-border hover:border-amber-500/40 px-3 py-1.5 rounded-bento text-xs text-gray-300 hover:text-white transition min-h-[38px] shadow-sm"
               title="Open OmniPalette (Cmd+K)"
@@ -419,10 +476,13 @@ export default function App() {
 
             {/* Audio Studio Trigger */}
             <button
+              type="button"
               onClick={() => {
                 playClack();
                 setIsAudioModalOpen(true);
               }}
+              aria-haspopup="dialog"
+              aria-expanded={isAudioModalOpen}
               aria-label="Sensory Web Audio Feedback Settings"
               className={`p-2 border rounded-bento transition min-h-[38px] min-w-[38px] flex items-center justify-center ${
                 audioEnabled
@@ -436,10 +496,13 @@ export default function App() {
 
             {/* Shortcuts Cheatsheet Trigger */}
             <button
+              type="button"
               onClick={() => {
                 playClack();
                 setIsShortcutsModalOpen(true);
               }}
+              aria-haspopup="dialog"
+              aria-expanded={isShortcutsModalOpen}
               aria-label="Keyboard Shortcuts Cheatsheet (?)"
               className="p-2 bg-bento-surface border border-bento-border hover:border-amber-400/50 text-gray-300 hover:text-white rounded-bento transition min-h-[38px] min-w-[38px] flex items-center justify-center"
               title="Keyboard Shortcuts Cheatsheet (?)"
@@ -449,10 +512,13 @@ export default function App() {
 
             {/* Notification Hub Trigger */}
             <button
+              type="button"
               onClick={() => {
                 playClack();
                 setIsNotificationDrawerOpen(true);
               }}
+              aria-haspopup="dialog"
+              aria-expanded={isNotificationDrawerOpen}
               aria-label={`Mission Control Notifications (${notifications.filter((n) => !n.read).length} unread)`}
               className="relative p-2 bg-bento-surface border border-bento-border hover:border-bento-salmon/50 text-gray-300 hover:text-white rounded-bento transition min-h-[38px] min-w-[38px] flex items-center justify-center"
               title="Mission Control Notifications (n)"
@@ -468,6 +534,7 @@ export default function App() {
             {/* Refresh Controls */}
             <div className="flex items-center gap-1.5 sm:gap-2">
               <button
+                type="button"
                 onClick={() => {
                   playClack();
                   setAutoRefresh(!autoRefresh);
@@ -482,6 +549,7 @@ export default function App() {
                 Auto: {autoRefresh ? '3s 🥢' : 'PAUSED'}
               </button>
               <button
+                type="button"
                 onClick={() => {
                   playClack();
                   fetchAllData();
@@ -496,15 +564,21 @@ export default function App() {
           </div>
         </div>
 
-        {/* Bento Compartment Navigation (Segmented Tabs) */}
+        {/* Bento Compartment Navigation (Segmented Tabs with Roving Tabindex) */}
         <nav aria-label="Bento Compartments Navigation" className="border-t border-bento-border/60 bg-[#16131c]/70">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-            <div role="tablist" aria-label="Bento Compartments" className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none py-2 -mx-1 px-1 sm:mx-0 sm:px-0">
+            <div
+              role="tablist"
+              aria-label="Bento Compartments"
+              onKeyDown={handleTabKeyDown}
+              className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none py-2 -mx-1 px-1 sm:mx-0 sm:px-0"
+            >
               {/* Tab 1: Kitchen Chefs */}
               <button
                 type="button"
                 role="tab"
                 id="tab-daemons"
+                tabIndex={activeTab === 'daemons' ? 0 : -1}
                 aria-controls="panel-daemons"
                 aria-selected={activeTab === 'daemons'}
                 onClick={() => {
@@ -537,6 +611,7 @@ export default function App() {
                 type="button"
                 role="tab"
                 id="tab-memory"
+                tabIndex={activeTab === 'memory' ? 0 : -1}
                 aria-controls="panel-memory"
                 aria-selected={activeTab === 'memory'}
                 onClick={() => {
@@ -567,6 +642,7 @@ export default function App() {
                 type="button"
                 role="tab"
                 id="tab-traces"
+                tabIndex={activeTab === 'traces' ? 0 : -1}
                 aria-controls="panel-traces"
                 aria-selected={activeTab === 'traces'}
                 onClick={() => {
@@ -597,6 +673,7 @@ export default function App() {
                 type="button"
                 role="tab"
                 id="tab-benchmarks"
+                tabIndex={activeTab === 'benchmarks' ? 0 : -1}
                 aria-controls="panel-benchmarks"
                 aria-selected={activeTab === 'benchmarks'}
                 onClick={() => {
@@ -627,6 +704,7 @@ export default function App() {
                 type="button"
                 role="tab"
                 id="tab-arena"
+                tabIndex={activeTab === 'arena' ? 0 : -1}
                 aria-controls="panel-arena"
                 aria-selected={activeTab === 'arena'}
                 onClick={() => {
@@ -723,7 +801,7 @@ export default function App() {
       </main>
 
       {/* Joyful Bento Box Footer */}
-      <footer className="border-t border-bento-border/70 py-3 bg-[#131117] text-xs text-gray-500 text-center font-mono flex flex-wrap items-center justify-center gap-2 px-4 pb-safe">
+      <footer className="border-t border-bento-border/70 py-3 bg-[#131117] text-xs text-gray-400 text-center font-mono flex flex-wrap items-center justify-center gap-2 px-4 pb-safe">
         <span>🍱 Bento Harness · Packed Fresh with Zero Python Dependencies</span>
         <span>•</span>
         <span className="text-gray-400">Telemetry updated at {lastRefreshed.toLocaleTimeString()}</span>
@@ -794,5 +872,13 @@ export default function App() {
       {/* Global Toast Notification Container */}
       <ToastContainer />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AnnounceProvider>
+      <BentoDashboard />
+    </AnnounceProvider>
   );
 }

@@ -32,6 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
   private handleClearStorageAndReload = () => {
     try {
       localStorage.removeItem('bento_notifications');
+      localStorage.removeItem('bento_arena_history');
       localStorage.removeItem('bento_bout_history');
       localStorage.removeItem('bento_audio_settings');
     } catch {

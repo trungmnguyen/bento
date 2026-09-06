@@ -154,9 +154,9 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
               <Swords className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+              <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
                 Bento Arena · Head-to-Head Sparring
-              </h1>
+              </h2>
               <p className="text-xs text-gray-400 mt-0.5">
                 Pit challenger contracts vs baseline defenders under identical deterministic constraints
               </p>
@@ -445,11 +445,21 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
             {bouts.map((b) => (
               <div
                 key={b.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`Replay bout between ${b.challenger} and ${b.defender}, won by ${b.winner}`}
                 onClick={() => {
                   setScorecard(b.scorecard);
                   playClack();
                 }}
-                className="bg-[#131117] border border-bento-border/70 hover:border-bento-matcha/50 rounded-xl p-3 text-xs cursor-pointer transition shadow-sm space-y-2 group"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setScorecard(b.scorecard);
+                    playClack();
+                  }
+                }}
+                className="bg-[#131117] border border-bento-border/70 hover:border-bento-matcha/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon rounded-xl p-3 text-xs cursor-pointer transition shadow-sm space-y-2 group"
               >
                 <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
                   <span>{b.timestamp}</span>
@@ -467,7 +477,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
                   {b.challenger} vs {b.defender}
                 </div>
                 <div className="text-[11px] text-gray-400 flex justify-between font-mono">
-                  <span>Margin: {b.margin.toFixed(1)}</span>
+                  <span>Margin: {typeof b.margin === 'number' ? b.margin.toFixed(1) : '0.0'}</span>
                   <span className="text-bento-matcha group-hover:underline flex items-center gap-1">
                     <RotateCcw className="w-3 h-3" /> Replay
                   </span>

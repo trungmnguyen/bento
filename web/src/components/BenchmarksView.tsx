@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   XCircle,
   RefreshCw,
@@ -18,6 +18,7 @@ import { Scenario, SuiteResult, PreflightResult } from '../types';
 import { playZenBell, playClack } from '../utils/audio';
 import { showToast } from './Toast';
 import { QuickRunnerModal } from './QuickRunnerModal';
+import { useA11yModal } from '../hooks/useA11yModal';
 
 interface BenchmarksViewProps {
   scenarios: Scenario[];
@@ -51,6 +52,12 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
 
   // Tasting Studio: Scenario Builder State
   const [showCraftModal, setShowCraftModal] = useState(false);
+  const craftModalRef = useRef<HTMLDivElement>(null);
+  const { modalProps: craftModalProps } = useA11yModal({
+    isOpen: showCraftModal,
+    onClose: () => setShowCraftModal(false),
+    containerRef: craftModalRef,
+  });
   const [craftMode, setCraftMode] = useState<'visual' | 'json'>('visual');
   const [craftJson, setCraftJson] = useState('');
   const [craftJsonError, setCraftJsonError] = useState<string | null>(null);
@@ -455,15 +462,22 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
       {/* Tasting Studio Modal: Craft New Tasting Flight */}
       {showCraftModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="bg-bento-surface border border-bento-border rounded-bento w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-up">
+          <div
+            ref={craftModalRef}
+            {...craftModalProps}
+            aria-labelledby="tasting-studio-title"
+            className="bg-bento-surface border border-bento-border rounded-bento w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-up"
+          >
             <div className="px-6 py-4 border-b border-bento-border flex justify-between items-center bg-bento-elevated sticky top-0 z-10">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <h3 id="tasting-studio-title" className="text-base font-bold text-white flex items-center gap-2">
                 <ChopsticksIcon className="w-5 h-5 text-amber-400" />
                 Tasting Studio · Craft New Verification Flight
               </h3>
               <button
+                type="button"
                 onClick={() => setShowCraftModal(false)}
-                className="text-gray-400 hover:text-white transition p-1"
+                aria-label="Close Tasting Studio"
+                className="text-gray-400 hover:text-white transition p-1.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon min-w-[28px] min-h-[28px] flex items-center justify-center"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -540,11 +554,13 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                           </div>
                         </div>
                         <button
+                          type="button"
                           onClick={() => {
                             playClack();
                             setCraftSteps((prev) => prev.filter((_, i) => i !== idx));
                           }}
-                          className="text-gray-500 hover:text-rose-400 p-1"
+                          aria-label={`Remove step ${idx + 1}: ${step.name}`}
+                          className="text-gray-500 hover:text-rose-400 p-1.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon min-w-[28px] min-h-[28px] flex items-center justify-center transition"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -608,7 +624,8 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                           { type: 'CONTAINS', target_field: 'stdout', expected: '', description: '' },
                         ]);
                       }}
-                      className="text-[11px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1"
+                      aria-label="Add contract assertion"
+                      className="text-[11px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400 rounded px-1.5 py-0.5"
                     >
                       <Plus className="w-3 h-3" /> Add Assertion
                     </button>
@@ -683,6 +700,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                                 prev.map((item, i) => (i === aIdx ? { ...item, type: val } : item))
                               );
                             }}
+                            aria-label={`Assertion ${aIdx + 1} type`}
                             className="w-full bg-bento-lacquer border border-bento-border rounded px-2 py-1 text-white font-mono text-[11px]"
                           >
                             <option value="EXIT_CODE_EQUALS">EXIT_CODE_EQUALS</option>
@@ -701,6 +719,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                                 prev.map((item, i) => (i === aIdx ? { ...item, target_field: val } : item))
                               );
                             }}
+                            aria-label={`Assertion ${aIdx + 1} target field`}
                             className="w-full bg-bento-lacquer border border-bento-border rounded px-2 py-1 text-white font-mono text-[11px]"
                           >
                             <option value="stdout">stdout</option>
@@ -708,7 +727,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                             <option value="exit_code">exit_code</option>
                           </select>
                         </div>
-                        <div className="sm:col-span-2 flex gap-1.5">
+                        <div className="sm:col-span-2 flex gap-1.5 items-center">
                           <input
                             type="text"
                             placeholder="Expected string or code..."
@@ -719,15 +738,18 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ scenarios, onRef
                                 prev.map((item, i) => (i === aIdx ? { ...item, expected: val } : item))
                               );
                             }}
+                            aria-label={`Assertion ${aIdx + 1} expected pattern`}
                             className="flex-1 bg-bento-lacquer border border-bento-border rounded px-2 py-1 text-white font-mono text-[11px]"
                           />
                           {currentAssertions.length > 1 && (
                             <button
+                              type="button"
                               onClick={() => {
                                 playClack();
                                 setCurrentAssertions((prev) => prev.filter((_, i) => i !== aIdx));
                               }}
-                              className="text-gray-500 hover:text-rose-400 p-1"
+                              aria-label={`Remove assertion ${aIdx + 1}`}
+                              className="text-gray-500 hover:text-rose-400 p-1 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon min-w-[28px] min-h-[28px] flex items-center justify-center transition"
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>

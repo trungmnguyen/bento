@@ -75,9 +75,22 @@ button:active {
    ========================================================================== */
 
 /* Accessible focus ring across all focusable interactive controls */
-*:focus-visible {
-  outline: 2px solid #ff6b6b;
-  outline-offset: 2px;
+*:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid #ff6b6b !important;
+  outline-offset: 2px !important;
+}
+
+/* Sticky Table Lacquer Styles */
+.sticky-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: rgba(30, 26, 37, 0.95);
+  backdrop-filter: blur(8px);
 }
 
 /* Reduced Motion: Suppress continuous animations and transforms for vestibular safety */

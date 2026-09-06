@@ -42,8 +42,10 @@ export function showToast(
 
 export const ToastContainer: React.FC = () => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const timerMapRef = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
+    const timerMap = timerMapRef.current;
     const handleToast = (e: Event) => {
       const customEvent = e as CustomEvent<ToastItem>;
       const newToast = customEvent?.detail;
@@ -58,18 +60,30 @@ export const ToastContainer: React.FC = () => {
         message: newToast.message ? String(newToast.message) : undefined,
       };
 
-      setToasts((prev) => [...prev, safeToast]);
+      // Cap toast queue to prevent DOM flooding (WASABI-UI-05)
+      setToasts((prev) => [...prev.slice(-3), safeToast]);
 
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== safeToast.id));
+        timerMap.delete(safeToast.id);
       }, 4000);
+      timerMap.set(safeToast.id, timer);
     };
 
     window.addEventListener('bento-toast', handleToast);
-    return () => window.removeEventListener('bento-toast', handleToast);
+    return () => {
+      window.removeEventListener('bento-toast', handleToast);
+      timerMap.forEach((timer) => clearTimeout(timer));
+      timerMap.clear();
+    };
   }, []);
 
   const removeToast = (id: string) => {
+    const timer = timerMapRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timerMapRef.current.delete(id);
+    }
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 

@@ -356,8 +356,21 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-2xl bg-bento-card border border-bento-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          playClack();
+          onClose();
+        }
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="OmniCommand Palette"
+        className="w-full max-w-2xl bg-bento-card border border-bento-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]"
+      >
         {/* Search Header */}
         <div className="flex items-center px-4 py-3.5 border-b border-bento-border bg-bento-surface gap-3">
           {isDirectActionMode ? (
@@ -368,6 +381,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           <input
             ref={inputRef}
             type="text"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="command-palette-results"
+            aria-autocomplete="list"
+            aria-activedescendant={displayedItems[selectedIndex] ? displayedItems[selectedIndex].id : undefined}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -383,10 +401,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             </span>
           )}
           <button
+            type="button"
             onClick={() => {
               playClack();
               onClose();
             }}
+            aria-label="Close command palette"
             className="p-1 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-white/5 transition"
           >
             <X className="w-4 h-4" />
@@ -394,7 +414,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         </div>
 
         {/* Results List */}
-        <div className="overflow-y-auto flex-1 p-2 divide-y divide-white/5">
+        <div
+          id="command-palette-results"
+          role="listbox"
+          aria-label="Command palette options"
+          className="overflow-y-auto flex-1 p-2 divide-y divide-white/5"
+        >
           {displayedItems.length === 0 ? (
             <div className="py-12 text-center text-xs text-gray-500">
               No matching items found for "{query}".
@@ -405,6 +430,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               return (
                 <div
                   key={item.id}
+                  id={item.id}
+                  role="option"
+                  aria-selected={isSelected}
                   onClick={() => {
                     playClack();
                     item.onSelect();

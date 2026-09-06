@@ -298,7 +298,7 @@
       "title": "Culinary Brigade Multi-Team Sprint Integration",
       "category": "orchestration",
       "context": "Manual rule addition via bento memory CLI",
-      "rule": "Every multi-team culinary brigade sprint (Red 🌶️, Yellow 🍋, Green 🍵, Patron 🥢, Blue 🍳) must: 1. Register in Bento Butler via 'bento bg run' so it tracks live in Kitchen Chefs, 2. Distill findings into 'bento memory add' to populate Seasoned Recipes, 3. Pair deliverables with contracts in examples/ to emit structured traces, and 4. Conclude with 'bento bg run \"bento dream --harvest\"' to synthesize skills in Night Dream.",
+      "rule": "Every multi-team culinary brigade sprint (Red \ud83c\udf36\ufe0f, Yellow \ud83c\udf4b, Green \ud83c\udf75, Patron \ud83e\udd62, Blue \ud83c\udf73) must: 1. Register in Bento Butler via 'bento bg run' so it tracks live in Kitchen Chefs, 2. Distill findings into 'bento memory add' to populate Seasoned Recipes, 3. Pair deliverables with contracts in examples/ to emit structured traces, and 4. Conclude with 'bento bg run \"bento dream --harvest\"' to synthesize skills in Night Dream.",
       "anti_pattern": "Running multi-team brigade sprints entirely inside ephemeral AI chat without registering background tasks in Bento Butler, leaving Kitchen Chefs, Seasoned Recipes, and Night Dream unpopulated.",
       "discovery_date": "2026-09-06",
       "tags": [
@@ -310,6 +310,32 @@
         "memory",
         "dream",
         "skills"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-C698B53F",
+      "title": "Strict Accessible Modal Focus Trapping",
+      "category": "accessibility",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "All modal dialogs must trap focus using useA11yModal, bind Escape key dismissal, and restore focus to trigger.",
+      "anti_pattern": "Unbounded focus leaking to background inputs or missing role='dialog'.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "accessibility"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-8C75A657",
+      "title": "Streaming Terminal DOM and Live Region Safety",
+      "category": "security",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Cap streaming terminal buffers in DOM to last 300 lines and never apply aria-live to active log containers; use off-screen status regions instead.",
+      "anti_pattern": "Unbounded log line arrays and aria-live='polite' on rapid stdout streams causing main-thread lockups.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "security"
       ],
       "source_scenario": ""
     }

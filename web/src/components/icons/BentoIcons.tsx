@@ -14,6 +14,8 @@ export const BentoBoxIcon: React.FC<IconProps> = ({ className = 'w-6 h-6', size 
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    aria-hidden="true"
+    focusable="false"
     style={size ? { width: size, height: size } : undefined}
   >
     {/* Outer Lacquer Box Body */}
@@ -68,6 +70,8 @@ export const OnigiriIcon: React.FC<IconProps> = ({ className = 'w-6 h-6', size }
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    aria-hidden="true"
+    focusable="false"
     style={size ? { width: size, height: size } : undefined}
   >
     {/* Rice Ball Body */}
@@ -108,6 +112,8 @@ export const ChefTamagoIcon: React.FC<IconProps> = ({ className = 'w-6 h-6', siz
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    aria-hidden="true"
+    focusable="false"
     style={size ? { width: size, height: size } : undefined}
   >
     {/* Frying Pan Handle */}
@@ -140,6 +146,8 @@ export const MatchaCupIcon: React.FC<IconProps> = ({ className = 'w-6 h-6', size
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    aria-hidden="true"
+    focusable="false"
     style={size ? { width: size, height: size } : undefined}
   >
     {/* Ceramic Chawan Bowl */}
@@ -188,6 +196,8 @@ export const ChopsticksIcon: React.FC<IconProps> = ({ className = 'w-6 h-6', siz
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    aria-hidden="true"
+    focusable="false"
     style={size ? { width: size, height: size } : undefined}
   >
     {/* Chopstick 1 */}
@@ -211,6 +221,8 @@ export const SoyFishIcon: React.FC<IconProps> = ({ className = 'w-6 h-6', size }
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    aria-hidden="true"
+    focusable="false"
     style={size ? { width: size, height: size } : undefined}
   >
     {/* Red Screw Cap */}
@@ -244,6 +256,8 @@ export const WasabiBadgeIcon: React.FC<IconProps> = ({ className = 'w-5 h-5', si
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    aria-hidden="true"
+    focusable="false"
     style={size ? { width: size, height: size } : undefined}
   >
     <path

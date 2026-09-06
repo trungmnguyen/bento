@@ -49,6 +49,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
   // Log Scope Filters
   const [logFilterQuery, setLogFilterQuery] = useState<string>('');
   const [selectedLogLevel, setSelectedLogLevel] = useState<LogLevel>('ALL');
+  const [wrapLines, setWrapLines] = useState<boolean>(true);
   const activeTaskIdRef = useRef<string | null>(null);
   const logDrawerRef = useRef<HTMLDivElement>(null);
 
@@ -276,17 +277,18 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     );
   }, [tasks, tableSearch]);
 
-  // Pre-compiled query matcher with ReDoS protection (WASABI-DOS-01)
+  // Pre-compiled query matcher with ReDoS protection (WASABI-DOS-01 / WASABI-UI-01)
   const queryMatcher = useMemo(() => {
     if (!logFilterQuery.trim()) return null;
     const trimmed = logFilterQuery.trim();
-    // Guard against dangerous nested quantifiers
-    if (trimmed.length > 50 || /([*+?])\1/.test(trimmed)) {
+    if (trimmed.length > 100) {
       const lower = trimmed.toLowerCase();
       return (line: string) => line.toLowerCase().includes(lower);
     }
     try {
-      const regex = new RegExp(trimmed, 'i');
+      // Escape regex special characters to prevent catastrophic backtracking and invalid pattern crashes
+      const safePattern = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(safePattern, 'i');
       return (line: string) => regex.test(line);
     } catch {
       const lower = trimmed.toLowerCase();
@@ -321,6 +323,12 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
     });
   }, [logContent, selectedLogLevel, queryMatcher]);
 
+  // Cap displayed lines in DOM to last 300 to prevent DOM explosion and screen reader hang (WASABI-UI-03)
+  const displayedLogLines = useMemo(() => {
+    if (processedLogLines.length <= 300) return processedLogLines;
+    return processedLogLines.slice(-300);
+  }, [processedLogLines]);
+
   return (
     <div className="space-y-6">
       {/* Kitchen Order Launch Panel */}
@@ -335,6 +343,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
             value={newCmd}
             disabled={isSubmitting}
             onChange={(e) => setNewCmd(e.target.value)}
+            aria-label="Command to cook in background"
             className="flex-1 min-w-0 bg-bento-lacquer border border-bento-border rounded-xl px-4 py-2.5 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition disabled:opacity-50"
           />
           <input
@@ -343,11 +352,13 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
             value={newTag}
             disabled={isSubmitting}
             onChange={(e) => setNewTag(e.target.value)}
+            aria-label="Dish tag or category"
             className="w-full sm:w-32 bg-bento-lacquer border border-bento-border rounded-xl px-3 py-2.5 text-xs sm:text-sm text-bento-rice placeholder-gray-500 focus:outline-none focus:border-bento-tamago font-mono transition disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={isSubmitting || !newCmd.trim()}
+            aria-label="Start cooking background task"
             className="w-full sm:w-auto bg-gradient-to-r from-bento-tamago to-amber-500 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-gray-950 font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-tamago-glow min-h-[42px] touch-manipulation"
           >
             {isSubmitting ? (
@@ -377,9 +388,11 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
               <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
+                id="daemon-table-search"
                 value={tableSearch}
                 onChange={(e) => setTableSearch(e.target.value)}
                 placeholder="Filter orders..."
+                aria-label="Filter kitchen orders"
                 className="bg-bento-lacquer border border-bento-border rounded-lg pl-8 pr-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-bento-tamago/60 font-mono w-36 sm:w-48"
               />
             </div>
@@ -388,6 +401,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
             <button
               onClick={handlePrune}
               disabled={isPruning}
+              aria-label="Sweep kitchen and prune finished tasks"
               className="px-3 py-1.5 bg-bento-lacquer hover:bg-bento-border border border-bento-border rounded-xl text-xs font-semibold text-gray-300 hover:text-white transition flex items-center gap-1.5 disabled:opacity-50"
               title="Prune finished tasks and dead logs"
             >
@@ -399,6 +413,7 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                 playClack();
                 onRefresh();
               }}
+              aria-label="Refresh kitchen orders"
               className="p-2 hover:bg-bento-border rounded-xl text-gray-400 hover:text-white transition"
               title="Refresh kitchen orders"
             >
@@ -414,9 +429,14 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
             <p className="text-xs text-gray-500 mt-1 font-mono">Launch a task with: <code>bento bg run "..."</code></p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div
+            role="region"
+            tabIndex={0}
+            aria-label="Background tasks table"
+            className="overflow-x-auto focus:outline-none focus-visible:ring-1 focus-visible:ring-bento-tamago"
+          >
             <table className="w-full text-left text-sm text-gray-300">
-              <thead className="text-xs uppercase bg-background/50 text-gray-400 border-b border-border">
+              <thead className="text-xs uppercase bg-[#1e1a25]/95 backdrop-blur-md text-gray-400 border-b border-border sticky top-0 z-20">
                 <tr>
                   <th className="px-6 py-3 font-medium">Task ID / Tag</th>
                   <th className="px-6 py-3 font-medium">PID</th>
@@ -439,21 +459,18 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                   return (
                     <tr
                       key={task.task_id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`View logs for task ${task.task_id} tagged ${task.tag}`}
-                      className="hover:bg-bento-elevated/70 transition cursor-pointer focus:outline-none focus:bg-white/10"
-                      onClick={handleSelect}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleSelect();
-                        }
-                      }}
+                      className="hover:bg-bento-elevated/70 transition"
                     >
                       <td className="px-6 py-4 font-mono font-medium text-bento-tamago">
-                        {task.task_id}
-                        <span className="block text-xs text-gray-400 font-sans mt-0.5 font-normal">#{task.tag}</span>
+                        <button
+                          type="button"
+                          onClick={handleSelect}
+                          aria-label={`View logs for task ${task.task_id} tagged ${task.tag}`}
+                          className="text-left font-mono font-medium text-bento-tamago hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon rounded px-1 -ml-1 transition"
+                        >
+                          {task.task_id}
+                          <span className="block text-xs text-gray-400 font-sans mt-0.5 font-normal">#{task.tag}</span>
+                        </button>
                       </td>
                       <td className="px-6 py-4 font-mono text-gray-400 text-xs">{task.pid || '—'}</td>
                       <td className="px-6 py-4">
@@ -626,9 +643,11 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                   <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
+                    id="log-filter-query"
                     value={logFilterQuery}
                     onChange={(e) => setLogFilterQuery(e.target.value)}
                     placeholder="Filter logs (regex / text)..."
+                    aria-label="Filter logs by regex or text"
                     className="w-full bg-bento-lacquer border border-bento-border rounded-lg pl-8 pr-3 py-1 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-amber-400 font-mono"
                   />
                 </div>
@@ -644,6 +663,8 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                       playClack();
                       setSelectedLogLevel(level);
                     }}
+                    aria-label={`Filter logs by level ${level}`}
+                    aria-pressed={selectedLogLevel === level}
                     className={`px-2.5 py-1 rounded-lg border transition ${
                       selectedLogLevel === level
                         ? level === 'ERROR'
@@ -661,21 +682,46 @@ export const DaemonView: React.FC<DaemonViewProps> = ({ tasks, onRefresh }) => {
                 ))}
               </div>
 
-              {/* Line Counter */}
-              <span className="text-[11px] font-mono text-gray-400">
-                Showing {processedLogLines.length} line(s)
-              </span>
+              {/* Line Wrap Toggle & Counter */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setWrapLines((prev) => !prev)}
+                  aria-label={`Toggle log line wrapping, currently ${wrapLines ? 'on' : 'off'}`}
+                  className={`text-[11px] px-2.5 py-1 rounded-xl border font-mono transition ${
+                    wrapLines
+                      ? 'bg-bento-matcha/15 text-bento-matcha border-bento-matcha/40 font-bold'
+                      : 'bg-bento-elevated text-gray-400 border-bento-border'
+                  }`}
+                >
+                  Wrap: {wrapLines ? 'ON' : 'OFF'}
+                </button>
+                <span className="text-[11px] font-mono text-gray-400">
+                  {processedLogLines.length > 300
+                    ? `Showing last 300 of ${processedLogLines.length} lines`
+                    : `Showing ${processedLogLines.length} line(s)`}
+                </span>
+              </div>
+            </div>
+
+            {/* Screen Reader Status Notification (WASABI-UI-03 / YUZU-A11Y-12) */}
+            <div className="sr-only" aria-live="polite" role="status">
+              {isStreaming
+                ? `Task ${selectedTask.task_id} is running and streaming logs.`
+                : `Task log stream completed for ${selectedTask.task_id}. Showing ${displayedLogLines.length} lines.`}
             </div>
 
             {/* Terminal Stream */}
             <div
               role="region"
+              tabIndex={0}
               aria-label="Task terminal output"
-              aria-live="polite"
-              className="flex-1 my-1 bg-bento-lacquer border border-bento-border rounded-xl p-4 font-mono text-xs text-bento-rice overflow-y-auto whitespace-pre-wrap leading-relaxed"
+              className={`flex-1 my-1 bg-bento-lacquer border border-bento-border rounded-xl p-4 font-mono text-xs text-bento-rice overflow-y-auto ${
+                wrapLines ? 'whitespace-pre-wrap' : 'whitespace-pre overflow-x-auto'
+              } leading-relaxed focus:outline-none focus-visible:ring-1 focus-visible:ring-bento-tamago`}
             >
-              {processedLogLines.length > 0 ? (
-                processedLogLines.map((line, idx) => {
+              {displayedLogLines.length > 0 ? (
+                displayedLogLines.map((line, idx) => {
                   const isError = /error|fatal|fail|traceback/i.test(line);
                   const isWarn = /warn|warning/i.test(line);
                   const isInfo = /info|serving|ready/i.test(line);
