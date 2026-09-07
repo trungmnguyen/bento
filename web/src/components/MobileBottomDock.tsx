@@ -32,14 +32,14 @@ export const MobileBottomDock: React.FC<MobileBottomDockProps> = ({
       badge: runningTasksCount > 0 ? runningTasksCount : undefined,
     },
     {
-      id: 'traces',
-      label: 'Traces',
-      icon: <ScrollText className="w-4 h-4" />,
-    },
-    {
       id: 'memory',
       label: 'Recipes',
       icon: <BookOpen className="w-4 h-4" />,
+    },
+    {
+      id: 'traces',
+      label: 'Traces',
+      icon: <ScrollText className="w-4 h-4" />,
     },
     {
       id: 'benchmarks',
@@ -71,7 +71,7 @@ export const MobileBottomDock: React.FC<MobileBottomDockProps> = ({
                 onSelectTab(item.id);
               }}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-1 rounded-xl transition touch-manipulation relative ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-1 rounded-xl transition touch-manipulation relative min-h-[44px] ${
                 isActive
                   ? 'text-white font-bold bg-white/5 shadow-xs'
                   : 'text-zinc-400 hover:text-zinc-200'

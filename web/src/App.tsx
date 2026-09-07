@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   RefreshCw,
   FolderGit2,
@@ -59,6 +59,36 @@ function BentoDashboard() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
+
+  // Tab Strip Horizontal Scroll & Dynamic Fade State
+  const tabListRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScrollLimits = useCallback(() => {
+    const el = tabListRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 4);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    checkScrollLimits();
+    const handleResize = () => checkScrollLimits();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [checkScrollLimits]);
+
+  // Synchronize activeTab with horizontal scroll
+  useEffect(() => {
+    const el = document.getElementById(`tab-${activeTab}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+    const timer = setTimeout(checkScrollLimits, 350);
+    return () => clearTimeout(timer);
+  }, [activeTab, checkScrollLimits]);
 
   const [status, setStatus] = useState<SystemStatus>({
     status: 'ACTIVE',
@@ -147,6 +177,8 @@ function BentoDashboard() {
       if (
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        Boolean(target.closest('select')) ||
         target.isContentEditable ||
         isPaletteOpen ||
         isAudioModalOpen ||
@@ -429,12 +461,17 @@ function BentoDashboard() {
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-bento-salmon/15 text-bento-salmon border border-bento-salmon/30 flex items-center gap-1">
                   <Sparkles className="w-2.5 h-2.5 animate-spin" /> Bento Kitchen
                 </span>
+                <span className="text-[10px] font-mono text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                  v0.5.0
+                </span>
               </div>
               <p className="text-xs text-gray-400 font-mono flex items-center gap-1.5 mt-0.5">
                 <FolderGit2 className="w-3 h-3 text-gray-500 shrink-0" />
                 <span className="text-gray-300 truncate max-w-[150px] sm:max-w-md" title={status.cwd}>
                   {status.cwd || 'Dev/bento'}
                 </span>
+                <span className="text-zinc-600 hidden sm:inline">·</span>
+                <span className="hidden sm:inline text-zinc-400 text-[11px]">🐍 Python 3.12</span>
               </p>
             </div>
           </div>
@@ -630,234 +667,260 @@ function BentoDashboard() {
 
         {/* Bento Compartment Navigation (Segmented Tabs with Roving Tabindex) */}
         <nav aria-label="Bento Compartments Navigation" className="border-t border-bento-border/60 bg-[#16131c]/70 relative">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:bottom-0 after:w-8 after:bg-gradient-to-l after:from-[#16131c] after:to-transparent sm:after:hidden">
-            <div
-              role="tablist"
-              aria-label="Bento Compartments"
-              onKeyDown={handleTabKeyDown}
-              className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none py-2 -mx-1 px-1 sm:mx-0 sm:px-0"
-            >
-              {/* Tab 1: Kitchen Chefs */}
-              <button
-                type="button"
-                role="tab"
-                id="tab-daemons"
-                tabIndex={activeTab === 'daemons' ? 0 : -1}
-                aria-controls="panel-daemons"
-                aria-selected={activeTab === 'daemons'}
-                onClick={() => {
-                  playClack();
-                  setActiveTab('daemons');
-                }}
-                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
-                  activeTab === 'daemons'
-                    ? 'bg-bento-tamago/15 text-bento-tamago border-bento-tamago/40 shadow-tamago-glow ring-1 ring-bento-tamago/20'
-                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
+            <div className="relative min-w-0 flex-1">
+              {/* Dynamic Left Gradient Mask */}
+              <div
+                className={`pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#16131c] to-transparent z-10 transition-opacity duration-200 sm:hidden ${
+                  canScrollLeft ? 'opacity-100' : 'opacity-0'
                 }`}
+                aria-hidden="true"
+              />
+
+              {/* Dynamic Right Gradient Mask */}
+              <div
+                className={`pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#16131c] to-transparent z-10 transition-opacity duration-200 sm:hidden ${
+                  canScrollRight ? 'opacity-100' : 'opacity-0'
+                }`}
+                aria-hidden="true"
+              />
+
+              <div
+                ref={tabListRef}
+                role="tablist"
+                aria-label="Bento Compartments"
+                onScroll={checkScrollLimits}
+                onKeyDown={handleTabKeyDown}
+                className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none py-2 px-2 sm:px-0 scroll-smooth"
               >
-                <ChefTamagoIcon className="w-4 h-4 shrink-0" />
-                <span>Kitchen Chefs</span>
-                <span
-                  className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
-                    runningTasksCount > 0
-                      ? 'bg-bento-tamago text-gray-950 shadow-sm animate-pulse'
-                      : activeTab === 'daemons'
-                      ? 'bg-bento-tamago text-gray-950 shadow-sm'
-                      : 'bg-white/10 text-gray-400'
+                {/* Tab 1: Kitchen Chefs */}
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-daemons"
+                  tabIndex={activeTab === 'daemons' ? 0 : -1}
+                  aria-controls="panel-daemons"
+                  aria-selected={activeTab === 'daemons'}
+                  onClick={() => {
+                    playClack();
+                    setActiveTab('daemons');
+                  }}
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[44px] touch-manipulation select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon ${
+                    activeTab === 'daemons'
+                      ? 'bg-bento-tamago/15 text-bento-tamago border-bento-tamago/40 shadow-tamago-glow ring-1 ring-bento-tamago/20'
+                      : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
                   }`}
                 >
-                  {runningTasksCount > 0 ? `${runningTasksCount} simmering` : tasks.length}
-                </span>
-              </button>
+                  <ChefTamagoIcon className="w-4 h-4 shrink-0" />
+                  <span className="sm:hidden">Chefs</span>
+                  <span className="hidden sm:inline">Kitchen Chefs</span>
+                  <span
+                    className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                      runningTasksCount > 0
+                        ? 'bg-bento-tamago text-gray-950 shadow-sm animate-pulse'
+                        : activeTab === 'daemons'
+                        ? 'bg-bento-tamago text-gray-950 shadow-sm'
+                        : 'bg-white/10 text-gray-400'
+                    }`}
+                  >
+                    {runningTasksCount > 0 ? (
+                      <>
+                        <span className="sm:hidden">{runningTasksCount} sim</span>
+                        <span className="hidden sm:inline">{runningTasksCount} simmering</span>
+                      </>
+                    ) : (
+                      tasks.length
+                    )}
+                  </span>
+                </button>
 
-              {/* Tab 2: Seasoned Recipes */}
-              <button
-                type="button"
-                role="tab"
-                id="tab-memory"
-                tabIndex={activeTab === 'memory' ? 0 : -1}
-                aria-controls="panel-memory"
-                aria-selected={activeTab === 'memory'}
-                onClick={() => {
-                  playClack();
-                  setActiveTab('memory');
-                }}
-                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
-                  activeTab === 'memory'
-                    ? 'bg-bento-salmon/15 text-bento-salmon border-bento-salmon/40 shadow-bento-glow ring-1 ring-bento-salmon/20'
-                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
-                }`}
-              >
-                <OnigiriIcon className="w-4 h-4 shrink-0" />
-                <span>Seasoned Recipes</span>
-                <span
-                  className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                {/* Tab 2: Seasoned Recipes */}
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-memory"
+                  tabIndex={activeTab === 'memory' ? 0 : -1}
+                  aria-controls="panel-memory"
+                  aria-selected={activeTab === 'memory'}
+                  onClick={() => {
+                    playClack();
+                    setActiveTab('memory');
+                  }}
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[44px] touch-manipulation select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon ${
                     activeTab === 'memory'
-                      ? 'bg-bento-salmon text-white shadow-sm'
-                      : 'bg-white/10 text-gray-400'
+                      ? 'bg-bento-salmon/15 text-bento-salmon border-bento-salmon/40 shadow-bento-glow ring-1 ring-bento-salmon/20'
+                      : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
                   }`}
                 >
-                  {lessons.length}
-                </span>
-              </button>
+                  <OnigiriIcon className="w-4 h-4 shrink-0" />
+                  <span className="sm:hidden">Recipes</span>
+                  <span className="hidden sm:inline">Seasoned Recipes</span>
+                  <span
+                    className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                      activeTab === 'memory'
+                        ? 'bg-bento-salmon text-white shadow-sm'
+                        : 'bg-white/10 text-gray-400'
+                    }`}
+                  >
+                    {lessons.length}
+                  </span>
+                </button>
 
-              {/* Tab 3: Night Dream & Tea */}
-              <button
-                type="button"
-                role="tab"
-                id="tab-traces"
-                tabIndex={activeTab === 'traces' ? 0 : -1}
-                aria-controls="panel-traces"
-                aria-selected={activeTab === 'traces'}
-                onClick={() => {
-                  playClack();
-                  setActiveTab('traces');
-                }}
-                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
-                  activeTab === 'traces'
-                    ? 'bg-bento-matcha/15 text-bento-matcha border-bento-matcha/40 shadow-matcha-glow ring-1 ring-bento-matcha/20'
-                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
-                }`}
-              >
-                <MatchaCupIcon className="w-4 h-4 shrink-0" />
-                <span>Night Dream & Tea</span>
-                <span
-                  className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                {/* Tab 3: Night Dream & Tea */}
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-traces"
+                  tabIndex={activeTab === 'traces' ? 0 : -1}
+                  aria-controls="panel-traces"
+                  aria-selected={activeTab === 'traces'}
+                  onClick={() => {
+                    playClack();
+                    setActiveTab('traces');
+                  }}
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[44px] touch-manipulation select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon ${
                     activeTab === 'traces'
-                      ? 'bg-bento-matcha text-gray-950 shadow-sm'
-                      : 'bg-white/10 text-gray-400'
+                      ? 'bg-bento-matcha/15 text-bento-matcha border-bento-matcha/40 shadow-matcha-glow ring-1 ring-bento-matcha/20'
+                      : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
                   }`}
                 >
-                  {traces.length}
-                </span>
-              </button>
+                  <MatchaCupIcon className="w-4 h-4 shrink-0" />
+                  <span className="sm:hidden">Traces</span>
+                  <span className="hidden sm:inline">Night Dream & Tea</span>
+                  <span
+                    className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                      activeTab === 'traces'
+                        ? 'bg-bento-matcha text-gray-950 shadow-sm'
+                        : 'bg-white/10 text-gray-400'
+                    }`}
+                  >
+                    {traces.length}
+                  </span>
+                </button>
 
-              {/* Tab 4: Tasting Battery */}
-              <button
-                type="button"
-                role="tab"
-                id="tab-benchmarks"
-                tabIndex={activeTab === 'benchmarks' ? 0 : -1}
-                aria-controls="panel-benchmarks"
-                aria-selected={activeTab === 'benchmarks'}
-                onClick={() => {
-                  playClack();
-                  setActiveTab('benchmarks');
-                }}
-                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
-                  activeTab === 'benchmarks'
-                    ? 'bg-amber-400/15 text-amber-300 border-amber-400/40 shadow-tamago-glow ring-1 ring-amber-400/20'
-                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
-                }`}
-              >
-                <ChopsticksIcon className="w-4 h-4 shrink-0" />
-                <span>Tasting Battery</span>
-                <span
-                  className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                {/* Tab 4: Tasting Battery */}
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-benchmarks"
+                  tabIndex={activeTab === 'benchmarks' ? 0 : -1}
+                  aria-controls="panel-benchmarks"
+                  aria-selected={activeTab === 'benchmarks'}
+                  onClick={() => {
+                    playClack();
+                    setActiveTab('benchmarks');
+                  }}
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[44px] touch-manipulation select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon ${
                     activeTab === 'benchmarks'
-                      ? 'bg-amber-400 text-gray-950 shadow-sm'
-                      : 'bg-white/10 text-gray-400'
+                      ? 'bg-amber-400/15 text-amber-300 border-amber-400/40 shadow-tamago-glow ring-1 ring-amber-400/20'
+                      : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
                   }`}
                 >
-                  {scenarios.length}
-                </span>
-              </button>
+                  <ChopsticksIcon className="w-4 h-4 shrink-0" />
+                  <span className="sm:hidden">Tasting</span>
+                  <span className="hidden sm:inline">Tasting Battery</span>
+                  <span
+                    className={`ml-0.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold transition ${
+                      activeTab === 'benchmarks'
+                        ? 'bg-amber-400 text-gray-950 shadow-sm'
+                        : 'bg-white/10 text-gray-400'
+                    }`}
+                  >
+                    {scenarios.length}
+                  </span>
+                </button>
 
-              {/* Tab 5: Arena Sparring */}
+                {/* Tab 5: Arena Sparring */}
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-arena"
+                  tabIndex={activeTab === 'arena' ? 0 : -1}
+                  aria-controls="panel-arena"
+                  aria-selected={activeTab === 'arena'}
+                  aria-label="Arena Sparring"
+                  onClick={() => {
+                    playClack();
+                    setActiveTab('arena');
+                  }}
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[44px] touch-manipulation select-none border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bento-salmon ${
+                    activeTab === 'arena'
+                      ? 'bg-red-500/15 text-red-300 border-red-500/40 shadow-sm ring-1 ring-red-500/20'
+                      : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
+                  }`}
+                >
+                  <Swords className="w-4 h-4 shrink-0 text-red-400" />
+                  <span className="sm:hidden">Arena</span>
+                  <span className="hidden sm:inline">Arena Sparring</span>
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-mono font-extrabold transition bg-red-500/20 text-red-300 border border-red-500/30">
+                    VS
+                  </span>
+                </button>
+
+                {/* Mobile Safe Trailing Overscroll Spacer */}
+                <div className="shrink-0 w-8 sm:hidden pointer-events-none" aria-hidden="true" />
+              </div>
+            </div>
+
+            {/* Quick Actions & Runtime Vitals Strip */}
+            <div className="hidden sm:flex items-center gap-2 shrink-0 py-1.5">
+              <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-[11px] font-mono text-zinc-400">
+                <span className="text-zinc-300">🍱 Bento v0.5.0</span>
+                <span className="text-zinc-600">·</span>
+                <span>🐍 Python 3.12</span>
+                <span className="text-zinc-600">·</span>
+                <span className="text-emerald-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  SSE Active
+                </span>
+              </div>
+
               <button
                 type="button"
-                role="tab"
-                id="tab-arena"
-                tabIndex={activeTab === 'arena' ? 0 : -1}
-                aria-controls="panel-arena"
-                aria-selected={activeTab === 'arena'}
                 onClick={() => {
                   playClack();
-                  setActiveTab('arena');
+                  setIsExportStudioOpen(true);
                 }}
-                className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 min-h-[42px] touch-manipulation select-none border ${
-                  activeTab === 'arena'
-                    ? 'bg-red-500/15 text-red-300 border-red-500/40 shadow-sm ring-1 ring-red-500/20'
-                    : 'bg-transparent text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
-                }`}
+                aria-label="Open Export Studio (Shift+E)"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[34px] rounded-lg bg-bento-salmon/10 hover:bg-bento-salmon/20 text-bento-salmon border border-bento-salmon/30 transition text-[11px] font-mono touch-manipulation shadow-sm"
+                title="Export telemetry and reports (Shift+E)"
               >
-                <Swords className="w-4 h-4 shrink-0 text-red-400" />
-                <span>Arena Sparring</span>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Export Studio</span>
+                <kbd className="hidden lg:inline bg-black/30 px-1 py-0.2 rounded text-[9px] text-rose-300">⇧E</kbd>
+              </button>
+
+              <button
+                onClick={() => {
+                  playZenBell();
+                  const a11yResult = runA11yDoctor();
+                  if (a11yResult.passed) {
+                    showToast({
+                      title: `Bento Doctor: Healthy (${a11yResult.score}%)`,
+                      message: `${a11yResult.checks.filter((c) => c.passed).length}/${a11yResult.checks.length} diagnostics passed (Subsystems + WCAG 2.1 AA verified).`,
+                      type: 'success',
+                    });
+                  } else {
+                    const failed = a11yResult.checks.find((c) => !c.passed);
+                    showToast({
+                      title: `Bento Doctor: A11y Notice (${a11yResult.score}%)`,
+                      message: failed?.details || 'Review accessibility telemetry in console.',
+                      type: 'warning',
+                    });
+                  }
+                  console.table(a11yResult.checks);
+                }}
+                aria-label="Run Bento Subsystem and Accessibility Doctor Diagnostics"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[34px] rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition text-[11px] touch-manipulation shadow-sm"
+                title="Click to verify subsystem & A11y diagnostics"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden md:inline">Doctor</span>
+                <span className="text-emerald-400/80 font-bold">✓</span>
               </button>
             </div>
           </div>
         </nav>
-
-        {/* Kitchen Vitals Telemetry Sub-strip */}
-        <div className="bg-[#121017] border-b border-bento-border/70 px-4 sm:px-6 py-1.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-zinc-400">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="flex items-center gap-1.5 text-zinc-300">
-              <span className="text-amber-400">🍱</span>
-              <strong className="text-zinc-200">Bento v0.5.0</strong>
-            </span>
-            <span className="text-zinc-600 hidden sm:inline">|</span>
-            <span className="hidden sm:flex items-center gap-1">
-              <span>🐍 Python 3.12 (CPython)</span>
-            </span>
-            <span className="text-zinc-600 hidden sm:inline">|</span>
-            <span className="flex items-center gap-1">
-              <span>🧠 Memory: <strong className="text-zinc-200">{lessons.length}</strong> Rules</span>
-            </span>
-            <span className="text-zinc-600 hidden md:inline">|</span>
-            <span className="hidden md:flex items-center gap-1">
-              <span>📜 Traces: <strong className="text-zinc-200">{traces.length}</strong> Runs</span>
-            </span>
-            <span className="text-zinc-600 hidden lg:inline">|</span>
-            <span className="hidden lg:flex items-center gap-1">
-              <span>⚡ Active SSE: <strong className="text-emerald-400">{vitals?.active_daemons || 0}</strong> Daemons</span>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                playClack();
-                setIsExportStudioOpen(true);
-              }}
-              aria-label="Open Export Studio (Shift+E)"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[32px] rounded-lg bg-bento-salmon/10 hover:bg-bento-salmon/20 text-bento-salmon border border-bento-salmon/30 transition text-[11px] font-mono touch-manipulation"
-              title="Export telemetry and reports (Shift+E)"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Export Studio</span>
-              <kbd className="hidden md:inline bg-black/30 px-1 py-0.2 rounded text-[9px] text-rose-300">⇧E</kbd>
-            </button>
-
-            <button
-              onClick={() => {
-                playZenBell();
-                const a11yResult = runA11yDoctor();
-                if (a11yResult.passed) {
-                  showToast({
-                    title: `Bento Doctor: Healthy (${a11yResult.score}%)`,
-                    message: `${a11yResult.checks.filter((c) => c.passed).length}/${a11yResult.checks.length} diagnostics passed (Subsystems + WCAG 2.1 AA verified).`,
-                    type: 'success',
-                  });
-                } else {
-                  const failed = a11yResult.checks.find((c) => !c.passed);
-                  showToast({
-                    title: `Bento Doctor: A11y Notice (${a11yResult.score}%)`,
-                    message: failed?.details || 'Review accessibility telemetry in console.',
-                    type: 'warning',
-                  });
-                }
-                console.table(a11yResult.checks);
-              }}
-              aria-label="Run Bento Subsystem and Accessibility Doctor Diagnostics"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[32px] rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition text-[11px] touch-manipulation"
-              title="Click to verify subsystem & A11y diagnostics"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Doctor ➔ Healthy ✓</span>
-            </button>
-          </div>
-        </div>
       </header>
 
       {/* Main Compartment Canvas */}
