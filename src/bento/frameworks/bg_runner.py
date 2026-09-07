@@ -3,6 +3,8 @@ from __future__ import annotations
 import datetime
 import json
 import os
+import re
+import shlex
 import signal
 import subprocess
 import time
@@ -10,6 +12,37 @@ import uuid
 import threading
 from pathlib import Path
 from typing import Any
+
+# SEC-01: Dangerous command pattern denylist — defense-in-depth alongside shell=False.
+# Shell injection is already prevented by shell=False + shlex.split, but we also
+# refuse to spawn processes whose command text matches these destructive patterns.
+_DANGEROUS_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r'\brm\s+-[rf]{1,2}f?\b', re.IGNORECASE),
+    re.compile(r'\bmkfs\b', re.IGNORECASE),
+    re.compile(r'\bdd\s+if=', re.IGNORECASE),
+    re.compile(r'>\s*/dev/(?!null)', re.IGNORECASE),  # allow /dev/null redirects
+    re.compile(r'\bDROP\s+TABLE\b', re.IGNORECASE),
+    re.compile(r'\bDELETE\s+FROM\b', re.IGNORECASE),
+    re.compile(r'\btruncate\b.*\btable\b', re.IGNORECASE),
+    re.compile(r':\(\)\s*\{.*\}.*:', re.IGNORECASE),  # fork bomb pattern
+]
+
+# SEC-02: Tag field allowlist — only alphanumeric, hyphens, underscores, max 64 chars.
+_TAG_PATTERN = re.compile(r'^[a-zA-Z0-9_\-]{1,64}$')
+
+
+def _sanitize_tag(tag: str) -> str:
+    """Strip unsafe characters from a task tag and enforce length limit."""
+    cleaned = re.sub(r'[^a-zA-Z0-9_\-]', '-', (tag or 'task'))[:64]
+    return cleaned or 'task'
+
+
+def _check_dangerous_command(command: str) -> str | None:
+    """Return the matched pattern string if the command is dangerous, else None."""
+    for pattern in _DANGEROUS_PATTERNS:
+        if pattern.search(command):
+            return pattern.pattern
+    return None
 
 
 class BackgroundTaskRunner:
@@ -65,10 +98,21 @@ class BackgroundTaskRunner:
         tag: str = "task",
         working_dir: str | None = None,
     ) -> dict[str, Any]:
+        # SEC-01: Reject dangerous commands before spawning anything.
+        dangerous_match = _check_dangerous_command(command)
+        if dangerous_match:
+            raise ValueError(
+                f"Command rejected: matches dangerous pattern '{dangerous_match}'. "
+                "Use a safer alternative or run this command directly from a trusted terminal."
+            )
+
+        # SEC-02: Sanitize tag to alphanumeric/hyphen/underscore, max 64 chars.
+        tag = _sanitize_tag(tag)
+
         bg_dir = self._get_bg_dir(working_dir)
         now_ts = int(time.time() * 1000)
         short_id = f"bg-{now_ts % 1000000:06d}-{uuid.uuid4().hex[:8]}"  # REL-12: 32-bit entropy
-        
+
         log_file = bg_dir / "logs" / f"{short_id}.log"
         task_meta_file = bg_dir / "tasks" / f"{short_id}.json"
 
@@ -80,11 +124,23 @@ class BackgroundTaskRunner:
             f.write("=" * 60 + "\n\n")
 
         effective_cwd = working_dir or self._default_base_dir or os.getcwd()
+
+        # SEC-01 (primary): Use shell=False + shlex.split to eliminate shell injection.
+        # shlex.split correctly handles quoted arguments, e.g.:
+        #   'bento run "my file.json"' → ['bento', 'run', 'my file.json']
+        try:
+            cmd_args = shlex.split(command)
+        except ValueError as exc:
+            raise ValueError(f"Command could not be parsed: {exc}") from exc
+
+        if not cmd_args:
+            raise ValueError("Command must not be empty.")
+
         log_handle = open(log_file, "a", encoding="utf-8")
         try:
             process = subprocess.Popen(
-                command,
-                shell=True,
+                cmd_args,
+                shell=False,
                 cwd=effective_cwd,
                 stdout=log_handle,
                 stderr=subprocess.STDOUT,
@@ -123,15 +179,17 @@ class BackgroundTaskRunner:
             cmd_out = res.stdout.strip()
             if not cmd_out:
                 return False
-            cmd_toks = task_cmd.strip().split()
+            cmd_out_lower = cmd_out.lower()
+            task_cmd_lower = task_cmd.lower()
+            cmd_toks = task_cmd_lower.strip().split()
             first_word = cmd_toks[0] if cmd_toks else ""
             return (
-                first_word in cmd_out
-                or task_cmd[:20] in cmd_out
-                or "bento" in cmd_out
-                or "sh" in cmd_out
-                or "python" in cmd_out
-                or "node" in cmd_out
+                first_word in cmd_out_lower
+                or task_cmd_lower[:20] in cmd_out_lower
+                or "bento" in cmd_out_lower
+                or "sh" in cmd_out_lower
+                or "python" in cmd_out_lower
+                or "node" in cmd_out_lower
             )
         except Exception:
             return True
@@ -295,13 +353,19 @@ class BackgroundTaskRunner:
             self._tasks_cache = None
         return True
 
-    def prune_tasks(self, stopped_only: bool = True, working_dir: str | None = None) -> int:
-        """Prune background task metadata and associated log files."""
+    def prune_tasks(
+        self,
+        stopped_only: bool = True,
+        skip_task_ids: set[str] | list[str] | None = None,
+        working_dir: str | None = None,
+    ) -> int:
+        """Prune background task metadata and associated log files, preserving any skipped IDs."""
         with self._cache_lock:
             self._tasks_cache = None
         bg_dir = self._get_bg_dir(working_dir)
         task_files = list((bg_dir / "tasks").glob("*.json"))
         pruned_count = 0
+        skip_set = set(skip_task_ids) if skip_task_ids else set()
 
         for tf in task_files:
             try:
@@ -313,6 +377,9 @@ class BackgroundTaskRunner:
                     continue
 
                 task_id = info.get("id", tf.stem)
+                if task_id in skip_set:
+                    continue
+
                 # Remove task json
                 tf.unlink(missing_ok=True)
                 # Remove log file

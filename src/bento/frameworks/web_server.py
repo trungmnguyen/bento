@@ -488,6 +488,22 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             killed = self.bg_runner.kill_task(task_id)
             return self._send_json({"task_id": task_id, "killed": killed})
 
+        elif path == "/api/bg/kill-batch":
+            raw_ids = payload.get("task_ids", [])
+            if not isinstance(raw_ids, list):
+                return self._send_json({"error": "task_ids must be a list"}, status=400)
+            killed_ids: list[str] = []
+            failed_ids: list[str] = []
+            for tid in raw_ids:
+                if isinstance(tid, str) and re.match(r"^bg-[a-zA-Z0-9_\-]+$", tid):
+                    if self.bg_runner.kill_task(tid):
+                        killed_ids.append(tid)
+                    else:
+                        failed_ids.append(tid)
+                else:
+                    failed_ids.append(str(tid))
+            return self._send_json({"killed": killed_ids, "failed": failed_ids, "count": len(killed_ids)})
+
         elif path == "/api/benchmarks/run":
             scenarios = self._load_all_scenarios()
             suite_res = self.run_suite_uc.execute(scenarios, suite_name="Bento Live Battery")
@@ -547,7 +563,9 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             })
 
         elif path in ("/api/bg/prune", "/api/bg/sweep"):
-            pruned_count = self.bg_runner.prune_tasks(stopped_only=True)
+            skip_ids = payload.get("skip_task_ids", [])
+            valid_skips = [tid for tid in skip_ids if isinstance(tid, str) and re.match(r"^bg-[a-zA-Z0-9_\-]+$", tid)]
+            pruned_count = self.bg_runner.prune_tasks(stopped_only=True, skip_task_ids=valid_skips)
             return self._send_json({"pruned_tasks_count": pruned_count})
 
         elif path == "/api/memory/add":
