@@ -95,3 +95,61 @@ class TestBackgroundTaskRunner(unittest.TestCase):
         tasks = self.runner.list_tasks(working_dir=self.test_dir)
         self.assertEqual(len(tasks), 0)
         self.assertIsNone(self.runner.get_status(task_id, working_dir=self.test_dir))
+
+    def test_dangerous_command_rejected(self):
+        dangerous_cmds = [
+            "rm -rf /",
+            "rm -f /tmp/foo",
+            "DROP TABLE users",
+            "DELETE FROM orders",
+            "mkfs /dev/sda",
+            "dd if=/dev/zero of=/dev/sda",
+        ]
+        for cmd in dangerous_cmds:
+            with self.subTest(cmd=cmd):
+                with self.assertRaises(ValueError) as ctx:
+                    self.runner.start_task(command=cmd, working_dir=self.test_dir)
+                self.assertIn("rejected", str(ctx.exception).lower())
+
+    def test_tag_sanitization(self):
+        task = self.runner.start_task(
+            command="python3 -c 'exit(0)'",
+            tag="../../unsafe tag!@#",
+            working_dir=self.test_dir,
+        )
+        task_id = task["id"]
+        self.spawned_tasks.append(task_id)
+        # Tag should have unsafe characters converted to hyphens and no slashes
+        self.assertNotIn("/", task["tag"])
+        self.assertNotIn(" ", task["tag"])
+        self.assertNotIn("!", task["tag"])
+
+    def test_prune_tasks_preserves_skip_task_ids(self):
+        task1 = self.runner.start_task(
+            command="python3 -c 'exit(0)'",
+            tag="pinned-task",
+            working_dir=self.test_dir,
+        )
+        task2 = self.runner.start_task(
+            command="python3 -c 'exit(0)'",
+            tag="regular-task",
+            working_dir=self.test_dir,
+        )
+        time.sleep(0.4)
+
+        # Prune with task1 in skip_task_ids
+        pruned = self.runner.prune_tasks(
+            stopped_only=True,
+            skip_task_ids=[task1["id"]],
+            working_dir=self.test_dir,
+        )
+        self.assertEqual(pruned, 1)
+
+        # Pinned task1 must still exist
+        status1 = self.runner.get_status(task1["id"], working_dir=self.test_dir)
+        self.assertIsNotNone(status1)
+        self.assertEqual(status1["id"], task1["id"])
+
+        # Unpinned task2 must be gone
+        status2 = self.runner.get_status(task2["id"], working_dir=self.test_dir)
+        self.assertIsNone(status2)

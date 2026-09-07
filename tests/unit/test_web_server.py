@@ -573,6 +573,39 @@ class TestBentoWebServer(unittest.TestCase):
         self.assertIn("Cross-Origin Forbidden", body)
         conn.close()
 
+    def test_api_bg_kill_batch(self):
+        # Spawn two tasks
+        _, run1 = self._post("/api/bg/run", {"command": "python3 -c 'import time; time.sleep(10)'", "tag": "b1"})
+        _, run2 = self._post("/api/bg/run", {"command": "python3 -c 'import time; time.sleep(10)'", "tag": "b2"})
+        id1 = json.loads(run1)["task_id"]
+        id2 = json.loads(run2)["task_id"]
+
+        status, body = self._post("/api/bg/kill-batch", {"task_ids": [id1, id2, "invalid-id"]})
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertIn(id1, data["killed"])
+        self.assertIn(id2, data["killed"])
+        self.assertIn("invalid-id", data["failed"])
+        self.assertEqual(data["count"], 2)
+
+    def test_api_bg_prune_with_skip_task_ids(self):
+        # Spawn two quick tasks
+        _, run1 = self._post("/api/bg/run", {"command": "python3 -c 'exit(0)'", "tag": "p1"})
+        _, run2 = self._post("/api/bg/run", {"command": "python3 -c 'exit(0)'", "tag": "p2"})
+        id1 = json.loads(run1)["task_id"]
+        id2 = json.loads(run2)["task_id"]
+        time.sleep(0.4)
+
+        # Prune with id1 skipped
+        status, body = self._post("/api/bg/prune", {"skip_task_ids": [id1]})
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertGreaterEqual(data["pruned_tasks_count"], 1)
+
+        # Confirm id1 still returns logs/status
+        status1, _ = self._get(f"/api/bg/{id1}/logs")
+        self.assertEqual(status1, 200)
+
 
 if __name__ == "__main__":
     unittest.main()
