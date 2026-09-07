@@ -42,6 +42,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
   const [metric, setMetric] = useState<string>('pass_rate');
   const [loading, setLoading] = useState<boolean>(false);
   const [scorecard, setScorecard] = useState<ArenaScorecardResponse | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false);
   const isMountedRef = useRef<boolean>(true);
 
   useEffect(() => {
@@ -78,7 +79,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
   const scenarioOptions = scenarios.length > 0
     ? scenarios.map((s) => ({
         label: s.name,
-        path: `benchmarks/${s.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.json`,
+        path: s.file_path || `examples/${s.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.json`,
       }))
     : [
         { label: 'Core System Health Check', path: 'examples/basic_test.json' },
@@ -178,7 +179,7 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
         </div>
 
         {/* Metric Selector */}
-        <div className="flex items-center gap-2 bg-[#131117] border border-bento-border p-1 rounded-xl" role="group" aria-label="Evaluation Metric">
+        <div className="grid grid-cols-3 sm:flex items-center gap-1 sm:gap-2 bg-[#131117] border border-bento-border p-1 rounded-xl w-full sm:w-auto" role="group" aria-label="Evaluation Metric">
           {(['pass_rate', 'duration', 'assertions'] as const).map((m) => (
             <button
               key={m}
@@ -188,13 +189,13 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
                 setMetric(m);
                 playClack();
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition ${
+              className={`px-2.5 sm:px-3 py-2 sm:py-1.5 min-h-[38px] sm:min-h-[32px] rounded-lg text-xs font-bold capitalize transition text-center justify-center flex items-center ${
                 metric === m
                   ? 'bg-red-500 text-white shadow-sm'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              {m.replace('_', ' ')}
+              {m === 'pass_rate' ? 'Pass Rate' : m === 'duration' ? 'Duration' : 'Asserts'}
             </button>
           ))}
         </div>
@@ -208,16 +209,16 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
             RED CORNER · CHALLENGER
           </div>
 
-          <h3 className="text-sm font-bold text-red-200 flex items-center gap-2 mb-3">
-            <Target className="w-4 h-4 text-red-400" />
-            Select Challenger Contract
+          <h3 className="text-sm font-bold text-red-200 flex items-center gap-2 mb-3 pr-28">
+            <Target className="w-4 h-4 text-red-400 shrink-0" />
+            <span className="truncate">Select Challenger Contract</span>
           </h3>
 
           <select
             aria-label="Select Challenger Contract"
             value={challengerPath || (scenarioOptions[0]?.path ?? '')}
             onChange={(e) => setChallengerPath(e.target.value)}
-            className="w-full bg-[#131117] border border-bento-border rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-red-500/60"
+            className="w-full bg-[#131117] border border-bento-border rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/50"
           >
             {scenarioOptions.map((opt, i) => (
               <option key={`c-${i}`} value={opt.path}>
@@ -233,16 +234,16 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
             BLUE CORNER · DEFENDER
           </div>
 
-          <h3 className="text-sm font-bold text-blue-200 flex items-center gap-2 mb-3">
-            <ShieldAlert className="w-4 h-4 text-blue-400" />
-            Select Defender Baseline
+          <h3 className="text-sm font-bold text-blue-200 flex items-center gap-2 mb-3 pr-28">
+            <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0" />
+            <span className="truncate">Select Defender Baseline</span>
           </h3>
 
           <select
             aria-label="Select Defender Baseline"
             value={defenderPath || (scenarioOptions[1]?.path ?? scenarioOptions[0]?.path ?? '')}
             onChange={(e) => setDefenderPath(e.target.value)}
-            className="w-full bg-[#131117] border border-bento-border rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:border-blue-500/60"
+            className="w-full bg-[#131117] border border-bento-border rounded-xl px-3 py-2.5 text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           >
             {scenarioOptions.map((opt, i) => (
               <option key={`d-${i}`} value={opt.path}>
@@ -259,14 +260,14 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
           onClick={handleFight}
           disabled={loading}
           aria-label="Launch Arena Sparring Match"
-          className={`px-8 py-3.5 rounded-2xl font-black text-sm tracking-wider uppercase transition-all shadow-xl flex items-center gap-2.5 ${
+          className={`w-full sm:w-auto px-6 sm:px-8 py-3.5 rounded-2xl font-black text-xs sm:text-sm tracking-wider uppercase transition-all shadow-xl flex items-center justify-center gap-2.5 ${
             loading
               ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-red-600 to-amber-600 text-white hover:brightness-110 hover:shadow-red-500/20 active:scale-95'
           }`}
         >
           <Swords className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Evaluating Sparring Round...' : 'Launch Arena Sparring Match 🥊'}
+          <span>{loading ? 'Evaluating Sparring Round...' : 'Launch Arena Sparring Match 🥊'}</span>
         </button>
       </div>
 
@@ -346,15 +347,17 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
 
           {/* Arcade Versus Combat Bar */}
           <div className="bg-[#0e0d13] border border-bento-border rounded-xl p-4 shadow-inner overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono font-bold mb-2">
-              <span className="text-red-400 flex items-center gap-1.5 break-all min-w-0">
-                🥊 {scorecard.challenger_name}
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs font-mono font-bold mb-2">
+              <span className="text-red-400 flex items-center gap-1.5 truncate min-w-0" title={scorecard.challenger_name}>
+                <span>🥊</span>
+                <span className="truncate">{scorecard.challenger_name}</span>
               </span>
-              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] shrink-0">
-                VS · {scorecard.metric_used.toUpperCase()}
+              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] shrink-0 font-extrabold tracking-wider">
+                VS
               </span>
-              <span className="text-blue-400 flex items-center gap-1.5 break-all min-w-0">
-                🛡️ {scorecard.defender_name}
+              <span className="text-blue-400 flex items-center justify-end gap-1.5 truncate min-w-0 text-right" title={scorecard.defender_name}>
+                <span className="truncate">{scorecard.defender_name}</span>
+                <span>🛡️</span>
               </span>
             </div>
 
@@ -486,16 +489,35 @@ export const ArenaView: React.FC<ArenaViewProps> = ({ scenarios }) => {
               <History className="w-4 h-4 text-bento-matcha" />
               Recent Arena Bouts ({bouts.length})
             </h3>
-            <button
-              onClick={() => {
-                setBouts([]);
-                localStorage.removeItem('bento_arena_history');
-                playClack();
-              }}
-              className="text-[11px] text-gray-500 hover:text-gray-300 font-mono transition"
-            >
-              Clear Bouts
-            </button>
+            {showClearConfirm ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-red-300">Clear all bouts?</span>
+                <button
+                  onClick={() => {
+                    setBouts([]);
+                    localStorage.removeItem('bento_arena_history');
+                    setShowClearConfirm(false);
+                    playClack();
+                  }}
+                  className="px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 rounded text-[11px] font-mono transition"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="px-2 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded text-[11px] font-mono transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="px-2.5 py-1 min-h-[32px] text-[11px] text-gray-400 hover:text-gray-200 font-mono transition rounded hover:bg-white/5"
+              >
+                Clear Bouts
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
