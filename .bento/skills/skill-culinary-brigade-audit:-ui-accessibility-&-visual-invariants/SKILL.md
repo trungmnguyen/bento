@@ -1,13 +1,13 @@
 ---
 name: skill-culinary-brigade-audit:-ui-accessibility-&-visual-invariants
 description: >-
-  Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (3 executions observed)
-trigger_tags: ['yuzu', 'yellow_team', 'culinary_brigade', 'a11y', 'ui']
+  Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (2 executions observed)
+trigger_tags: ['culinary_brigade', 'yellow_team', 'ui', 'yuzu', 'a11y']
 ---
 
 # 🛠️ skill-culinary-brigade-audit:-ui-accessibility-&-visual-invariants
 
-> Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (3 executions observed)
+> Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (2 executions observed)
 
 ## 📋 Procedural Execution Steps
 

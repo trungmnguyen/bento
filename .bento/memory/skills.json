@@ -3,17 +3,48 @@
   "count": 11,
   "skills": [
     {
-      "name": "skill-quant-calc-signal-normalizer-contract",
-      "description": "Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (14 executions observed)",
+      "name": "skill-triad-audit:-ui-accessibility-&-visual-invariants",
+      "description": "Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (2 executions observed)",
       "trigger_tags": [
         "triad_sprint",
+        "yuzu",
+        "a11y",
+        "yellow_team",
+        "ui"
+      ],
+      "steps": [
+        "Step 1: Check pre-conditions for Triad Audit: UI Accessibility & Visual Invariants",
+        "Step 2: Execute validated deterministic routine for Triad Audit: UI Accessibility & Visual Invariants",
+        "Step 3: Verify output assertions"
+      ]
+    },
+    {
+      "name": "skill-triad-audit:-ast-purity-&-architectural-invariants",
+      "description": "Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (2 executions observed)",
+      "trigger_tags": [
+        "ast_purity",
+        "triad_sprint",
+        "red_team",
+        "wasabi",
+        "security"
+      ],
+      "steps": [
+        "Step 1: Check pre-conditions for Triad Audit: AST Purity & Architectural Invariants",
+        "Step 2: Execute validated deterministic routine for Triad Audit: AST Purity & Architectural Invariants",
+        "Step 3: Verify output assertions"
+      ]
+    },
+    {
+      "name": "skill-quant-calc-signal-normalizer-contract",
+      "description": "Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (16 executions observed)",
+      "trigger_tags": [
         "benchmark",
-        "chef",
         "brigade_sprint",
-        "blue_team",
-        "quant",
         "demo",
-        "auto-loop"
+        "chef",
+        "auto-loop",
+        "quant",
+        "blue_team"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Quant Calc Signal Normalizer Contract",
@@ -23,16 +54,15 @@
     },
     {
       "name": "skill-mobile-ui-&-navigation-verification",
-      "description": "Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (13 executions observed)",
+      "description": "Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (16 executions observed)",
       "trigger_tags": [
-        "triad_sprint",
-        "tailwind",
         "benchmark",
-        "chef",
         "brigade_sprint",
+        "ui",
+        "chef",
+        "tailwind",
         "ux",
         "blue_team",
-        "ui",
         "mobile"
       ],
       "steps": [
@@ -43,17 +73,16 @@
     },
     {
       "name": "skill-dashboard-resilience-&-security-verification-rig",
-      "description": "Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (13 executions observed)",
+      "description": "Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (17 executions observed)",
       "trigger_tags": [
-        "triad_sprint",
-        "benchmark",
-        "chef",
-        "brigade_sprint",
-        "security",
-        "web",
-        "blue_team",
         "dashboard",
-        "resilience"
+        "benchmark",
+        "brigade_sprint",
+        "chef",
+        "security",
+        "resilience",
+        "blue_team",
+        "web"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Dashboard Resilience & Security Verification Rig",
@@ -65,14 +94,12 @@
       "name": "skill-core-system-health-check",
       "description": "Autonomous skill macro synthesized from recurring task 'Core System Health Check' (15 executions observed)",
       "trigger_tags": [
-        "triad_sprint",
         "benchmark",
-        "chef",
         "brigade_sprint",
-        "sanity",
-        "contract",
+        "core",
+        "chef",
         "blue_team",
-        "core"
+        "sanity"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Core System Health Check",
@@ -82,16 +109,15 @@
     },
     {
       "name": "skill-agent-code-gen-verification-rig",
-      "description": "Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (13 executions observed)",
+      "description": "Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (15 executions observed)",
       "trigger_tags": [
-        "triad_sprint",
         "benchmark",
-        "chef",
         "brigade_sprint",
-        "eval",
-        "blue_team",
+        "agent",
+        "chef",
         "cyrilXBT-paradigm",
-        "agent"
+        "blue_team",
+        "eval"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Agent Code-Gen Verification Rig",
@@ -101,17 +127,17 @@
     },
     {
       "name": "skill-accessibility-&-sensory-verification-rig",
-      "description": "Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (13 executions observed)",
+      "description": "Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (15 executions observed)",
       "trigger_tags": [
+        "python311",
         "benchmark",
-        "accessibility",
-        "chef",
         "brigade_sprint",
-        "wcag21aa",
-        "blue_team",
-        "a11y",
+        "chef",
         "sensory",
-        "python311"
+        "wcag21aa",
+        "accessibility",
+        "blue_team",
+        "a11y"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Accessibility & Sensory Verification Rig",
@@ -121,12 +147,11 @@
     },
     {
       "name": "skill-orchestra_round_1",
-      "description": "Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (7 executions observed)",
+      "description": "Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (2 executions observed)",
       "trigger_tags": [
-        "triad_sprint",
         "brigade_sprint",
-        "culinary_brigade",
-        "orchestra"
+        "orchestra",
+        "culinary_brigade"
       ],
       "steps": [
         "Step 1: Check pre-conditions for orchestra_round_1",
@@ -136,13 +161,13 @@
     },
     {
       "name": "skill-culinary-brigade-audit:-ui-accessibility-&-visual-invariants",
-      "description": "Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (3 executions observed)",
+      "description": "Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (2 executions observed)",
       "trigger_tags": [
-        "yuzu",
-        "yellow_team",
         "culinary_brigade",
-        "a11y",
-        "ui"
+        "yellow_team",
+        "ui",
+        "yuzu",
+        "a11y"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Culinary Brigade Audit: UI Accessibility & Visual Invariants",
@@ -152,49 +177,17 @@
     },
     {
       "name": "skill-culinary-brigade-audit:-ast-purity-&-architectural-invariants",
-      "description": "Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (3 executions observed)",
+      "description": "Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (2 executions observed)",
       "trigger_tags": [
+        "culinary_brigade",
         "ast_purity",
         "wasabi",
         "security",
-        "culinary_brigade",
         "red_team"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Culinary Brigade Audit: AST Purity & Architectural Invariants",
         "Step 2: Execute validated deterministic routine for Culinary Brigade Audit: AST Purity & Architectural Invariants",
-        "Step 3: Verify output assertions"
-      ]
-    },
-    {
-      "name": "skill-triad-audit:-ui-accessibility-&-visual-invariants",
-      "description": "Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (3 executions observed)",
-      "trigger_tags": [
-        "triad_sprint",
-        "yuzu",
-        "yellow_team",
-        "a11y",
-        "ui"
-      ],
-      "steps": [
-        "Step 1: Check pre-conditions for Triad Audit: UI Accessibility & Visual Invariants",
-        "Step 2: Execute validated deterministic routine for Triad Audit: UI Accessibility & Visual Invariants",
-        "Step 3: Verify output assertions"
-      ]
-    },
-    {
-      "name": "skill-triad-audit:-ast-purity-&-architectural-invariants",
-      "description": "Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (3 executions observed)",
-      "trigger_tags": [
-        "triad_sprint",
-        "ast_purity",
-        "wasabi",
-        "security",
-        "red_team"
-      ],
-      "steps": [
-        "Step 1: Check pre-conditions for Triad Audit: AST Purity & Architectural Invariants",
-        "Step 2: Execute validated deterministic routine for Triad Audit: AST Purity & Architectural Invariants",
         "Step 3: Verify output assertions"
       ]
     }

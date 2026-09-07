@@ -1,6 +1,6 @@
 # 🧠 Bento Persistent Memory Bank
 
-> Auto-distilled architectural rules and edge-case guards (27 rules stored).
+> Auto-distilled architectural rules and edge-case guards (38 rules stored).
 
 ### `[MEM-50790948]` Clean Architecture Port Rule
 - **Category:** `architecture` | **Discovered:** 2026-09-01
@@ -162,31 +162,113 @@
 - **Anti-Pattern:** Never scatter raw fetch() calls across React components when auth is involved. Never skip auth on EventSource SSE endpoints just because they appear read-only.
 - **Tags:** architecture
 
+### `[MEM-33AC7EF3]` bg_runner shell=False and Dangerous Pattern Guard
+- **Category:** `security` | **Discovered:** 2026-09-06
+- **Hard Rule:** subprocess.Popen in background runners must use shlex.split() + shell=False, sanitize tags to [a-zA-Z0-9_-], and reject destructive commands before process spawning.
+- **Anti-Pattern:** subprocess.Popen(command, shell=True) with arbitrary user inputs allowing command injection.
+- **Tags:** bg_runner,security,rce,subprocess
+
+### `[MEM-A44FDA40]` Always-Mounted ARIA Live Regions
+- **Category:** `accessibility` | **Discovered:** 2026-09-06
+- **Hard Rule:** aria-live status and alert regions must remain permanently mounted in the DOM (using sr-only when empty) so assistive technology detects mutations. Never conditionally mount aria-live containers.
+- **Anti-Pattern:** Conditionally unmounting aria-live containers so screen readers fail to register mutation events.
+- **Tags:** a11y,aria-live,wcag,screen-reader
+
+### `[MEM-5B6CF2E9]` DaemonView Modular Component Architecture
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Keep DaemonView as a thin orchestration shell (<120 lines). Decompose into TaskLaunchPanel, TaskTable, and LogDrawer, driven by dedicated hooks (useTaskLogs, useTaskActions, useCommandHistory, useLocalStorage).
+- **Anti-Pattern:** Consolidating task execution, table rendering, SSE log streaming, and dialog state into a single 800+ line God Component.
+- **Tags:** react,clean-architecture,decomposition
+
+### `[MEM-E48C9A92]` Atomic Batch Process Termination and Pin Protection
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Backend endpoints for process operations must support batch execution (/api/bg/kill-batch) and respect pin-preservation filters (skip_task_ids) at the filesystem storage layer to prevent race conditions and unintentional state loss.
+- **Anti-Pattern:** Iterating multiple individual kill HTTP requests sequentially from frontend clients or failing to pass pinned exclusion IDs to filesystem pruning routines.
+- **Tags:** concurrency,processes,api,prune
+
+### `[MEM-9ABEA664]` Streaming Terminal Scroll Protection and Hotkey Ergonomics
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Interactive streaming terminal interfaces must decouple scroll state from incoming chunks: detect user scroll-up to pause disruptive scroll snapping, display a floating 'Scroll to latest' resume control, provide toggleable select-none line number gutters, and wire standard shortcuts (Cmd+F / Ctrl+F) to focus search inputs.
+- **Anti-Pattern:** Unconditionally calling scrollIntoView on every streaming chunk, forcing viewport snapping and preventing developers from inspecting historical log traces.
+- **Tags:** react,terminal,streaming,ux,shortcuts
+
+### `[MEM-DREAM-99E641B3]` Autonomous Recovery Guard: Accessibility & Sensory Verification Rig
+- **Category:** `auto-dream-distilled` | **Discovered:** 2026-09-06
+- **Hard Rule:** Always satisfy contract requirements: Verify SoundCaptionHUD Accessible Subtitles: Target 'stdout' contains 'aria-live': False
+- **Anti-Pattern:** Initial failing mode: Verify SoundCaptionHUD Accessible Subtitles: Target 'stdout' contains 'aria-live': False
+- **Tags:** wcag21aa, sensory, dream-distilled, a11y, python311, harness-recovery, accessibility
+
+### `[MEM-5022A110]` Multi-Faceted Order State Filtering and Pantry Ergonomics
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Background task monitors should provide multi-faceted filtering combining status filters (All, Simmering, Ready, Failed), dynamic tag aggregation, and free-text search. Finished tasks must display formatted relative timestamps alongside execution duration, and empty dashboard states must provide one-click curated pantry actions.
+- **Anti-Pattern:** Limiting task dashboards to flat un-filterable tables without relative temporal context or empty-state guidance.
+- **Tags:** react,dashboard,filtering,pantry,ux
+
+### `[MEM-FC550C37]` Multi-Dimensional Filter Recovery and Empty State Diagnostics
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** When tabular dashboards filter out all rows via compound criteria (text search, status pills, tags), the empty-state UI must detail all active constraints and render a one-click 'Reset All Filters' escape hatch to prevent user confusion.
+- **Anti-Pattern:** Displaying generic 'No matching results' text that fails to indicate which specific filter eliminated the data, or failing to offer an all-filter reset action.
+- **Tags:** react,ux,dashboard,filtering,a11y
+
+### `[MEM-E52AB565]` Inline Command Clipboard Ergonomics and Log Artifact Versioning
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Process monitoring rows must provide hover-activated one-click clipboard copying for truncated command strings, and downloaded log artifacts must append ISO collision-resistant timestamps to prevent overwrites in developer downloads folders.
+- **Anti-Pattern:** Truncating command strings without copy affordances or exporting static-named log files that collide on repeated downloads.
+- **Tags:** react,ux,dashboard,clipboard,download
+
+### `[MEM-1CF48B24]` Terminal ANSI Parsing and Log Match Navigation
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Render streaming terminal output with zero-dependency ANSI parsing and keyboard-accessible match jumping (Enter/Shift+Enter) to guarantee instant incident triaging without third-party heavy terminal emulators.
+- **Anti-Pattern:** Rendering raw ANSI escape artifacts as gibberish or loading heavyweight xterm.js bundles in lightweight dashboard modals.
+- **Tags:** architecture
+
+### `[MEM-950A9331]` Daemon Historical Average Duration Estimation
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Derive running background task duration expectations by memoizing completed tasks indexed by command and tag, giving operators immediate telemetry context.
+- **Anti-Pattern:** Displaying only raw monotonic timers with zero indication of expected baseline completion windows.
+- **Tags:** architecture
+
 ---
 
 ## 🛠️ Bento Crystallized Procedural Skills (11 skills stored)
 
 > Reusable macros synthesized from recurring successful executions.
 
+### `[skill-triad-audit:-ui-accessibility-&-visual-invariants]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (2 executions observed)
+- **Tags:** triad_sprint, yuzu, a11y, yellow_team, ui
+- **Steps:**
+  1. Step 1: Check pre-conditions for Triad Audit: UI Accessibility & Visual Invariants
+  1. Step 2: Execute validated deterministic routine for Triad Audit: UI Accessibility & Visual Invariants
+  1. Step 3: Verify output assertions
+
+### `[skill-triad-audit:-ast-purity-&-architectural-invariants]`
+- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (2 executions observed)
+- **Tags:** ast_purity, triad_sprint, red_team, wasabi, security
+- **Steps:**
+  1. Step 1: Check pre-conditions for Triad Audit: AST Purity & Architectural Invariants
+  1. Step 2: Execute validated deterministic routine for Triad Audit: AST Purity & Architectural Invariants
+  1. Step 3: Verify output assertions
+
 ### `[skill-quant-calc-signal-normalizer-contract]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (14 executions observed)
-- **Tags:** triad_sprint, benchmark, chef, brigade_sprint, blue_team, quant, demo, auto-loop
+- **Description:** Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (16 executions observed)
+- **Tags:** benchmark, brigade_sprint, demo, chef, auto-loop, quant, blue_team
 - **Steps:**
   1. Step 1: Check pre-conditions for Quant Calc Signal Normalizer Contract
   1. Step 2: Execute validated deterministic routine for Quant Calc Signal Normalizer Contract
   1. Step 3: Verify output assertions
 
 ### `[skill-mobile-ui-&-navigation-verification]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (13 executions observed)
-- **Tags:** triad_sprint, tailwind, benchmark, chef, brigade_sprint, ux, blue_team, ui, mobile
+- **Description:** Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (16 executions observed)
+- **Tags:** benchmark, brigade_sprint, ui, chef, tailwind, ux, blue_team, mobile
 - **Steps:**
   1. Step 1: Check pre-conditions for Mobile UI & Navigation Verification
   1. Step 2: Execute validated deterministic routine for Mobile UI & Navigation Verification
   1. Step 3: Verify output assertions
 
 ### `[skill-dashboard-resilience-&-security-verification-rig]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (13 executions observed)
-- **Tags:** triad_sprint, benchmark, chef, brigade_sprint, security, web, blue_team, dashboard, resilience
+- **Description:** Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (17 executions observed)
+- **Tags:** dashboard, benchmark, brigade_sprint, chef, security, resilience, blue_team, web
 - **Steps:**
   1. Step 1: Check pre-conditions for Dashboard Resilience & Security Verification Rig
   1. Step 2: Execute validated deterministic routine for Dashboard Resilience & Security Verification Rig
@@ -194,64 +276,48 @@
 
 ### `[skill-core-system-health-check]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Core System Health Check' (15 executions observed)
-- **Tags:** triad_sprint, benchmark, chef, brigade_sprint, sanity, contract, blue_team, core
+- **Tags:** benchmark, brigade_sprint, core, chef, blue_team, sanity
 - **Steps:**
   1. Step 1: Check pre-conditions for Core System Health Check
   1. Step 2: Execute validated deterministic routine for Core System Health Check
   1. Step 3: Verify output assertions
 
 ### `[skill-agent-code-gen-verification-rig]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (13 executions observed)
-- **Tags:** triad_sprint, benchmark, chef, brigade_sprint, eval, blue_team, cyrilXBT-paradigm, agent
+- **Description:** Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (15 executions observed)
+- **Tags:** benchmark, brigade_sprint, agent, chef, cyrilXBT-paradigm, blue_team, eval
 - **Steps:**
   1. Step 1: Check pre-conditions for Agent Code-Gen Verification Rig
   1. Step 2: Execute validated deterministic routine for Agent Code-Gen Verification Rig
   1. Step 3: Verify output assertions
 
 ### `[skill-accessibility-&-sensory-verification-rig]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (13 executions observed)
-- **Tags:** benchmark, accessibility, chef, brigade_sprint, wcag21aa, blue_team, a11y, sensory, python311
+- **Description:** Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (15 executions observed)
+- **Tags:** python311, benchmark, brigade_sprint, chef, sensory, wcag21aa, accessibility, blue_team, a11y
 - **Steps:**
   1. Step 1: Check pre-conditions for Accessibility & Sensory Verification Rig
   1. Step 2: Execute validated deterministic routine for Accessibility & Sensory Verification Rig
   1. Step 3: Verify output assertions
 
 ### `[skill-orchestra_round_1]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (7 executions observed)
-- **Tags:** triad_sprint, brigade_sprint, culinary_brigade, orchestra
+- **Description:** Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (2 executions observed)
+- **Tags:** brigade_sprint, orchestra, culinary_brigade
 - **Steps:**
   1. Step 1: Check pre-conditions for orchestra_round_1
   1. Step 2: Execute validated deterministic routine for orchestra_round_1
   1. Step 3: Verify output assertions
 
 ### `[skill-culinary-brigade-audit:-ui-accessibility-&-visual-invariants]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (3 executions observed)
-- **Tags:** yuzu, yellow_team, culinary_brigade, a11y, ui
+- **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (2 executions observed)
+- **Tags:** culinary_brigade, yellow_team, ui, yuzu, a11y
 - **Steps:**
   1. Step 1: Check pre-conditions for Culinary Brigade Audit: UI Accessibility & Visual Invariants
   1. Step 2: Execute validated deterministic routine for Culinary Brigade Audit: UI Accessibility & Visual Invariants
   1. Step 3: Verify output assertions
 
 ### `[skill-culinary-brigade-audit:-ast-purity-&-architectural-invariants]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (3 executions observed)
-- **Tags:** ast_purity, wasabi, security, culinary_brigade, red_team
+- **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (2 executions observed)
+- **Tags:** culinary_brigade, ast_purity, wasabi, security, red_team
 - **Steps:**
   1. Step 1: Check pre-conditions for Culinary Brigade Audit: AST Purity & Architectural Invariants
   1. Step 2: Execute validated deterministic routine for Culinary Brigade Audit: AST Purity & Architectural Invariants
-  1. Step 3: Verify output assertions
-
-### `[skill-triad-audit:-ui-accessibility-&-visual-invariants]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: UI Accessibility & Visual Invariants' (3 executions observed)
-- **Tags:** triad_sprint, yuzu, yellow_team, a11y, ui
-- **Steps:**
-  1. Step 1: Check pre-conditions for Triad Audit: UI Accessibility & Visual Invariants
-  1. Step 2: Execute validated deterministic routine for Triad Audit: UI Accessibility & Visual Invariants
-  1. Step 3: Verify output assertions
-
-### `[skill-triad-audit:-ast-purity-&-architectural-invariants]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Triad Audit: AST Purity & Architectural Invariants' (3 executions observed)
-- **Tags:** triad_sprint, ast_purity, wasabi, security, red_team
-- **Steps:**
-  1. Step 1: Check pre-conditions for Triad Audit: AST Purity & Architectural Invariants
-  1. Step 2: Execute validated deterministic routine for Triad Audit: AST Purity & Architectural Invariants
   1. Step 3: Verify output assertions

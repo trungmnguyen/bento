@@ -416,6 +416,155 @@
         "architecture"
       ],
       "source_scenario": ""
+    },
+    {
+      "id": "MEM-33AC7EF3",
+      "title": "bg_runner shell=False and Dangerous Pattern Guard",
+      "category": "security",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "subprocess.Popen in background runners must use shlex.split() + shell=False, sanitize tags to [a-zA-Z0-9_-], and reject destructive commands before process spawning.",
+      "anti_pattern": "subprocess.Popen(command, shell=True) with arbitrary user inputs allowing command injection.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "bg_runner,security,rce,subprocess"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-A44FDA40",
+      "title": "Always-Mounted ARIA Live Regions",
+      "category": "accessibility",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "aria-live status and alert regions must remain permanently mounted in the DOM (using sr-only when empty) so assistive technology detects mutations. Never conditionally mount aria-live containers.",
+      "anti_pattern": "Conditionally unmounting aria-live containers so screen readers fail to register mutation events.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "a11y,aria-live,wcag,screen-reader"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-5B6CF2E9",
+      "title": "DaemonView Modular Component Architecture",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Keep DaemonView as a thin orchestration shell (<120 lines). Decompose into TaskLaunchPanel, TaskTable, and LogDrawer, driven by dedicated hooks (useTaskLogs, useTaskActions, useCommandHistory, useLocalStorage).",
+      "anti_pattern": "Consolidating task execution, table rendering, SSE log streaming, and dialog state into a single 800+ line God Component.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "react,clean-architecture,decomposition"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-E48C9A92",
+      "title": "Atomic Batch Process Termination and Pin Protection",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Backend endpoints for process operations must support batch execution (/api/bg/kill-batch) and respect pin-preservation filters (skip_task_ids) at the filesystem storage layer to prevent race conditions and unintentional state loss.",
+      "anti_pattern": "Iterating multiple individual kill HTTP requests sequentially from frontend clients or failing to pass pinned exclusion IDs to filesystem pruning routines.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "concurrency,processes,api,prune"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-9ABEA664",
+      "title": "Streaming Terminal Scroll Protection and Hotkey Ergonomics",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Interactive streaming terminal interfaces must decouple scroll state from incoming chunks: detect user scroll-up to pause disruptive scroll snapping, display a floating 'Scroll to latest' resume control, provide toggleable select-none line number gutters, and wire standard shortcuts (Cmd+F / Ctrl+F) to focus search inputs.",
+      "anti_pattern": "Unconditionally calling scrollIntoView on every streaming chunk, forcing viewport snapping and preventing developers from inspecting historical log traces.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "react,terminal,streaming,ux,shortcuts"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-DREAM-99E641B3",
+      "title": "Autonomous Recovery Guard: Accessibility & Sensory Verification Rig",
+      "category": "auto-dream-distilled",
+      "context": "Task 'Accessibility & Sensory Verification Rig' failed at iteration 1 due to: [Verify SoundCaptionHUD Accessible Subtitles: Target 'stdout' contains 'aria-live': False], but recovered cleanly at iteration 1.",
+      "rule": "Always satisfy contract requirements: Verify SoundCaptionHUD Accessible Subtitles: Target 'stdout' contains 'aria-live': False",
+      "anti_pattern": "Initial failing mode: Verify SoundCaptionHUD Accessible Subtitles: Target 'stdout' contains 'aria-live': False",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "wcag21aa",
+        "sensory",
+        "dream-distilled",
+        "a11y",
+        "python311",
+        "harness-recovery",
+        "accessibility"
+      ],
+      "source_scenario": "Accessibility & Sensory Verification Rig"
+    },
+    {
+      "id": "MEM-5022A110",
+      "title": "Multi-Faceted Order State Filtering and Pantry Ergonomics",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Background task monitors should provide multi-faceted filtering combining status filters (All, Simmering, Ready, Failed), dynamic tag aggregation, and free-text search. Finished tasks must display formatted relative timestamps alongside execution duration, and empty dashboard states must provide one-click curated pantry actions.",
+      "anti_pattern": "Limiting task dashboards to flat un-filterable tables without relative temporal context or empty-state guidance.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "react,dashboard,filtering,pantry,ux"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-FC550C37",
+      "title": "Multi-Dimensional Filter Recovery and Empty State Diagnostics",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "When tabular dashboards filter out all rows via compound criteria (text search, status pills, tags), the empty-state UI must detail all active constraints and render a one-click 'Reset All Filters' escape hatch to prevent user confusion.",
+      "anti_pattern": "Displaying generic 'No matching results' text that fails to indicate which specific filter eliminated the data, or failing to offer an all-filter reset action.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "react,ux,dashboard,filtering,a11y"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-E52AB565",
+      "title": "Inline Command Clipboard Ergonomics and Log Artifact Versioning",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Process monitoring rows must provide hover-activated one-click clipboard copying for truncated command strings, and downloaded log artifacts must append ISO collision-resistant timestamps to prevent overwrites in developer downloads folders.",
+      "anti_pattern": "Truncating command strings without copy affordances or exporting static-named log files that collide on repeated downloads.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "react,ux,dashboard,clipboard,download"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-1CF48B24",
+      "title": "Terminal ANSI Parsing and Log Match Navigation",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Render streaming terminal output with zero-dependency ANSI parsing and keyboard-accessible match jumping (Enter/Shift+Enter) to guarantee instant incident triaging without third-party heavy terminal emulators.",
+      "anti_pattern": "Rendering raw ANSI escape artifacts as gibberish or loading heavyweight xterm.js bundles in lightweight dashboard modals.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "architecture"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-950A9331",
+      "title": "Daemon Historical Average Duration Estimation",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Derive running background task duration expectations by memoizing completed tasks indexed by command and tag, giving operators immediate telemetry context.",
+      "anti_pattern": "Displaying only raw monotonic timers with zero indication of expected baseline completion windows.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "architecture"
+      ],
+      "source_scenario": ""
     }
   ]
 }
