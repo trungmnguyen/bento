@@ -2,7 +2,7 @@
 name: skill-accessibility-&-sensory-verification-rig
 description: >-
   Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (15 executions observed)
-trigger_tags: ['python311', 'benchmark', 'brigade_sprint', 'chef', 'sensory', 'wcag21aa', 'accessibility', 'blue_team', 'a11y']
+trigger_tags: ['benchmark', 'accessibility', 'chef', 'brigade_sprint', 'wcag21aa', 'blue_team', 'a11y', 'sensory', 'python311']
 ---
 
 # 🛠️ skill-accessibility-&-sensory-verification-rig

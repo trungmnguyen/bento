@@ -565,6 +565,84 @@
         "architecture"
       ],
       "source_scenario": ""
+    },
+    {
+      "id": "MEM-02EBA022",
+      "title": "Memory Tag Atomization and Pantry Category Hierarchy",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Always atomize joined comma-delimited tags into discrete tokens and tier them under high-level category compartments with frequency counters to avoid unbounded UI tag cloud explosions.",
+      "anti_pattern": "Dumping 70+ un-split comma-joined tags into a flat wrapping flex container that degrades viewport layout and traps keyboard navigation.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "architecture"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-E3CDF31C",
+      "title": "Markdown Export Header and Prompt Injection Guard",
+      "category": "security",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Strip newlines and carriage returns from user-supplied recipe titles and category metadata before persistence or export to prevent markdown header hijacking and indirect prompt injection into AGENTS.md.",
+      "anti_pattern": "Interpolating un-sanitized multi-line title strings directly into markdown H2/H3 headings.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "security"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-45582B62",
+      "title": "Responsive Container Alignment Invariant",
+      "category": "architecture",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Every global header sub-strip and horizontal telemetry bar must nest its content inside the max-w-7xl mx-auto container grid to prevent unbounded full-width stretching and alignment breaks on wide monitors.",
+      "anti_pattern": "Allowing header sub-strips to expand directly across 100vw while inner page tabs and main canvas are constrained inside max-w-7xl.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "architecture"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-A91E499D",
+      "title": "Horizontal Scroll Strip Trailing Clearance and Dynamic Edge Masks",
+      "category": "ui",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "In horizontal scroll containers with edge gradient masks, always add trailing clearance (at least 32px overscroll spacer) and dynamically toggle mask opacity (opacity-0 at boundaries) so the trailing interactive element is never occluded or blocked from touch swiping.",
+      "anti_pattern": "Static CSS after: pseudo-element gradient overlays pinned to right-0 without trailing clearance, which permanently trap the last item under the fade and prevent further swiping.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "ui"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-CBAB6843",
+      "title": "Bi-Directional Tab Scroll Synchronization",
+      "category": "ui",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "In mobile responsive web apps with dual navigation layers (e.g. top scrollable tablist and bottom dock), always synchronize active tab state with scrollIntoView({ inline: 'center', behavior: 'smooth' }) so the active indicator remains in the viewport regardless of activation trigger.",
+      "anti_pattern": "Updating active tab state without centering the active tab element in the scrollable tablist, leaving the top bar stranded off-screen.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "ui"
+      ],
+      "source_scenario": ""
+    },
+    {
+      "id": "MEM-46D5F8A7",
+      "title": "Global Keydown Exclusion for Form Select Controls",
+      "category": "accessibility",
+      "context": "Manual rule addition via bento memory CLI",
+      "rule": "Global keyboard event listeners for numerical shortcuts or single-key navigation must always exclude SELECT elements and select parent containers, preventing keypresses intended for dropdown option jumping from triggering global view switches.",
+      "anti_pattern": "Checking only INPUT and TEXTAREA tags in global keydown guards, which causes dropdown selection keys to inadvertently trigger global hotkeys.",
+      "discovery_date": "2026-09-06",
+      "tags": [
+        "accessibility"
+      ],
+      "source_scenario": ""
     }
   ]
 }

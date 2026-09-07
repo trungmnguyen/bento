@@ -1,6 +1,6 @@
 # 🧠 Bento Persistent Memory Bank
 
-> Auto-distilled architectural rules and edge-case guards (38 rules stored).
+> Auto-distilled architectural rules and edge-case guards (44 rules stored).
 
 ### `[MEM-50790948]` Clean Architecture Port Rule
 - **Category:** `architecture` | **Discovered:** 2026-09-01
@@ -228,6 +228,42 @@
 - **Anti-Pattern:** Displaying only raw monotonic timers with zero indication of expected baseline completion windows.
 - **Tags:** architecture
 
+### `[MEM-02EBA022]` Memory Tag Atomization and Pantry Category Hierarchy
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Always atomize joined comma-delimited tags into discrete tokens and tier them under high-level category compartments with frequency counters to avoid unbounded UI tag cloud explosions.
+- **Anti-Pattern:** Dumping 70+ un-split comma-joined tags into a flat wrapping flex container that degrades viewport layout and traps keyboard navigation.
+- **Tags:** architecture
+
+### `[MEM-E3CDF31C]` Markdown Export Header and Prompt Injection Guard
+- **Category:** `security` | **Discovered:** 2026-09-06
+- **Hard Rule:** Strip newlines and carriage returns from user-supplied recipe titles and category metadata before persistence or export to prevent markdown header hijacking and indirect prompt injection into AGENTS.md.
+- **Anti-Pattern:** Interpolating un-sanitized multi-line title strings directly into markdown H2/H3 headings.
+- **Tags:** security
+
+### `[MEM-45582B62]` Responsive Container Alignment Invariant
+- **Category:** `architecture` | **Discovered:** 2026-09-06
+- **Hard Rule:** Every global header sub-strip and horizontal telemetry bar must nest its content inside the max-w-7xl mx-auto container grid to prevent unbounded full-width stretching and alignment breaks on wide monitors.
+- **Anti-Pattern:** Allowing header sub-strips to expand directly across 100vw while inner page tabs and main canvas are constrained inside max-w-7xl.
+- **Tags:** architecture
+
+### `[MEM-A91E499D]` Horizontal Scroll Strip Trailing Clearance and Dynamic Edge Masks
+- **Category:** `ui` | **Discovered:** 2026-09-06
+- **Hard Rule:** In horizontal scroll containers with edge gradient masks, always add trailing clearance (at least 32px overscroll spacer) and dynamically toggle mask opacity (opacity-0 at boundaries) so the trailing interactive element is never occluded or blocked from touch swiping.
+- **Anti-Pattern:** Static CSS after: pseudo-element gradient overlays pinned to right-0 without trailing clearance, which permanently trap the last item under the fade and prevent further swiping.
+- **Tags:** ui
+
+### `[MEM-CBAB6843]` Bi-Directional Tab Scroll Synchronization
+- **Category:** `ui` | **Discovered:** 2026-09-06
+- **Hard Rule:** In mobile responsive web apps with dual navigation layers (e.g. top scrollable tablist and bottom dock), always synchronize active tab state with scrollIntoView({ inline: 'center', behavior: 'smooth' }) so the active indicator remains in the viewport regardless of activation trigger.
+- **Anti-Pattern:** Updating active tab state without centering the active tab element in the scrollable tablist, leaving the top bar stranded off-screen.
+- **Tags:** ui
+
+### `[MEM-46D5F8A7]` Global Keydown Exclusion for Form Select Controls
+- **Category:** `accessibility` | **Discovered:** 2026-09-06
+- **Hard Rule:** Global keyboard event listeners for numerical shortcuts or single-key navigation must always exclude SELECT elements and select parent containers, preventing keypresses intended for dropdown option jumping from triggering global view switches.
+- **Anti-Pattern:** Checking only INPUT and TEXTAREA tags in global keydown guards, which causes dropdown selection keys to inadvertently trigger global hotkeys.
+- **Tags:** accessibility
+
 ---
 
 ## 🛠️ Bento Crystallized Procedural Skills (11 skills stored)
@@ -252,7 +288,7 @@
 
 ### `[skill-quant-calc-signal-normalizer-contract]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (16 executions observed)
-- **Tags:** benchmark, brigade_sprint, demo, chef, auto-loop, quant, blue_team
+- **Tags:** benchmark, chef, brigade_sprint, blue_team, quant, demo, auto-loop
 - **Steps:**
   1. Step 1: Check pre-conditions for Quant Calc Signal Normalizer Contract
   1. Step 2: Execute validated deterministic routine for Quant Calc Signal Normalizer Contract
@@ -260,23 +296,23 @@
 
 ### `[skill-mobile-ui-&-navigation-verification]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (16 executions observed)
-- **Tags:** benchmark, brigade_sprint, ui, chef, tailwind, ux, blue_team, mobile
+- **Tags:** tailwind, benchmark, chef, brigade_sprint, ux, blue_team, ui, mobile
 - **Steps:**
   1. Step 1: Check pre-conditions for Mobile UI & Navigation Verification
   1. Step 2: Execute validated deterministic routine for Mobile UI & Navigation Verification
   1. Step 3: Verify output assertions
 
 ### `[skill-dashboard-resilience-&-security-verification-rig]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (17 executions observed)
-- **Tags:** dashboard, benchmark, brigade_sprint, chef, security, resilience, blue_team, web
+- **Description:** Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (16 executions observed)
+- **Tags:** benchmark, chef, brigade_sprint, security, web, blue_team, dashboard, resilience
 - **Steps:**
   1. Step 1: Check pre-conditions for Dashboard Resilience & Security Verification Rig
   1. Step 2: Execute validated deterministic routine for Dashboard Resilience & Security Verification Rig
   1. Step 3: Verify output assertions
 
 ### `[skill-core-system-health-check]`
-- **Description:** Autonomous skill macro synthesized from recurring task 'Core System Health Check' (15 executions observed)
-- **Tags:** benchmark, brigade_sprint, core, chef, blue_team, sanity
+- **Description:** Autonomous skill macro synthesized from recurring task 'Core System Health Check' (16 executions observed)
+- **Tags:** benchmark, chef, brigade_sprint, sanity, blue_team, core
 - **Steps:**
   1. Step 1: Check pre-conditions for Core System Health Check
   1. Step 2: Execute validated deterministic routine for Core System Health Check
@@ -284,7 +320,7 @@
 
 ### `[skill-agent-code-gen-verification-rig]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (15 executions observed)
-- **Tags:** benchmark, brigade_sprint, agent, chef, cyrilXBT-paradigm, blue_team, eval
+- **Tags:** benchmark, chef, brigade_sprint, eval, blue_team, cyrilXBT-paradigm, agent
 - **Steps:**
   1. Step 1: Check pre-conditions for Agent Code-Gen Verification Rig
   1. Step 2: Execute validated deterministic routine for Agent Code-Gen Verification Rig
@@ -292,7 +328,7 @@
 
 ### `[skill-accessibility-&-sensory-verification-rig]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (15 executions observed)
-- **Tags:** python311, benchmark, brigade_sprint, chef, sensory, wcag21aa, accessibility, blue_team, a11y
+- **Tags:** benchmark, accessibility, chef, brigade_sprint, wcag21aa, blue_team, a11y, sensory, python311
 - **Steps:**
   1. Step 1: Check pre-conditions for Accessibility & Sensory Verification Rig
   1. Step 2: Execute validated deterministic routine for Accessibility & Sensory Verification Rig
@@ -300,7 +336,7 @@
 
 ### `[skill-orchestra_round_1]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (2 executions observed)
-- **Tags:** brigade_sprint, orchestra, culinary_brigade
+- **Tags:** brigade_sprint, culinary_brigade, orchestra
 - **Steps:**
   1. Step 1: Check pre-conditions for orchestra_round_1
   1. Step 2: Execute validated deterministic routine for orchestra_round_1
@@ -308,7 +344,7 @@
 
 ### `[skill-culinary-brigade-audit:-ui-accessibility-&-visual-invariants]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (2 executions observed)
-- **Tags:** culinary_brigade, yellow_team, ui, yuzu, a11y
+- **Tags:** yuzu, yellow_team, culinary_brigade, a11y, ui
 - **Steps:**
   1. Step 1: Check pre-conditions for Culinary Brigade Audit: UI Accessibility & Visual Invariants
   1. Step 2: Execute validated deterministic routine for Culinary Brigade Audit: UI Accessibility & Visual Invariants
@@ -316,7 +352,7 @@
 
 ### `[skill-culinary-brigade-audit:-ast-purity-&-architectural-invariants]`
 - **Description:** Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (2 executions observed)
-- **Tags:** culinary_brigade, ast_purity, wasabi, security, red_team
+- **Tags:** ast_purity, wasabi, security, culinary_brigade, red_team
 - **Steps:**
   1. Step 1: Check pre-conditions for Culinary Brigade Audit: AST Purity & Architectural Invariants
   1. Step 2: Execute validated deterministic routine for Culinary Brigade Audit: AST Purity & Architectural Invariants

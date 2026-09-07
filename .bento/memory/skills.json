@@ -39,12 +39,12 @@
       "description": "Autonomous skill macro synthesized from recurring task 'Quant Calc Signal Normalizer Contract' (16 executions observed)",
       "trigger_tags": [
         "benchmark",
-        "brigade_sprint",
-        "demo",
         "chef",
-        "auto-loop",
+        "brigade_sprint",
+        "blue_team",
         "quant",
-        "blue_team"
+        "demo",
+        "auto-loop"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Quant Calc Signal Normalizer Contract",
@@ -56,13 +56,13 @@
       "name": "skill-mobile-ui-&-navigation-verification",
       "description": "Autonomous skill macro synthesized from recurring task 'Mobile UI & Navigation Verification' (16 executions observed)",
       "trigger_tags": [
-        "benchmark",
-        "brigade_sprint",
-        "ui",
-        "chef",
         "tailwind",
+        "benchmark",
+        "chef",
+        "brigade_sprint",
         "ux",
         "blue_team",
+        "ui",
         "mobile"
       ],
       "steps": [
@@ -73,16 +73,16 @@
     },
     {
       "name": "skill-dashboard-resilience-&-security-verification-rig",
-      "description": "Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (17 executions observed)",
+      "description": "Autonomous skill macro synthesized from recurring task 'Dashboard Resilience & Security Verification Rig' (16 executions observed)",
       "trigger_tags": [
-        "dashboard",
         "benchmark",
-        "brigade_sprint",
         "chef",
+        "brigade_sprint",
         "security",
-        "resilience",
+        "web",
         "blue_team",
-        "web"
+        "dashboard",
+        "resilience"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Dashboard Resilience & Security Verification Rig",
@@ -92,14 +92,14 @@
     },
     {
       "name": "skill-core-system-health-check",
-      "description": "Autonomous skill macro synthesized from recurring task 'Core System Health Check' (15 executions observed)",
+      "description": "Autonomous skill macro synthesized from recurring task 'Core System Health Check' (16 executions observed)",
       "trigger_tags": [
         "benchmark",
-        "brigade_sprint",
-        "core",
         "chef",
+        "brigade_sprint",
+        "sanity",
         "blue_team",
-        "sanity"
+        "core"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Core System Health Check",
@@ -112,12 +112,12 @@
       "description": "Autonomous skill macro synthesized from recurring task 'Agent Code-Gen Verification Rig' (15 executions observed)",
       "trigger_tags": [
         "benchmark",
-        "brigade_sprint",
-        "agent",
         "chef",
-        "cyrilXBT-paradigm",
+        "brigade_sprint",
+        "eval",
         "blue_team",
-        "eval"
+        "cyrilXBT-paradigm",
+        "agent"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Agent Code-Gen Verification Rig",
@@ -129,15 +129,15 @@
       "name": "skill-accessibility-&-sensory-verification-rig",
       "description": "Autonomous skill macro synthesized from recurring task 'Accessibility & Sensory Verification Rig' (15 executions observed)",
       "trigger_tags": [
-        "python311",
         "benchmark",
-        "brigade_sprint",
-        "chef",
-        "sensory",
-        "wcag21aa",
         "accessibility",
+        "chef",
+        "brigade_sprint",
+        "wcag21aa",
         "blue_team",
-        "a11y"
+        "a11y",
+        "sensory",
+        "python311"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Accessibility & Sensory Verification Rig",
@@ -150,8 +150,8 @@
       "description": "Autonomous skill macro synthesized from recurring task 'orchestra_round_1' (2 executions observed)",
       "trigger_tags": [
         "brigade_sprint",
-        "orchestra",
-        "culinary_brigade"
+        "culinary_brigade",
+        "orchestra"
       ],
       "steps": [
         "Step 1: Check pre-conditions for orchestra_round_1",
@@ -163,11 +163,11 @@
       "name": "skill-culinary-brigade-audit:-ui-accessibility-&-visual-invariants",
       "description": "Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: UI Accessibility & Visual Invariants' (2 executions observed)",
       "trigger_tags": [
-        "culinary_brigade",
-        "yellow_team",
-        "ui",
         "yuzu",
-        "a11y"
+        "yellow_team",
+        "culinary_brigade",
+        "a11y",
+        "ui"
       ],
       "steps": [
         "Step 1: Check pre-conditions for Culinary Brigade Audit: UI Accessibility & Visual Invariants",
@@ -179,10 +179,10 @@
       "name": "skill-culinary-brigade-audit:-ast-purity-&-architectural-invariants",
       "description": "Autonomous skill macro synthesized from recurring task 'Culinary Brigade Audit: AST Purity & Architectural Invariants' (2 executions observed)",
       "trigger_tags": [
-        "culinary_brigade",
         "ast_purity",
         "wasabi",
         "security",
+        "culinary_brigade",
         "red_team"
       ],
       "steps": [
