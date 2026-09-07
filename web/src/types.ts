@@ -68,6 +68,7 @@ export interface Scenario {
   description: string;
   tags: string[];
   steps: ScenarioStep[];
+  file_path?: string;
 }
 
 export interface SuiteResult {

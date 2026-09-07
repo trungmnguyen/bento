@@ -326,7 +326,11 @@ class BentoApiHandler(BaseHTTPRequestHandler):
 
         elif path == "/api/benchmarks":
             scenarios = self._load_all_scenarios()
-            data = [ScenarioParser.to_dict(s) for s in scenarios]
+            data = []
+            for s in scenarios:
+                d = ScenarioParser.to_dict(s)
+                d["file_path"] = s.metadata.get("file_path", "")
+                data.append(d)
             return self._send_json(data)
 
         elif path == "/api/telemetry":
@@ -373,6 +377,9 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             export_format = qs.get("format", ["agents_md"])[0].lower()
 
+            if export_format not in ("json", "agents_md", "claude_md", "markdown"):
+                return self._send_json({"error": f"Unsupported export format: {export_format}. Supported formats are 'json', 'agents_md', 'claude_md', and 'markdown'."}, status=400)
+
             memory = self.memory_gateway.load_memory()
             if export_format == "json":
                 data = [
@@ -388,7 +395,20 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                     }
                     for l in memory.lessons
                 ]
-                return self._send_json(data)
+                json_str = json.dumps(data, indent=2)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Disposition", 'attachment; filename="bento_memory.json"')
+                self.send_header("Content-Length", str(len(json_str.encode("utf-8"))))
+                self.send_header("X-Frame-Options", "DENY")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
+                cors_origin = self._get_cors_origin()
+                if cors_origin:
+                    self.send_header("Access-Control-Allow-Origin", cors_origin)
+                self.end_headers()
+                self.wfile.write(json_str.encode("utf-8"))
+                return
             else:
                 lines = [
                     "# Bento Institutional Memory Bank",
@@ -410,8 +430,10 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                             lines.append(f"- **Tags**: {', '.join(l.tags)}")
                         lines.append("")
                 export_text = "\n".join(lines)
+                filename = "CLAUDE.md" if export_format == "claude_md" else "AGENTS.md"
                 self.send_response(200)
                 self.send_header("Content-Type", "text/markdown; charset=utf-8")
+                self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
                 self.send_header("Content-Length", str(len(export_text.encode("utf-8"))))
                 self.send_header("X-Frame-Options", "DENY")
                 self.send_header("X-Content-Type-Options", "nosniff")
@@ -569,17 +591,25 @@ class BentoApiHandler(BaseHTTPRequestHandler):
             return self._send_json({"pruned_tasks_count": pruned_count})
 
         elif path == "/api/memory/add":
-            title = str(payload.get("title", "")).strip()
+            ALLOWED_CATEGORIES = {"architecture", "security", "git", "performance", "reliability", "general", "a11y", "accessibility", "quant", "ui"}
+            raw_category = str(payload.get("category", "general")).strip().lower()
+            category = "".join(ch for ch in raw_category if ch.isalnum() or ch in ("_", "-"))
+            if category not in ALLOWED_CATEGORIES:
+                category = "general"
+
+            title = re.sub(r"[\r\n\t]+", " ", str(payload.get("title", ""))).strip()
             rule = str(payload.get("rule", "")).strip()
-            category = str(payload.get("category", "general")).strip() or "general"
             anti_pattern = str(payload.get("anti_pattern", "")).strip()
+
             tags_raw = payload.get("tags")
-            if isinstance(tags_raw, list):
-                tags = [str(t).strip()[:30] for t in tags_raw if str(t).strip()][:20]
-            elif isinstance(tags_raw, str) and tags_raw.strip():
-                tags = [t.strip()[:30] for t in tags_raw.split(",") if t.strip()][:20]
-            else:
-                tags = [category[:30]]
+            tags_set: list[str] = []
+            raw_items = tags_raw if isinstance(tags_raw, list) else [tags_raw] if isinstance(tags_raw, str) else []
+            for item in raw_items:
+                for sub in str(item).split(","):
+                    cleaned = re.sub(r"[\r\n\t]+", "", sub.strip().lstrip("#"))[:30]
+                    if cleaned and cleaned not in tags_set:
+                        tags_set.append(cleaned)
+            tags = tags_set[:20] if tags_set else [category[:30]]
 
             if not title or not rule:
                 return self._send_json({"error": "Title and rule are required fields."}, status=400)
@@ -918,7 +948,12 @@ class BentoApiHandler(BaseHTTPRequestHandler):
                     content = self.storage_gateway.read_text(f_path)
                     if len(content) > 2 * 1024 * 1024:
                         continue
-                    scenarios.append(ScenarioParser.from_json(content))
+                    sc = ScenarioParser.from_json(content)
+                    meta = dict(sc.metadata) if sc.metadata else {}
+                    meta["file_path"] = str(f_path)
+                    from dataclasses import replace
+                    sc = replace(sc, metadata=meta)
+                    scenarios.append(sc)
                 except Exception:
                     continue
         return scenarios
