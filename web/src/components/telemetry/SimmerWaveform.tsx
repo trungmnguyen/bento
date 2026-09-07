@@ -17,8 +17,8 @@ export const SimmerWaveform: React.FC<SimmerWaveformProps> = ({
       aria-label={`${activeCount} active daemon${activeCount > 1 ? 's' : ''} simmering`}
       title={`${activeCount} daemon${activeCount > 1 ? 's' : ''} currently simmering`}
     >
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+      <span className="relative flex h-2 w-2" aria-hidden="true">
+        <span className="animate-ping motion-reduce:animate-none absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
         <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
       </span>
 

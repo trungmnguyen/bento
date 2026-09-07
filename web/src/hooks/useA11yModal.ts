@@ -63,7 +63,12 @@ export function useA11yModal({
       if (e.key === 'Tab') {
         const focusableElements = Array.from(
           containerRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)
-        ).filter((el) => el.offsetParent !== null || el.getAttribute('tabindex') !== null);
+        ).filter((el) => {
+          // YZ-17: offsetParent === null incorrectly excludes position:fixed elements.
+          // Use computed style to determine actual visibility instead.
+          const style = getComputedStyle(el);
+          return style.display !== 'none' && style.visibility !== 'hidden' && !el.hasAttribute('disabled');
+        });
 
         if (focusableElements.length === 0) {
           e.preventDefault();

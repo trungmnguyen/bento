@@ -11,10 +11,13 @@ export const LiveDurationTicker: React.FC<LiveDurationTickerProps> = ({
   className = '',
 }) => {
   const [elapsedSec, setElapsedSec] = useState<number>(0);
+  // YZ-11: Throttle aria-label updates to every 10s to avoid screen reader spam
+  const [ariaElapsedSec, setAriaElapsedSec] = useState<number>(0);
 
   useEffect(() => {
     if (!startTime) {
       setElapsedSec(0);
+      setAriaElapsedSec(0);
       return;
     }
 
@@ -31,6 +34,10 @@ export const LiveDurationTicker: React.FC<LiveDurationTickerProps> = ({
       const now = Date.now();
       const diff = Math.max(0, Math.floor((now - startMs) / 1000));
       setElapsedSec(diff);
+      // Update aria-label every 10 seconds only
+      if (diff % 10 === 0) {
+        setAriaElapsedSec(diff);
+      }
     };
 
     update();
@@ -54,10 +61,10 @@ export const LiveDurationTicker: React.FC<LiveDurationTickerProps> = ({
   return (
     <span
       className={`inline-flex items-center gap-1 font-mono text-zinc-300 font-medium ${className}`}
-      aria-label={`Running for ${elapsedSec} seconds`}
+      aria-label={`Running for ${ariaElapsedSec} seconds`}
       title={`Live duration: ${formatDuration(elapsedSec)}`}
     >
-      <Timer className="w-3 h-3 text-bento-tamago animate-spin [animation-duration:4s]" />
+      <Timer className="w-3 h-3 text-bento-tamago animate-spin [animation-duration:4s]" aria-hidden="true" />
       <span className="tabular-nums">{formatDuration(elapsedSec)}</span>
     </span>
   );

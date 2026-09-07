@@ -10,6 +10,7 @@ interface CopyButtonProps {
   iconOnly?: boolean;
   toastTitle?: string;
   className?: string;
+  'aria-label'?: string;
 }
 
 export const CopyButton: React.FC<CopyButtonProps> = ({
@@ -19,6 +20,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
   iconOnly = false,
   toastTitle,
   className = '',
+  'aria-label': ariaLabel,
 }) => {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,7 +51,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
     <button
       type="button"
       onClick={handleCopy}
-      aria-label={copied ? 'Copied to clipboard' : tooltip}
+      aria-label={ariaLabel ?? (copied ? 'Copied to clipboard' : tooltip)}
       title={tooltip}
       className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border transition text-xs font-mono select-none ${
         copied
