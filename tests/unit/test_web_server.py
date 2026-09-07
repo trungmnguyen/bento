@@ -241,6 +241,8 @@ class TestBentoWebServer(unittest.TestCase):
         self.assertEqual(status, 200)
         data = json.loads(body)
         self.assertIsInstance(data, list)
+        if len(data) > 0:
+            self.assertIn("file_path", data[0])
 
     def test_api_bg_run_validation_fails_on_empty(self):
         status, body = self._post("/api/bg/run", {})
@@ -606,7 +608,33 @@ class TestBentoWebServer(unittest.TestCase):
         status1, _ = self._get(f"/api/bg/{id1}/logs")
         self.assertEqual(status1, 200)
 
+    def test_api_memory_export_headers_and_validation(self):
+        # Unsupported format returns 400
+        status, body = self._get("/api/memory/export?format=invalid_fmt")
+        self.assertEqual(status, 400)
+        self.assertIn("Unsupported export format", body)
+
+        # Valid markdown export
+        status, body = self._get("/api/memory/export?format=agents_md")
+        self.assertEqual(status, 200)
+        self.assertIn("Bento Institutional Memory Bank", body)
+
+    def test_api_memory_add_sanitizes_category_and_tags(self):
+        status, body = self._post("/api/memory/add", {
+            "title": "Axiom Title\nWith Newline",
+            "rule": "Domain rule must be pure",
+            "category": "malicious_cat\n## Exploit",
+            "tags": "a11y, wcag, screen-reader",
+        })
+        self.assertEqual(status, 201)
+        data = json.loads(body)
+        lesson = data["lesson"]
+        self.assertEqual(lesson["title"], "Axiom Title With Newline")
+        self.assertEqual(lesson["category"], "general")
+        self.assertEqual(lesson["tags"], ["a11y", "wcag", "screen-reader"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
